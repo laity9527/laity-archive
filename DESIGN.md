@@ -47,6 +47,12 @@
 - 代价：每次详情页访问多一次 `select id` 数据库查询；Proxy 内不得依赖共享模块与全局状态；数据库不可用时该路由返回 500 而非 404（诚实失败，不做兜底）；接受。
 - 连带：Phase 3 的鉴权文件由 src/middleware.ts 改为 src/proxy.ts，与本节同一文件扩展。
 
+### D8：Phase 3 先用 JWT 会话，数据库会话留作后续可拓展项
+- 决策：NextAuth v4 默认 JWT 会话，不建 Session/Account/User 表；会话里只放 `githubId` 与展示名，授权判定唯一依据仍是 `ALLOWED_GITHUB_IDS`。
+- 理由：单人后台，白名单本身就是唯一的准入事实；JWT 免去每次请求查会话表，也不必为一个用户引入四张表的迁移。被否备选：v4 的 database session——adapter 与迁移的复杂度买到的是"服务端可即时吊销"，而本项目的吊销手段是改白名单（Proxy 每次请求都重新比对 env，收紧立即生效），这一条收益并不成立。
+- 代价：JWT 在 `NEXTAUTH_SECRET` 泄露时可被伪造，因此该 secret 只允许放环境变量；单条已签发会话在过期前无法服务端撤销（改白名单只能阻止其访问 /admin，不能作废那枚 cookie）。
+- 后续可拓展成数据库会话的路径（明确写出，未来照此执行）：① 依赖加 `@next-auth/prisma-adapter`（v4 配套版，MIT），停点报批；② schema 增 `User / Account / Session / VerificationToken` 四模型并 `migrate dev`；③ `authOptions` 追加 `adapter` 与 `session: { strategy: "database" }`；④ Proxy 里的 `getToken()` 只认 JWT，database 模式下必须改为按 cookie 查 Session 表（新增 `src/lib/session.ts`，这是改动量最大的一处）；⑤ 页面侧 `getServerSession(authOptions)` 与 `signIn` 回调逻辑不变。
+
 ## 二、分阶段路线图（6 个 Phase，每个都是可运行最小闭环）
 
 通则：每个 Phase 开新会话 + 执行指令卡；完成后独立验收 → git commit → 截图/日志归档。

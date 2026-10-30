@@ -1,16 +1,19 @@
 /**
  * 文件：src/proxy.ts
- * 描述：请求前置校验：/logs/:slug 未命中已发布日志时直接返回 404 状态码（页面级 notFound 在 pPR 下只能返回 200）
+ * 描述：请求前置校验：/logs/:slug 未命中已发布日志直接返回 404；/admin 全路由校验登录与白名单
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-10-30: matcher 扩展 /admin/:path*，加登录态与白名单校验（Phase 3）
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { isAllowedGithubId } from "@/auth";
 import { isPublishedLogSlug } from "@/lib/logs";
 
-export const config = { matcher: "/logs/:slug" };
+export const config = { matcher: ["/logs/:slug", "/admin/:path*"] };
 
 const NOT_FOUND_HTML = `<!doctype html>
 <html lang="zh-CN">
@@ -66,8 +69,28 @@ function readSlug(pathname: string) {
   }
 }
 
+async function guardAdmin(request: NextRequest) {
+  const token = await getToken({ req: request });
+  const allowed = isAllowedGithubId(token?.githubId as string | undefined);
+
+  if (!allowed) {
+    const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
+    return NextResponse.redirect(
+      new URL(`/api/auth/signin/github?callbackUrl=${callbackUrl}`, request.url),
+    );
+  }
+
+  return NextResponse.next();
+}
+
 export async function proxy(request: NextRequest) {
-  const slug = readSlug(request.nextUrl.pathname);
+  const { pathname } = request.nextUrl;
+
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    return guardAdmin(request);
+  }
+
+  const slug = readSlug(pathname);
 
   if (slug && (await isPublishedLogSlug(slug))) {
     return NextResponse.next();
