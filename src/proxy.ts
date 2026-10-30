@@ -7,6 +7,7 @@
  * - 2026-10-30: 初始创建
  * - 2026-10-30: matcher 扩展 /admin/:path*，加登录态与白名单校验（Phase 3）
  * - 2026-10-30: matcher 扩展 /projects/:slug，404 页文案按路由类型分别给出（Phase 5a，经我批准）
+ * - 2026-10-30: 未登录改跳自建 /login?callbackUrl=…，不再经 /api/auth/signin 多绕一次 307（I012-B）
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -106,10 +107,9 @@ async function guardAdmin(request: NextRequest) {
   const allowed = isAllowedGithubId(token?.githubId as string | undefined);
 
   if (!allowed) {
+    // 直接去自建登录页；再走 /api/auth/signin 会因为 pages.signIn 多一次 307
     const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
-    return NextResponse.redirect(
-      new URL(`/api/auth/signin/github?callbackUrl=${callbackUrl}`, request.url),
-    );
+    return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));
   }
 
   return NextResponse.next();

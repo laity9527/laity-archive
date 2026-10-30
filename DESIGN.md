@@ -22,8 +22,8 @@
 - 代价：依赖 GitHub 可用性；GitHub 挂了我也进不了后台，但访客不受影响，接受。
 
 ### D3：渲染以 RSC 为主，不引入客户端状态库
-- 决策：页面服务端直读数据库；仅编辑器、筛选器两个交互点用客户端组件。
-- 理由：内容站读多写少，RSC 天然免掉取数状态管理；被否备选 SWR/Redux——为两个交互点引入全局方案不成比例。
+- 决策：页面服务端直读数据库；客户端组件只用在两处——编辑器（Editor）与登录按钮（SignInButton）。筛选器不走客户端，靠 URL 参数 + 服务端重渲染。
+- 理由：内容站读多写少，RSC 天然免掉取数状态管理；被否备选 SWR/Redux——为两个交互点引入全局方案不成比例。登录按钮必须是客户端组件：NextAuth v4 的 OAuth 只能由带 csrfToken 的 POST 发起，而 csrf-token cookie 只在 `/api/auth/*` 的响应里铸造，服务端渲染的登录页首次访问时手里没有这个 cookie，填不进隐藏字段（`core/index.js` 的 `case "signin"` 里 GET 分支只会 307 到 `pages.signIn`，POST 分支才要 `csrfTokenVerified`）。
 - 代价：筛选切换走 URL 参数 + 服务端重渲染，交互延迟略高；内容站可接受。
 
 ### D4：Markdown 渲染管线固定为 react-markdown + rehype-sanitize
@@ -64,6 +64,12 @@
 - 理由：Project 模型没有发布开关，"哪些字段可以给访客看"只能由查询层说了算；靠 `include` 全量返回再在页面里挑，等于把以后加进表的私有字段默认发给访客。计数若走 `_count` 全量会把草稿数量也漏出去。
 - 代价：项目本身无法"下线"（想藏一个项目只能删掉或改名）；将来若要给项目加发布开关，需改 schema 并同步这两处查询。
 - 连带：数据层落在 src/lib/projects.ts（AGENTS.md 禁止页面直查库），已在 Phase 5a 清单里注明。
+
+### D11：后台登录页自建，落点 /login 而不是 /admin/login
+- 决策：`authOptions.pages = { signIn: "/login", error: "/login" }`，登录页与错误提示都在这一个页面里给；Proxy 与 admin 布局的未登录跳转都改成 `/login?callbackUrl=…`；`callbackUrl` 只接受本站相对路径（以 `/` 开头且不以 `//` 开头），否则回落 `/admin`。
+- 理由：NextAuth v4 默认登录页自带主题样式（圆角、浅色卡片），与视觉铁律冲突，而且从 `/admin` 进去要多一次点击。放 `/admin/login` 会死循环——`pages.signIn` 一旦设置，`/api/auth/signin*` 的 GET 一律 307 到它，而该路径同时被 Proxy 的 `/admin/:path*` 与 admin 布局的会话守卫管辖，三者互相弹回；放到 `/login` 既不在 matcher 里也不吃 admin 布局。callbackUrl 两层兜底：我这层挡住协议相对与绝对外链，v4 的 `default-callbacks.js#redirect` 再挡一次非本站 origin。
+- 代价：登录入口的 URL 与后台不同源命名（`/login` 而非 `/admin/login`）；多一个客户端组件（见 D3 的 CSRF 原因）；`/admin/:path*` 的守卫覆盖面因此少一条路径，但它本来就不该拦登录页。
+- 连带：Phase 3 的"未登录访问 /admin → 跳转 GitHub 授权页"改为两跳语义——`/admin` → `/login` →（点一次按钮）→ GitHub 授权页；非白名单账号回到 `/login?error=AccessDenied` 并显示中文提示。
 
 ## 二、分阶段路线图（6 个 Phase，每个都是可运行最小闭环）
 
@@ -116,12 +122,15 @@ src/auth.ts、src/proxy.ts（在 D7 的 matcher 上扩展 /admin）、src/app/ap
 src/app/admin/layout.tsx、src/app/admin/page.tsx、src/app/admin/projects/page.tsx、
 src/app/admin/project-actions.ts、src/lib/projects.ts、.env.example
 
+补做（2026-10-30 经我批准，I012-B / D11）：新建 src/app/login/page.tsx、src/components/SignInButton.tsx，
+回改 src/auth.ts（pages）、src/proxy.ts 与 src/app/admin/layout.tsx（跳转目标），验收证据并入 Phase-3 自测表第九节。
+
 前置动作（人工）：在 GitHub 创建 OAuth App（回调 http://localhost:3000/api/auth/callback/github），把 Client ID/Secret 填入本地 .env——外部账号操作由我本人执行。
 
 验收标准：
-1. 未登录访问 /admin → 跳转 GitHub 授权页；
+1. 未登录访问 /admin → 跳到自建 /login，点一次"用 GITHUB 登录"即进 GitHub 授权页（D11 改的两跳语义）；
 2. 白名单账号完成授权 → 进入 /admin；
-3. 非白名单账号授权 → 被拒绝并回到首页（用第二个账号或临时改白名单验证）；
+3. 非白名单账号授权 → 被拒绝并回到 /login?error=AccessDenied 显示中文提示（用第二个账号或临时改白名单验证）；
 4. 新建/编辑项目后 /admin/projects 列表即时可见；slug 重复返回 PRJ_002 提示；
 5. 删除挂有日志的项目被拒绝（PRJ_001），删除空项目成功；
 6. `npm run lint` / `npm run build` 通过。
@@ -166,7 +175,9 @@ src/proxy.ts（2026-10-30 经我批准：matcher 增 `/projects/:slug`，404 文
 src/lib/oss.ts、src/app/admin/upload-action.ts、src/components/Editor.tsx（接入上传）、
 next.config.ts（images.remotePatterns 增 OSS 域名，经本 DESIGN 批准）
 
-**5b 前置动作（人工）**：开通阿里云 OSS Bucket、配置 RAM 子账号最小权限密钥，填入 .env——外部账号与计费操作由我本人执行，AI 停点等待；确需新增 OSS SDK 时先报许可再装。
+**5b 前置动作（人工）**：开通阿里云 OSS Bucket、配置 RAM 子账号最小权限密钥，填入 .env——外部账号与计费操作由我本人执行，AI 停点等待。
+
+**5b 依赖已批准（2026-10-30）**：走 A 方案 `ali-oss@6.23.0`（MIT，最近发布 2025-12-17）。`npm install --dry-run` 实测新增 **68** 个包，直接依赖含 lodash、urllib@2、xml2js、ws、socks 等；装之前逐个核许可证（GPL/AGPL 一律拒），装完把 package.json 与 package-lock.json 的变化一并上报，含被删条目。被否备选：B `@alicloud/oss20190517@1.0.6`（Apache-2.0，dry-run 47 个包，发布更旧 2024-09-17）；C 零依赖自写 V4 签名 PUT（0 个包，但签名细节要等真库联调才暴露，官方文档也写明优先用 SDK）。
 
 **5b 验收标准**：
 1. 编辑器上传 png 返回 OSS 外链，正文引用可显示；服务器本地目录无新增图片文件；

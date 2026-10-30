@@ -5,6 +5,7 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-10-30: 第二道守卫的跳转目标改为自建 /login?callbackUrl=%2Fadmin（I012-B）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -28,7 +29,7 @@ export default async function AdminLayout({
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/api/auth/signin/github?callbackUrl=/admin");
+    redirect("/login?callbackUrl=%2Fadmin");
   }
 
   return (

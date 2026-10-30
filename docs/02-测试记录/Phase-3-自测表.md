@@ -103,7 +103,7 @@ D:\ZHANGLEI\laity-archive\src\app\admin\layout.tsx
 | 测试数据 | 临时项目已删除；库内仅 `earth-mirror`（1 条日志）与 `prebuild-index`（isPublished=true） |
 | 测试会话 | 等价验证用的 cookie 已清除，/tmp 下 token 文件已删 |
 | 环境变量 | `ALLOWED_GITHUB_IDS` 已还原为我的真实 ID `111046902`；三个 GitHub 凭据与 `NEXTAUTH_SECRET` 只存在于被 git 忽略的 `.env` |
-| 服务 | 3000 端口上的 `next start` 为便于我本人登录验证保持运行（自测时 PID 48792 那轮已停） |
+| 服务 | 3000 端口上的 `next start` 为便于我本人登录验证保持运行（自测时 PID 48792 那轮已停）；**2026-10-30 第九节做完后已停用，需要时 `npm run start` 再起** |
 
 ## 八、结论
 
@@ -111,3 +111,42 @@ D:\ZHANGLEI\laity-archive\src\app\admin\layout.tsx
 - 待我本人执行：浏览器打开 http://localhost:3000/admin → 点 `Sign in with GitHub` → 用 GitHub 账号 laity9527 授权 → 应回到 /admin；然后截 /admin 与 /admin/projects 两张带地址栏截图。
 - 已定：第三节按 A 走，B（自建登录页）排到后续单独做。
 - 范围外发现：I009（NextAuth v4 与 Next 16 的组合需单独评估升级）、I010（真实账号授权未验证）、I011（退出入口的 lint 规则禁用）、I012（NextAuth 默认登录页视觉与点击次数）。
+
+## 九、I012-B 补做：自建登录页（2026-10-30，经我批准）
+
+第三节当时定的是"先 A 后 B"，本轮空档把 B 做完。**落点从设想的 `/admin/login` 改成 `/login`**，原因在 `node_modules/next-auth/core/index.js` 的 `case "signin"`：一旦设了 `pages.signIn`，`/api/auth/signin*` 的 GET 一律 307 到那个页面。若登录页自己在 `/admin/` 子树下，Proxy 守卫和 `admin/layout.tsx` 的第二道守卫都会把它再 307 回去，形成无限循环；放到 `/login`（不在 matcher 里、也不吃 admin 布局）就没有这个环。
+
+改动 5 个文件：新建 `src/app/login/page.tsx`、`src/components/SignInButton.tsx`（客户端组件，D3 已改写为"编辑器 + 登录按钮两处"）；`src/auth.ts` 加 `pages: { signIn: "/login", error: "/login" }`；`src/proxy.ts` 与 `src/app/admin/layout.tsx` 的未登录跳转改指 `/login?callbackUrl=…`，少一次 307。
+
+### 运行期实测（`npm run start` 后 curl）
+
+| 探针 | 命令 | 实际输出 |
+|---|---|---|
+| 未登录进后台 | `curl -w "%{http_code} -> %{redirect_url}" /admin` | `307 -> http://localhost:3000/login?callbackUrl=%2Fadmin` |
+| 登录页可公开访问 | `curl -o /dev/null -w %{http_code} /login` | `200` |
+| 登录页文案 | 剥标签读正文 | `← 首页` / `后台登录` / `这里只有管理员进得来：用 GitHub 授权后，还要命中ALLOWED_GITHUB_IDS白名单才会放行。` / `用 GITHUB 登录 →` / `访客不需要登录，前台的日志与项目档案直接可读。` |
+| 非白名单提示 | `curl "/login?error=AccessDenied"` | `这个 GitHub 账号不在白名单里，登录被拒绝。`（链路：`core/routes/callback.js:85` → `/api/auth/error?error=AccessDenied` → `pages.error` → 本页） |
+| 未知错误码不回显 | `curl "/login?error=github"` | `登录没有完成，可以再试一次。`（首版会把 `github` 原样打出来，已改成只给中文文案） |
+| `pages.signIn` 生效 | `curl /api/auth/signin/github` | `302 -> /login?callbackUrl=http%3A%2F%2Flocalhost%3A3000&error=github` |
+| 按钮发起 OAuth（等价验证） | `GET /api/auth/csrf` 取 token + cookie，再 `POST /api/auth/signin/github`（csrfToken / callbackUrl=/admin / provider=github） | `302 -> https://github.com/login/oauth/authorize?client_id=0v23113f7OFGWlpK95KK&scope=read%3Auser%20user%3Aemail&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fgithub&state=pMqvDVrhzNUn…` |
+
+POST 这条就是 `signIn("github", { callbackUrl })` 在浏览器里做的事，为什么要走客户端：`csrf-token` cookie 只在 `/api/auth/*` 的响应里铸造，服务端渲染的登录页首次访问时手里没有它，隐藏字段填不进去。
+
+### 视觉与响应式（computed style 探针，代替人眼）
+
+`document.querySelectorAll('*')` 全量取样式：`rounded: []`、`shadow: []`、`gradient: []`、`svg: 0`、`bodyBg: rgb(251, 251, 249)`；按钮 `radius: 0px`、`shadow: none`、`border: 1px solid rgb(19, 19, 19)`、字体 `"JetBrains Mono"`、字距 `2.2px`；`h1` 为 `Inter 30px`。375px 隐藏 iframe：`/login` 与 `/login?error=AccessDenied` 的 `scrollWidth` 都是 `375`、越界元素 `[]`；同一 iframe 里加载 `/admin` 最终渲染出的是登录页文本——**这同时证明没有重定向死循环**（浏览器只会在环断开后交出内容）。
+
+### 未验证项
+
+| 项 | 状态 | 原因与替代验证 |
+|---|---|---|
+| 已登录访问 `/login` 自动跳回 callbackUrl | 未验证 | 想用本地签发的 JWT 做等价验证，探针被运行时安全策略判为越权测试拦下（与 I013 同类），我没有绕。替代：`safeCallbackUrl` 纯函数判表实测——`"/admin/projects" -> /admin/projects`、`"//evil.com/x" -> /admin`、`"https://evil.com" -> /admin`、`"" / undefined -> /admin`；另有 v4 自身一层（`core/lib/default-callbacks.js` 的 `redirect`：非本站 origin 一律回 `baseUrl`） |
+| 白名单外账号在 `/admin` 被拦 | 未验证（同上，需真实授权） | Proxy 每次请求重新比对 `ALLOWED_GITHUB_IDS`，逻辑与 Phase 3 第二节同一条，未改动 |
+| 真实点击按钮到 GitHub 再回来 | 未验证 | 应用内浏览器没有 GitHub 会话（I010），等我本人走一遍 |
+
+### 收尾与结论
+
+`npm run lint` 退出 0、`npx tsc --noEmit` 退出 0、`npm run build` 成功（`✓ Compiled successfully in 1151ms`，路由表新增 `ƒ /login`）；红线 grep `ZERO_MATCH`；`"use client"` 恰好出现在 `Editor.tsx` 与 `SignInButton.tsx` 两处；页面直查库 `ZERO_MATCH`。探针未落任何数据，服务已停、端口释放（`after_kill=000`）。
+
+判定：**I012 转 FIXED**——点击次数从"两跳 + NextAuth 默认页"变成"一跳 + 自建页"，视觉符合铁律；剩余未验证项全部集中在"需要真实 GitHub 会话"这一条前置上（I010）。
+
