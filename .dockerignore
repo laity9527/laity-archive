@@ -1,0 +1,38 @@
+# 文件：.dockerignore
+# 描述：构建上下文排除清单：本地依赖与产物不进镜像，重点是 .env 系列绝不进上下文
+# 作者：张磊
+# 创建日期：2026-10-30
+# 修改记录：
+# - 2026-10-30: 初始创建（Phase 6 环境准备）
+
+node_modules
+.next
+out
+build
+tmp
+uploads
+
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.prod.yml
+deploy
+
+README.md
+AGENTS.md
+DESIGN.md
+SPEC.md
+ISSUES.md
+docs
+next-env.d.ts
+tsconfig.tsbuildinfo
+.vscode
+.idea
+.DS_Store
+Thumbs.db

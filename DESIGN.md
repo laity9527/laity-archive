@@ -40,6 +40,18 @@
 - 决策：Dockerfile 三阶段（deps → build → run），run 阶段仅含 standalone 产物与静态资源。
 - 理由：小内存服务器防 OOM，镜像体积小；被否备选完整 node_modules 进镜像——体积与内存双输。
 - 代价：next.config 需设 output: "standalone"（该配置变更列入 Phase 6 文件清单，经本 DESIGN 批准）；接受。
+- 落地实况（2026-10-30 Phase 6 环境准备实测，细节见 Phase-6 环境准备自测表）：
+  - 基础镜像 `node:24-slim` 而非 alpine：Prisma 引擎在 musl 上要额外处理 openssl provider，Debian 侧没这个坎；但 slim 只有 libssl3 没有 `openssl` 可执行文件，Prisma 启动时会退回 `openssl-1.1.x` 并告警，所以 deps 与 runner 两阶段都显式 `apt-get install openssl`。
+  - 第四个构建目标 `migrator`：`docker compose run --rm migrate` 跑 `npx prisma migrate deploy`，把"改库"这个动作和 Web 容器的生命周期分开，Web 镜像里不留 prisma CLI。
+  - standalone 默认不含 `public` 与 `.next/static`（Next 官方 output.md 明写要手工拷），由镜像内两条 COPY 补齐。
+  - run 阶段用 node 镜像自带的 uid 1000 `node` 用户启动，`.dockerignore` 保证 `.env`、`.git`、`docs`、`node_modules`、`.next` 不进上下文。
+  - 新增 **D12 上线门禁**（见下）后，编排里多一个一次性 `preflight` 服务。
+
+### D12：上线门禁用一次性 preflight 容器硬卡，口令不合格就不起栈
+- 决策：`docker-compose.prod.yml` 里 preflight 服务先跑，检查数据库用户/口令不是 root、两者不相同、口令不少于 12 位、`NEXTAUTH_URL` 是 https 且不含 localhost、`NEXTAUTH_SECRET` 不少于 32 位、`ALLOWED_GITHUB_IDS` 非空；db 服务 `depends_on: preflight (service_completed_successfully)`，任一条不合格整个 `up` 直接失败。
+- 理由：风险清单里"弱口令遗留上线"要求的是**硬卡**，而 compose 的 `${VAR:?}` 只能拦空值——实测 `root/root` 能被照常放行（`config` 退出 0）。把判定放进容器启动链，比写在 README 里靠人自觉可靠。
+- 代价：多一个一次性容器；检查项是字符串规则，换更强的口令策略要回来改这一处。
+- 连带：通过时打印脱敏行（用户名 + 口令长度 + 域名，不打印值），正好充当验收第 2 条要的"脱敏检查记录"。
 
 ### D7：/logs/:slug 与 /projects/:slug 的真 404 由 Proxy 前置判定
 - 决策：src/proxy.ts 的 matcher 为 `["/logs/:slug", "/projects/:slug", "/admin/:path*"]`；日志按"是否已发布"判定，项目按"slug 是否存在"判定（`select slug` 落在唯一索引上），未命中直接返回带 404 状态码的极简纸白页（noindex + no-store），文案按路由类型分别给出、请求里的 slug 一律不拼进 HTML。
@@ -186,18 +198,31 @@ next.config.ts（images.remotePatterns 增 OSS 域名，经本 DESIGN 批准）
 ### Phase 6：生产部署 + 软著材料整理
 交付物：自有服务器上 HTTPS 可访问的生产站点；docs/04 软著材料成套。
 
+> 2026-10-30 经我批准拆段：**6a 环境准备**（构建产物 + 编排 + 反代 + 上线门禁，全部能在本机验）先做完；
+> **6b 真上线 + 软著材料**等服务器、域名、证书、生产 OAuth App 就位。原"每个 Phase 只做该 Phase"
+> 的红线不变，本节只动了 Phase 6 自己的清单。
+
 允许触碰的文件：
 Dockerfile、.dockerignore、docker-compose.prod.yml、deploy/nginx.conf、
 next.config.ts（output: "standalone"，经 D6 批准）、docs/04-软著材料/*
 
+6a 清单外增补（2026-10-30 经我批准，逐条见 Phase-6 环境准备自测表第八节）：
+- `.env.production.example`：生产变量模板，让"该填哪些键"进仓库、真实值继续被忽略；
+- `.gitignore`：`.env.*` 规则会连模板一起吞掉（同 I006/I014 的机制），补 `!.env.production.example`；
+- `package-lock.json`：`npm ci` 在 linux 下判 lock 与 package.json 不同步（Windows 侧看不出来，
+  缺的是 wasm32 可选依赖的边），按 A 方案在 `node:24-slim` 容器里用 `--package-lock-only` 重算，
+  实测 570→578 条目、0 删除、0 版本变化、来源仍是 registry.npmmirror.com，容器与本地两侧 `npm ci --dry-run` 均通过；
+- `Dockerfile` 的 deps/runner 两处 `apt-get install openssl`：Prisma 靠 openssl 可执行文件判引擎版本，
+  slim 镜像只有 libssl3，不装会退回 openssl-1.1.x 并告警（D6 落地实况）。
+
 前置动作（人工）：服务器就绪、域名解析、生产级数据库口令生成、生产 OAuth App（回调为正式域名）——全部由我本人执行。
 
 验收标准：
-1. `docker build` 成功；生产容器启动后 `curl -I https://<域名>` 返回 200，证书有效；
-2. 生产环境变量检查：数据库口令非 root、密钥不与开发环境复用（粘贴脱敏检查记录）；
-3. 线上重跑 Phase 2 验收第 1 条（草稿隔离）与 Phase 4 第 3 条（哈希复核）均 PASS；
-4. docs/04 含源代码文档（按软著要求前 30 页 + 后 30 页排版）与操作说明书；
-5. docs/03 存线上带地址栏截图。
+1. `docker build` 成功（6a 本机已验）；生产容器启动后 `curl -I https://<域名>` 返回 200，证书有效（6b）；
+2. 生产环境变量检查：数据库口令非 root、密钥不与开发环境复用（粘贴脱敏检查记录）——由 D12 的 preflight 硬卡并打印脱敏行；
+3. 线上重跑 Phase 2 验收第 1 条（草稿隔离）与 Phase 4 第 3 条（哈希复核）均 PASS（6a 已在容器化的同一镜像内复现，6b 需线上再跑一次）；
+4. docs/04 含源代码文档（按软著要求前 30 页 + 后 30 页排版）与操作说明书（6b）；
+5. docs/03 存线上带地址栏截图（6b）。
 
 ## 三、风险清单
 
@@ -207,7 +232,7 @@ next.config.ts（output: "standalone"，经 D6 批准）、docs/04-软著材料/
 | GitHub OAuth 回调域名限制 | 生产域名与本地回调不一致 | 开发与生产各建一个 OAuth App，环境变量隔离 |
 | OSS 开通/计费受阻 | Phase 5 前置动作卡住 | Phase 5 顺延，不阻塞 Phase 6 之外的任何已验收产物；正文暂用免版权图库外链 |
 | 小内存服务器构建 OOM | 服务器上直接 build 失败 | 本地/CI 构建镜像后推送，服务器只 pull + run（D6 已按此设计） |
-| 弱口令遗留上线 | Phase 6 环境检查发现 root 口令 | 上线门禁硬卡：口令不改不发版 |
+| 弱口令遗留上线 | Phase 6 环境检查发现 root 口令 | 已落地为 D12：编排里的 preflight 一次性容器硬卡，口令/域名/密钥不合格则整个 `up` 失败，不放行 |
 | 时区错乱复发 | 任何页面时间显示偏移 | 全链路 UTC（AGENTS.md 已锁），验收含时区核对项 |
 | 单人项目密钥泄露 | .env 被提交 | .gitignore 已忽略；独立验收含"git 历史无密钥"检查 |
 

@@ -1,0 +1,133 @@
+# 文件：docker-compose.prod.yml
+# 描述：生产编排：app（standalone 镜像）+ db（postgres:16，非 root 口令、不对宿主机开放端口）+ nginx（TLS 终结）；迁移走一次性 migrate 服务
+# 作者：张磊
+# 创建日期：2026-10-30
+# 修改记录：
+# - 2026-10-30: 初始创建（Phase 6 环境准备，对应 D6）
+#
+# 用前必读：
+#   1. cp .env.production.example .env.production，填真实值，两个口令不要与开发环境复用；
+#   2. 证书放到 deploy/certs/laity.crt 与 laity.key（文件名要和 nginx.conf 里一致）；
+#   3. 首次部署（--env-file 必须带，compose 默认只读 .env，不会自动读 .env.production）：
+#      docker compose --env-file .env.production -f docker-compose.prod.yml build
+#      docker compose --env-file .env.production -f docker-compose.prod.yml run --rm migrate
+#      docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+
+services:
+  # 上线门禁：DESIGN 风险清单写死"口令不改不发版"。compose 的 ${VAR:?} 只能拦空值，
+  # 拦不住 root/root，所以用一次性容器先把口令与 scheme 判一遍，不合格就非零退出，整个 up 随之失败
+  preflight:
+    image: postgres:16
+    container_name: laity-preflight
+    entrypoint:
+      - /bin/sh
+      - -e
+      - -c
+      - |
+        fail() { echo "上线门禁未通过：$1" >&2; exit 1; }
+        [ "$${POSTGRES_USER:-}" = "root" ] && fail "数据库用户仍是 root"
+        [ "$${POSTGRES_PASSWORD:-}" = "root" ] && fail "数据库口令仍是 root"
+        [ "$${POSTGRES_PASSWORD:-}" = "$${POSTGRES_USER:-}" ] && fail "数据库口令与用户名相同"
+        [ "$${#POSTGRES_PASSWORD}" -lt 12 ] && fail "数据库口令短于 12 位"
+        case "$${NEXTAUTH_URL:-}" in
+          https://*) ;;
+          *) fail "NEXTAUTH_URL 必须是 https:// 开头的正式域名（当前：$${NEXTAUTH_URL:-空}）" ;;
+        esac
+        case "$${NEXTAUTH_URL}" in
+          *localhost*|*127.0.0.1*) fail "NEXTAUTH_URL 还指向开发环境" ;;
+        esac
+        [ "$${#NEXTAUTH_SECRET}" -lt 32 ] && fail "NEXTAUTH_SECRET 短于 32 位"
+        [ -z "$${ALLOWED_GITHUB_IDS:-}" ] && fail "ALLOWED_GITHUB_IDS 为空，登录后也进不去"
+        echo "上线门禁通过：数据库用户 $${POSTGRES_USER}、口令长度 $${#POSTGRES_PASSWORD}、$${NEXTAUTH_URL}"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?必须在 .env.production 里指定非 root 用户}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?必须在 .env.production 里指定强口令}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?必须填正式域名，例如 https://laity.example}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?生产密钥，不得与开发环境复用}
+      ALLOWED_GITHUB_IDS: ${ALLOWED_GITHUB_IDS:?允许登录的 GitHub 账号 ID}
+    restart: "no"
+    networks: [laity_back]
+
+  db:
+    image: postgres:16
+    container_name: laity-db-prod
+    restart: unless-stopped
+    # 口令与库名都来自 .env.production，禁止写死；POSTGRES_USER 非 root（由 preflight 硬卡）
+    depends_on:
+      preflight:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?必须在 .env.production 里指定非 root 用户}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?必须在 .env.production 里指定强口令}
+      POSTGRES_DB: ${POSTGRES_DB:-laity}
+    volumes:
+      - laity_prod_data:/var/lib/postgresql/data
+    # 生产库不向宿主机发布端口，只有 app 走内部网络访问
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-laity}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks: [laity_back]
+
+  app:
+    build:
+      context: .
+      target: runner
+    image: laity-archive:prod
+    container_name: laity-app-prod
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-laity}?schema=public
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?必须填正式域名，例如 https://laity.example}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?生产密钥，不得与开发环境复用}
+      GITHUB_ID: ${GITHUB_ID:?生产 OAuth App 的 Client ID}
+      GITHUB_SECRET: ${GITHUB_SECRET:?生产 OAuth App 的 Secret}
+      ALLOWED_GITHUB_IDS: ${ALLOWED_GITHUB_IDS:?允许登录的 GitHub 账号 ID}
+    # 只绑 127.0.0.1：外部流量一律经 nginx，不给应用直接开口
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      # /login 不查库，探针只证明进程活着并能出 HTTP；数据库连通性由 migrate 与页面表现判断
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks: [laity_back]
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-laity}?schema=public
+    networks: [laity_back]
+
+  web:
+    image: nginx:1.27-alpine
+    container_name: laity-nginx-prod
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+    networks: [laity_back]
+
+volumes:
+  laity_prod_data:
+
+networks:
+  laity_back:
+    driver: bridge

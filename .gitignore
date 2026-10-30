@@ -69,6 +69,8 @@ web_modules/
 .env
 .env.*
 !.env.example
+# 生产环境变量模板要入库（真实值在 .env.production，继续被忽略）
+!.env.production.example
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
