@@ -65,6 +65,10 @@ HAS_JS_PROTOCOL: false
 | 越界文件 | 对照 DESIGN.md Phase 2 清单 | 多改 prisma/seed.ts（Phase 2 验收第 2 条要求种子数据带合法哈希，D5 口径现算）；新增 src/proxy.ts 经你批准并已补进 DESIGN.md 的 Phase 2 清单（D7）；其余均在清单内，未提前建 Phase 3 的 projects 数据层 |
 | 配置变更 | — | 详情页新增 `export const instant = false`：只解决"未发布 slug 的查询发生在静态壳断言期"导致的构建报错，**不产生 404 状态码**（先前理解有误，已在第七节更正）；属路由段配置，非 build/CI 配置 |
 | 密钥入库 | git status | `.env` 仍被忽略，未入库 |
+| 数据访问分层 | `grep -rn "db\.log" src/app src/components`；`grep -rn "@/lib/db" src/app src/components` | 均零命中；`new PrismaClient` 只出现在 src/lib/db.ts 与 prisma/seed.ts |
+| 裸渲染 | `grep -rn "dangerouslySetInnerHTML" src/` | 零命中 |
+| Markdown 出口唯一 | `grep -rln "react-markdown" src/` | 只有 src/lib/markdown.tsx |
+| 文件头注释覆盖 | 遍历 `src/`、`prisma/` 下全部 .ts/.tsx 查首 3 行"文件：" | 无一缺失 |
 
 ## 五、留痕检查
 

@@ -13,7 +13,7 @@
 |---|---|---|---|---|---|
 | 1 | Node ≥ v22 | `node -v` | ≥ v22 | `v24.13.0` | PASS |
 | 2 | PostgreSQL 容器 Up | `docker ps` | laity-postgres Up | `Error response from daemon: Docker Desktop is unable to start`；根因：`wsl --status` 输出"未安装适用于 Linux 的 Windows 子系统" | 未验证（环境阻塞） |
-| 3 | 迁移成功 | `npx prisma migrate dev` | 生成迁移文件无报错 | 未执行：数据库引擎无法启动 | 未验证 |
+| 3 | 迁移成功 | `npx prisma migrate dev` | 生成迁移文件无报错 | 未执行：数据库引擎无法启动。替代验证（不需要库）：`npx prisma validate` 输出 `The schema at prisma\schema.prisma is valid 🚀`；`npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script` 离线生成 TODO SQL，两张表字段、`slug` 唯一约束、`Log` 两个索引均与 schema 一致，见下方附录 | 未验证（迁移文件仍待生成） |
 | 4 | 种子数据入库 | `npx prisma db seed` + studio 查验 | 1 Project、1 条已发布 Log | 未执行：数据库引擎无法启动 | 未验证 |
 | 5 | /logs 显示种子标题，改库即时变化 | 浏览器访问 http://localhost:3000/logs | 显示"决定放弃本地搜索，改用索引预构建" | 页面返回 HTTP 200（静态壳）；流式部分报 Prisma 连接错误（数据库未起），日志证据已随本次交付记录 | 未验证 |
 | 6 | 生产构建通过 | `npm run build` | 退出码 0 | `✓ Compiled successfully in 1966ms`；路由表：`/`(Static)、`/_not-found`、`/logs`(Partial Prerender) | PASS |
@@ -48,7 +48,40 @@
 | docs/03 带地址栏截图 | 待补：需人工在浏览器打开 localhost:3000 截图（数据库起后截 /logs） |
 | 独立 commit | 未提交：本轮未获提交授权，等你确认后再提交 |
 
-## 五、结论
+## 五、附录：离线迁移 SQL 预览
+
+库起不来，但 schema 到 SQL 的翻译不需要库。`npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script` 的真实输出（节选关键句）：
+
+```sql
+CREATE TABLE "Project" (
+    "id" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    ...
+    CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "Log" (
+    "id" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "tags" TEXT[],
+    "beforeDate" TIMESTAMP(3) NOT NULL,
+    "afterDate" TIMESTAMP(3),
+    "isPublished" BOOLEAN NOT NULL DEFAULT false,
+    ...
+    CONSTRAINT "Log_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "Project_slug_key" ON "Project"("slug");
+CREATE UNIQUE INDEX "Log_slug_key" ON "Log"("slug");
+CREATE INDEX "Log_isPublished_beforeDate_idx" ON "Log"("isPublished", "beforeDate");
+CREATE INDEX "Log_projectId_idx" ON "Log"("projectId");
+ALTER TABLE "Log" ADD CONSTRAINT "Log_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+```
+
+读出来的两点事实（供 WSL2 就绪后对照）：`tags` 是 `TEXT[]` 且 NOT NULL 无默认值，任何插入都必须给 `tags`；时间列是 `TIMESTAMP(3)`（无时区），Prisma 按 UTC 写入，展示层再做时区与 UTC 标注。
+
+## 六、结论
 
 - 判定：**条件性 PASS**——代码侧（构建/lint/视觉/结构）全部通过；数据库侧 4 项因 WSL2 未安装而阻塞，未验证。
 - 解除阻塞动作（需我本人执行）：`wsl --install`（管理员权限 + 重启）→ 启动 Docker Desktop → `docker compose up -d` → `npx prisma migrate dev` → `npx prisma db seed` → 浏览器验收第 5 条并截图。
