@@ -1,0 +1,49 @@
+// 文件：prisma/schema.prisma
+// 描述：Laity 项目档案库数据库模型（Project / Log）
+// 作者：张磊
+// 创建日期：2026-10-30
+// 修改记录：
+// - 2026-10-30: 初始创建，按 SPEC.md 建表草案定义 Project 与 Log
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  kind      String // product | tool | site
+  status    String // WIP | LIVE | ARCHIVED
+  summary   String?
+  repoUrl   String?
+  createdAt DateTime @default(now())
+  logs      Log[]
+}
+
+model Log {
+  id            String    @id @default(cuid())
+  title         String
+  slug          String    @unique
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id])
+  tags          String[]
+  beforeContent String
+  afterContent  String?
+  beforeDate    DateTime
+  afterDate     DateTime?
+  isPublished   Boolean   @default(false)
+  lessonLearned String?
+  publishedAt   DateTime?
+  contentHash   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([isPublished, beforeDate])
+  @@index([projectId])
+}
