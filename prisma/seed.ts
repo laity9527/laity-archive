@@ -5,10 +5,22 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-10-30: 按 D5 口径为种子日志计算 contentHash，供 Phase 2 详情页印章展示
  */
+import { createHash } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
+
+const logTitle = "决定放弃本地搜索，改用索引预构建";
+const logBefore = "构建耗时从 3.2s 涨到 11.8s，计划改为构建期预生成索引。";
+const logAfter = "预构建后首次打开 1.1s，构建期多 4s，可接受。";
+
+function contentHashOf(title: string, before: string, after: string | null) {
+  return createHash("sha256")
+    .update(`${title}\n${before}\n${after ?? ""}`, "utf8")
+    .digest("hex");
+}
 
 async function main() {
   const project = await prisma.project.upsert({
@@ -27,17 +39,18 @@ async function main() {
     where: { slug: "prebuild-index" },
     update: {},
     create: {
-      title: "决定放弃本地搜索，改用索引预构建",
+      title: logTitle,
       slug: "prebuild-index",
       projectId: project.id,
       tags: ["需求判断", "踩坑"],
-      beforeContent: "构建耗时从 3.2s 涨到 11.8s，计划改为构建期预生成索引。",
-      afterContent: "预构建后首次打开 1.1s，构建期多 4s，可接受。",
+      beforeContent: logBefore,
+      afterContent: logAfter,
       beforeDate: new Date("2026-03-12T06:02:11Z"),
       afterDate: new Date("2026-03-12T07:47:33Z"),
       isPublished: true,
       lessonLearned: "用构建期成本换首次打开速度。",
       publishedAt: new Date("2026-03-12T08:00:00Z"),
+      contentHash: contentHashOf(logTitle, logBefore, logAfter),
     },
   });
 

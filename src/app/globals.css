@@ -8,11 +8,112 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-paper: #fbfbf9;
+  --color-ink: #131313;
+  --color-ink-soft: #5c5c5c;
+  --color-hairline: #e7e7e2;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Arial,
+    sans-serif;
+  --font-serif: var(--font-noto-serif-sc), "Noto Serif SC",
+    "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular",
+    Consolas, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial,
-    sans-serif;
+}
+
+.log-body {
+  font-family: var(--font-noto-serif-sc), "Noto Serif SC",
+    "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  font-size: 18px;
+  line-height: 1.85;
+}
+
+.log-body > * + * {
+  margin-top: 1.5em;
+}
+
+.log-body h2,
+.log-body h3 {
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.log-body h2 {
+  font-size: 1.35em;
+}
+
+.log-body h3 {
+  font-size: 1.15em;
+}
+
+.log-body ul,
+.log-body ol {
+  padding-left: 1.4em;
+}
+
+.log-body ul {
+  list-style: disc;
+}
+
+.log-body ol {
+  list-style: decimal;
+}
+
+.log-body li + li {
+  margin-top: 0.4em;
+}
+
+.log-body a {
+  border-bottom: 1px solid var(--foreground);
+  text-decoration: none;
+}
+
+.log-body blockquote {
+  border-left: 1px solid var(--foreground);
+  padding-left: 1.2em;
+  color: var(--color-ink-soft, #5c5c5c);
+}
+
+.log-body code {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 0.85em;
+}
+
+.log-body pre {
+  border: 1px solid #e7e7e2;
+  padding: 1em 1.2em;
+  overflow-x: auto;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+
+.log-body pre code {
+  font-size: 0.9em;
+}
+
+.log-body hr {
+  border: 0;
+  border-top: 1px solid #e7e7e2;
+}
+
+.log-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.log-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.log-body th,
+.log-body td {
+  border-bottom: 1px solid #e7e7e2;
+  padding: 0.5em 0.6em;
+  text-align: left;
 }

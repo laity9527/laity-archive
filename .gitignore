@@ -157,3 +157,8 @@ next-env.d.ts
 Thumbs.db
 tmp/
 uploads/
+
+# Node 模板的 logs 规则会误伤源码目录 src/app/logs，此处显式重新纳入
+!src/app/logs/
+!src/app/logs/**
+
