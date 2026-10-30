@@ -17,7 +17,7 @@
 - 代价：未来若真要开放公开 API 需补一层；接受。
 
 ### D2：鉴权用 NextAuth GitHub Provider + 服务端白名单
-- 决策：signIn 回调里校验 GitHub 账号 ID 是否在环境变量白名单（ALLOWED_GITHUB_IDS）内，不在即拒绝；/admin 全路由由 middleware 保护。
+- 决策：signIn 回调里校验 GitHub 账号 ID 是否在环境变量白名单（ALLOWED_GITHUB_IDS）内，不在即拒绝；/admin 全路由由 proxy 保护（Next 16 已将 middleware 更名 Proxy，见 D7）。
 - 理由：不存密码、不做注册找回；白名单用不可变的账号 ID 而非用户名（用户名可改）；被否备选 Credentials——自己管哈希与防爆破，纯增风险。
 - 代价：依赖 GitHub 可用性；GitHub 挂了我也进不了后台，但访客不受影响，接受。
 
@@ -40,6 +40,12 @@
 - 决策：Dockerfile 三阶段（deps → build → run），run 阶段仅含 standalone 产物与静态资源。
 - 理由：小内存服务器防 OOM，镜像体积小；被否备选完整 node_modules 进镜像——体积与内存双输。
 - 代价：next.config 需设 output: "standalone"（该配置变更列入 Phase 6 文件清单，经本 DESIGN 批准）；接受。
+
+### D7：/logs/:slug 的真 404 由 Proxy 前置判定
+- 决策：新增 src/proxy.ts，matcher 只匹配 `/logs/:slug`；命中已发布日志则放行，未命中直接返回带 404 状态码的极简纸白页（noindex + no-store）。
+- 理由：本项目开了 Cache Components（pPR），流式响应固定以 200 开头，页面级 notFound() 只能在正文已流式之后才执行，实测未发布 slug 返回 200 + 错误页。Next 官方文档对动态路由真 404 的处方就是 Proxy 前置检查；rewrite 携带 status 实测同样被渲染路由的 200 覆盖，只有直接返回 Response 才保留状态码（两种写法都已实测）。
+- 代价：每次详情页访问多一次 `select id` 数据库查询；Proxy 内不得依赖共享模块与全局状态；数据库不可用时该路由返回 500 而非 404（诚实失败，不做兜底）；接受。
+- 连带：Phase 3 的鉴权文件由 src/middleware.ts 改为 src/proxy.ts，与本节同一文件扩展。
 
 ## 二、分阶段路线图（6 个 Phase，每个都是可运行最小闭环）
 
@@ -71,13 +77,13 @@ src/app/logs/page.tsx（最小版）、next.config.ts、tsconfig.json、.env.exa
 交付物：首页/日志大厅/详情三页全部读真库，视觉铁律全量落地，草稿隔离与 sanitize 生效。
 
 允许触碰的文件：
-src/lib/logs.ts（getSafeLogs/getSafeLogBySlug）、src/lib/markdown.tsx、
-src/app/page.tsx、src/app/logs/page.tsx、src/app/logs/[slug]/page.tsx、
+src/lib/logs.ts（getSafeLogs/getSafeLogBySlug/isPublishedLogSlug）、src/lib/markdown.tsx、
+src/app/page.tsx、src/app/logs/page.tsx、src/app/logs/[slug]/page.tsx、src/proxy.ts（经 D7 批准新增）、
 src/components/Timeline.tsx、src/components/StatusBoard.tsx、src/components/Seal.tsx、
 src/app/globals.css、src/app/layout.tsx（字体接入）
 
 验收标准：
-1. 造一条 isPublished=false 的草稿：/、/logs 均不出现，直访其 /logs/[slug] 返回 404；
+1. 造一条 isPublished=false 的草稿：/、/logs 均不出现，直访其 /logs/[slug] 返回 404（状态码由 D7 的 Proxy 保证，不是 200 + 404 页面）；
 2. 详情页显示 contentHash 与 publishedAt（种子数据先手动填一个合法哈希供展示）；
 3. 正文含 `<script>alert(1)</script>` 的日志渲染后无脚本执行（查看页面源码确认被清洗）；
 4. `grep -rE "rounded-(?!none)|shadow-(?!none)|bg-gradient" src/` 零命中；无图标库 import；
@@ -88,7 +94,7 @@ src/app/globals.css、src/app/layout.tsx（字体接入）
 交付物：GitHub OAuth 登录闭环，白名单生效，/admin 概览与项目增改删可用。
 
 允许触碰的文件：
-src/auth.ts、src/middleware.ts、src/app/api/auth/[...nextauth]/route.ts、
+src/auth.ts、src/proxy.ts（在 D7 的 matcher 上扩展 /admin）、src/app/api/auth/[...nextauth]/route.ts、
 src/app/admin/layout.tsx、src/app/admin/page.tsx、src/app/admin/projects/page.tsx、
 src/app/admin/project-actions.ts、src/lib/projects.ts、.env.example
 
