@@ -162,3 +162,7 @@ uploads/
 !src/app/logs/
 !src/app/logs/**
 
+# 同一条 logs 规则也误伤了 Phase 4 的后台日志目录，一并重新纳入
+!src/app/admin/logs/
+!src/app/admin/logs/**
+

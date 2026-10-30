@@ -58,9 +58,10 @@ Route (app)
 
 第一版命令 `/admin` 直接 307 到 `/api/auth/signin/github`，以为到了 GitHub。实测是 200：翻 `node_modules/next-auth/core/index.js` 看到 `case "signin"` 的 OAuth 分支只在 `method === "POST" && options.csrfTokenVerified && options.provider` 时才返回授权跳转；GET 走的是 `render.signin()`。也就是说 NextAuth v4 把发起 OAuth 做成了一次带 CSRF token 的表单 POST，GET 只能拿到登录页——这是它的防伪设计，不是配置错误。
 
-结果是 `/admin` → 本项目登录页（一个 `Sign in with GitHub` 按钮）→ 点击 → github.com 授权页。多这一次点击怎么处理，两个选项摆在这里，等你定：
-- **A（现状）**：保留 NextAuth 默认登录页。代价是多一次点击；且该页用的是 NextAuth 自带主题（浅色、圆角按钮），与本项目"零圆角、无阴影"的视觉铁律不一致。
-- **B**：在 `authOptions.pages.signIn` 指向自建页面（如 `/admin/login`），用同款纸白表单调 `signIn("github")`。代价是要新增 `src/app/admin/login/page.tsx`——不在 Phase 3 文件清单内，属清单外改动，需你批准后才做。
+结果是 `/admin` → 本项目登录页（一个 `Sign in with GitHub` 按钮）→ 点击 → github.com 授权页。多这一次点击怎么处理，两个选项摆在这里：
+
+- **A（已采纳）**：保留 NextAuth 默认登录页。代价是多一次点击；且该页用的是 NextAuth 自带主题（浅色、圆角按钮），与本项目"零圆角、无阴影"的视觉铁律不一致。2026-10-30 我拍板按 A 走，Phase 3 按现状验收。
+- **B（后续再做）**：在 `authOptions.pages.signIn` 指向自建页面（如 `/admin/login`），用同款纸白表单调 `signIn("github")`。要新增 `src/app/admin/login/page.tsx`，不在 Phase 3 文件清单内，另立任务；登记在 ISSUES I012。
 
 ## 四、lint 报错的处理（不是绕过）
 
@@ -108,5 +109,5 @@ D:\ZHANGLEI\laity-archive\src\app\admin\layout.tsx
 
 - 判定：**条件性 PASS**——项目增改删、两条业务错误码、表单校验、概览计数、构建/类型/lint、红线与前台回归全部通过；第 1 条已验证到 GitHub 授权地址（client_id 与回调地址正确、GitHub 可达），第 2 条等我本人完整登录一次后回填。
 - 待我本人执行：浏览器打开 http://localhost:3000/admin → 点 `Sign in with GitHub` → 用 GitHub 账号 laity9527 授权 → 应回到 /admin；然后截 /admin 与 /admin/projects 两张带地址栏截图。
-- 待你决定：第三节的 A/B——是否要自建登录页以消除"多一次点击 + 默认页视觉不合铁律"。
+- 已定：第三节按 A 走，B（自建登录页）排到后续单独做。
 - 范围外发现：I009（NextAuth v4 与 Next 16 的组合需单独评估升级）、I010（真实账号授权未验证）、I011（退出入口的 lint 规则禁用）、I012（NextAuth 默认登录页视觉与点击次数）。

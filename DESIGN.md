@@ -53,6 +53,12 @@
 - 代价：JWT 在 `NEXTAUTH_SECRET` 泄露时可被伪造，因此该 secret 只允许放环境变量；单条已签发会话在过期前无法服务端撤销（改白名单只能阻止其访问 /admin，不能作废那枚 cookie）。
 - 后续可拓展成数据库会话的路径（明确写出，未来照此执行）：① 依赖加 `@next-auth/prisma-adapter`（v4 配套版，MIT），停点报批；② schema 增 `User / Account / Session / VerificationToken` 四模型并 `migrate dev`；③ `authOptions` 追加 `adapter` 与 `session: { strategy: "database" }`；④ Proxy 里的 `getToken()` 只认 JWT，database 模式下必须改为按 cookie 查 Session 表（新增 `src/lib/session.ts`，这是改动量最大的一处）；⑤ 页面侧 `getServerSession(authOptions)` 与 `signIn` 回调逻辑不变。
 
+### D9：已发布日志被编辑保存后自动退回草稿
+- 决策：编辑任一已发布日志并保存，`isPublished` 一律置 false；旧的 `contentHash` 与 `publishedAt` 保留为"上次发布"历史，重新发布时按当前正文重算哈希并刷新时间。
+- 理由：哈希只对发布那一刻的正文成立，正文一变印章就与内容脱钩，存证语义直接失效。保留旧值而不是清空，是为了后台能显示"上次发布于何时、哈希是什么"，不销毁证据。
+- 代价：改一个错别字也会让日志短暂下线，必须手动再点一次发布；接受。
+- 连带：Phase 4 编辑页据此显示"已发布的日志一保存就退回草稿"，并展示上一次发布的哈希与时间。
+
 ## 二、分阶段路线图（6 个 Phase，每个都是可运行最小闭环）
 
 通则：每个 Phase 开新会话 + 执行指令卡；完成后独立验收 → git commit → 截图/日志归档。
@@ -119,7 +125,8 @@ src/app/admin/project-actions.ts、src/lib/projects.ts、.env.example
 
 允许触碰的文件：
 src/app/admin/logs/new/page.tsx、src/app/admin/logs/[id]/edit/page.tsx、
-src/components/Editor.tsx、src/app/admin/log-actions.ts、src/lib/publish.ts、src/lib/logs.ts（补管理侧查询，独立于 getSafeLogs）
+src/components/Editor.tsx、src/app/admin/log-actions.ts、src/lib/publish.ts、src/lib/logs.ts（补管理侧查询，独立于 getSafeLogs）、
+src/app/admin/page.tsx（2026-10-30 经我批准：最近动态加编辑链接、底部加新建入口）
 
 验收标准：
 1. 新建草稿（含 BEFORE/AFTER）保存成功，前台三页不可见；

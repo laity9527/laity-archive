@@ -5,6 +5,7 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-10-30: 最近动态加编辑链接、底部加新建日志入口（Phase 4，经批准改本清单外文件）
  */
 import Link from "next/link";
 import { getAdminOverview } from "@/lib/projects";
@@ -65,12 +66,21 @@ export default async function AdminHomePage() {
                   {log.isPublished ? "PUBLISHED" : "DRAFT"} ·{" "}
                   {log.updatedAt.toISOString().slice(0, 10)}
                 </span>
+                <Link
+                  href={`/admin/logs/${log.id}/edit`}
+                  className="border-b border-ink font-mono text-[11px] text-ink"
+                >
+                  编辑
+                </Link>
               </li>
             ))}
           </ul>
         )}
         <p className="mt-6 font-mono text-[11px] text-ink-soft">
-          日志编辑与发布在 Phase 4 接入，这里先只读。
+          <Link href="/admin/logs/new" className="border-b border-ink text-ink">
+            新建日志
+          </Link>
+          <span className="ml-4">草稿对外不可见，发布后前台立即可见</span>
         </p>
       </section>
 
