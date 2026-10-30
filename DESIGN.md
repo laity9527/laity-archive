@@ -41,11 +41,11 @@
 - 理由：小内存服务器防 OOM，镜像体积小；被否备选完整 node_modules 进镜像——体积与内存双输。
 - 代价：next.config 需设 output: "standalone"（该配置变更列入 Phase 6 文件清单，经本 DESIGN 批准）；接受。
 
-### D7：/logs/:slug 的真 404 由 Proxy 前置判定
-- 决策：新增 src/proxy.ts，matcher 只匹配 `/logs/:slug`；命中已发布日志则放行，未命中直接返回带 404 状态码的极简纸白页（noindex + no-store）。
-- 理由：本项目开了 Cache Components（pPR），流式响应固定以 200 开头，页面级 notFound() 只能在正文已流式之后才执行，实测未发布 slug 返回 200 + 错误页。Next 官方文档对动态路由真 404 的处方就是 Proxy 前置检查；rewrite 携带 status 实测同样被渲染路由的 200 覆盖，只有直接返回 Response 才保留状态码（两种写法都已实测）。
-- 代价：每次详情页访问多一次 `select id` 数据库查询；Proxy 内不得依赖共享模块与全局状态；数据库不可用时该路由返回 500 而非 404（诚实失败，不做兜底）；接受。
-- 连带：Phase 3 的鉴权文件由 src/middleware.ts 改为 src/proxy.ts，与本节同一文件扩展。
+### D7：/logs/:slug 与 /projects/:slug 的真 404 由 Proxy 前置判定
+- 决策：src/proxy.ts 的 matcher 为 `["/logs/:slug", "/projects/:slug", "/admin/:path*"]`；日志按"是否已发布"判定，项目按"slug 是否存在"判定（`select slug` 落在唯一索引上），未命中直接返回带 404 状态码的极简纸白页（noindex + no-store），文案按路由类型分别给出、请求里的 slug 一律不拼进 HTML。
+- 理由：本项目开了 Cache Components（pPR），流式响应固定以 200 开头，页面级 notFound() 只能在正文已流式之后才执行，实测未发布日志与不存在项目都返回 200 + 错误页。Next 官方文档对动态路由真 404 的处方就是 Proxy 前置检查；rewrite 携带 status 实测同样被渲染路由的 200 覆盖，只有直接返回 Response 才保留状态码（两种写法都已实测）。
+- 代价：每次详情类访问多一次 `select` 查询；Proxy 内不得依赖共享模块与全局状态；数据库不可用时该路由返回 500 而非 404（诚实失败，不做兜底）；接受。
+- 连带：Phase 3 的鉴权文件由 src/middleware.ts 改为 src/proxy.ts，与本节同一文件扩展。Phase 5a 的 `/projects/:slug` 由我在 2026-10-30 批准扩入（I015），同时把该文件写进 5a 清单。
 
 ### D8：Phase 3 先用 JWT 会话，数据库会话留作后续可拓展项
 - 决策：NextAuth v4 默认 JWT 会话，不建 Session/Account/User 表；会话里只放 `githubId` 与展示名，授权判定唯一依据仍是 `ALLOWED_GITHUB_IDS`。
@@ -58,6 +58,12 @@
 - 理由：哈希只对发布那一刻的正文成立，正文一变印章就与内容脱钩，存证语义直接失效。保留旧值而不是清空，是为了后台能显示"上次发布于何时、哈希是什么"，不销毁证据。
 - 代价：改一个错别字也会让日志短暂下线，必须手动再点一次发布；接受。
 - 连带：Phase 4 编辑页据此显示"已发布的日志一保存就退回草稿"，并展示上一次发布的哈希与时间。
+
+### D10：前台项目页的公开口径 = 字段白名单 + 只统计已发布日志
+- 决策：`/projects` 列出全部项目（含零日志项目），`/projects/[slug]` 只列该项目 `isPublished: true` 的日志；公开查询用显式 `select` 白名单（slug、名称、类型、状态、简介、仓库地址，详情页另加 `createdAt`），不返回 `id`；日志条数与最近日期一律由 `getSafeLogs` / `where: { isPublished: true }` 得出。
+- 理由：Project 模型没有发布开关，"哪些字段可以给访客看"只能由查询层说了算；靠 `include` 全量返回再在页面里挑，等于把以后加进表的私有字段默认发给访客。计数若走 `_count` 全量会把草稿数量也漏出去。
+- 代价：项目本身无法"下线"（想藏一个项目只能删掉或改名）；将来若要给项目加发布开关，需改 schema 并同步这两处查询。
+- 连带：数据层落在 src/lib/projects.ts（AGENTS.md 禁止页面直查库），已在 Phase 5a 清单里注明。
 
 ## 二、分阶段路线图（6 个 Phase，每个都是可运行最小闭环）
 
@@ -139,17 +145,32 @@ src/app/admin/page.tsx（2026-10-30 经我批准：最近动态加编辑链接�
 ### Phase 5：P1 增强——OSS 图片 + 项目维度页面
 交付物：编辑器可传图得外链；/projects 与 /projects/[slug] 上线。
 
-允许触碰的文件：
-src/lib/oss.ts、src/app/admin/upload-action.ts、src/components/Editor.tsx（接入上传）、
-src/app/projects/page.tsx、src/app/projects/[slug]/page.tsx、next.config.ts（images.remotePatterns 增 OSS 域名，经本 DESIGN 批准）
+> 2026-10-30 经我批准拆段：OSS 的前置动作（开 Bucket、配 RAM 密钥）是外部账号与计费操作，
+> 不由 AI 执行，故本 Phase 拆成 **5a 项目维度页**（不依赖 OSS，先做先验收）与 **5b OSS 传图**
+> （待密钥就绪再做）。原风险清单"OSS 受阻则 Phase 5 顺延"据此收窄为"5b 顺延"。
 
-前置动作（人工）：开通阿里云 OSS Bucket、配置 RAM 子账号最小权限密钥，填入 .env——外部账号与计费操作由我本人执行，AI 停点等待。
+**5a 允许触碰的文件**：
+src/app/projects/page.tsx、src/app/projects/[slug]/page.tsx、
+src/lib/projects.ts（2026-10-30 补：AGENTS.md 禁止页面直查库，公开侧查询必须有 src/lib 落点，
+故在此加 listPublicProjects / getPublicProjectBySlug 两个只返回公开字段、日志只计已发布的函数，
+以及 Proxy 用的 isProjectSlug）、
+src/proxy.ts（2026-10-30 经我批准：matcher 增 `/projects/:slug`，404 文案按路由类型分开给，见 D7 与 I015）
 
-验收标准：
-1. 编辑器上传 png 返回 OSS 外链，正文引用可显示；服务器本地目录无新增图片文件；
-2. 上传 .exe 或 6MB 文件被拒绝（IMG_001）；
-3. /projects 列出全部项目，/projects/[slug] 显示该项目已发布日志（草稿仍不可见）；
+**5a 验收标准**：
+1. /projects 列出全部项目（含零日志项目，计数为 0）；
+2. /projects/[slug] 显示该项目已发布日志，草稿在任何前台页都不可见、也不计入条数；
+3. 不存在的 slug 返回 404 状态码（经批准由 Proxy 前置判定，见 D7）；
 4. `npm run lint` / `npm run build` 通过。
+
+**5b 允许触碰的文件**：
+src/lib/oss.ts、src/app/admin/upload-action.ts、src/components/Editor.tsx（接入上传）、
+next.config.ts（images.remotePatterns 增 OSS 域名，经本 DESIGN 批准）
+
+**5b 前置动作（人工）**：开通阿里云 OSS Bucket、配置 RAM 子账号最小权限密钥，填入 .env——外部账号与计费操作由我本人执行，AI 停点等待；确需新增 OSS SDK 时先报许可再装。
+
+**5b 验收标准**：
+1. 编辑器上传 png 返回 OSS 外链，正文引用可显示；服务器本地目录无新增图片文件；
+2. 上传 .exe 或 6MB 文件被拒绝（IMG_001）。
 
 ### Phase 6：生产部署 + 软著材料整理
 交付物：自有服务器上 HTTPS 可访问的生产站点；docs/04 软著材料成套。

@@ -1,27 +1,54 @@
 /**
  * 文件：src/proxy.ts
- * 描述：请求前置校验：/logs/:slug 未命中已发布日志直接返回 404；/admin 全路由校验登录与白名单
+ * 描述：请求前置校验：/logs/:slug 与 /projects/:slug 未命中记录直接返回 404；/admin 全路由校验登录与白名单
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-10-30: matcher 扩展 /admin/:path*，加登录态与白名单校验（Phase 3）
+ * - 2026-10-30: matcher 扩展 /projects/:slug，404 页文案按路由类型分别给出（Phase 5a，经我批准）
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { isAllowedGithubId } from "@/auth";
 import { isPublishedLogSlug } from "@/lib/logs";
+import { isProjectSlug } from "@/lib/projects";
 
-export const config = { matcher: ["/logs/:slug", "/admin/:path*"] };
+export const config = {
+  matcher: ["/logs/:slug", "/projects/:slug", "/admin/:path*"],
+};
 
-const NOT_FOUND_HTML = `<!doctype html>
+// 文案全部是常量，请求里的 slug 不会拼进 HTML
+const NOT_FOUND_COPY = {
+  log: {
+    title: "404 · 日志不存在",
+    heading: "这条日志不存在",
+    hint: "它可能还没有发布，或者链接已经失效。",
+    backHref: "/logs",
+    backText: "← 返回日志列表",
+  },
+  project: {
+    title: "404 · 项目不存在",
+    heading: "这个项目不存在",
+    hint: "链接可能失效了，也可能这个项目还没有进档案库。",
+    backHref: "/projects",
+    backText: "← 返回项目列表",
+  },
+};
+
+type NotFoundKind = keyof typeof NOT_FOUND_COPY;
+
+function notFoundHtml(kind: NotFoundKind) {
+  const copy = NOT_FOUND_COPY[kind];
+
+  return `<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="robots" content="noindex">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>404 · 日志不存在</title>
+<title>${copy.title}</title>
 <style>
 html,body{margin:0;padding:0;background:#FBFBF9;color:#131313}
 body{font-family:-apple-system,"Segoe UI","Noto Sans SC",sans-serif}
@@ -36,27 +63,32 @@ a:hover{border-bottom-color:#131313}
 <body>
 <main>
 <p class="label">404 · NOT FOUND</p>
-<h1>这条日志不存在</h1>
-<p>它可能还没有发布，或者链接已经失效。</p>
-<a href="/logs">← 返回日志列表</a>
+<h1>${copy.heading}</h1>
+<p>${copy.hint}</p>
+<a href="${copy.backHref}">${copy.backText}</a>
 </main>
 </body>
 </html>`;
+}
 
-function notFoundResponse() {
-  return new NextResponse(NOT_FOUND_HTML, {
+function notFoundResponse(kind: NotFoundKind) {
+  return new NextResponse(notFoundHtml(kind), {
     status: 404,
     headers: {
       "content-type": "text/html; charset=utf-8",
       "x-robots-tag": "noindex",
-      // 日志发布后同一个 URL 必须能立刻返回 200，不能让 CDN 缓存住这一次 404
+      // 记录发布后同一个 URL 必须能立刻返回 200，不能让 CDN 缓存住这一次 404
       "cache-control": "no-store",
     },
   });
 }
 
-function readSlug(pathname: string) {
-  const segment = pathname.slice("/logs/".length).replace(/\/+$/, "");
+function readSegment(pathname: string, prefix: string) {
+  if (!pathname.startsWith(prefix)) {
+    return null;
+  }
+
+  const segment = pathname.slice(prefix.length).replace(/\/+$/, "");
 
   if (!segment) {
     return null;
@@ -90,11 +122,22 @@ export async function proxy(request: NextRequest) {
     return guardAdmin(request);
   }
 
-  const slug = readSlug(pathname);
+  const logSlug = readSegment(pathname, "/logs/");
 
-  if (slug && (await isPublishedLogSlug(slug))) {
-    return NextResponse.next();
+  if (logSlug) {
+    return (await isPublishedLogSlug(logSlug))
+      ? NextResponse.next()
+      : notFoundResponse("log");
   }
 
-  return notFoundResponse();
+  const projectSlug = readSegment(pathname, "/projects/");
+
+  if (projectSlug) {
+    return (await isProjectSlug(projectSlug))
+      ? NextResponse.next()
+      : notFoundResponse("project");
+  }
+
+  // matcher 只放行上面两类动态路由与 /admin；走到这里说明 matcher 被改宽了，放行比误拦安全
+  return NextResponse.next();
 }

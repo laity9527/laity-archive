@@ -1,10 +1,11 @@
 /**
  * 文件：src/lib/projects.ts
- * 描述：管理侧项目数据访问：列表（含日志数）、概览统计、增改删与 PRJ_001/PRJ_002 判定
+ * 描述：项目数据访问：管理侧列表（含日志数）、概览统计、增改删与 PRJ_001/PRJ_002 判定；公开侧列表与按 slug 查询
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-10-30: Phase 5a 补 listPublicProjects / getPublicProjectBySlug，只取可公开展示的字段
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -34,8 +35,53 @@ export async function listProjects() {
   });
 }
 
+// 项目表没有发布开关，公开范围靠字段白名单控制；日志只统计已发布，避免草稿计数外泄
+export async function listPublicProjects() {
+  return db.project.findMany({
+    orderBy: { createdAt: "asc" },
+    select: {
+      slug: true,
+      name: true,
+      kind: true,
+      status: true,
+      summary: true,
+      repoUrl: true,
+      logs: {
+        where: { isPublished: true },
+        select: { beforeDate: true },
+        orderBy: { beforeDate: "desc" },
+      },
+    },
+  });
+}
+
+export async function getPublicProjectBySlug(slug: string) {
+  return db.project.findUnique({
+    where: { slug },
+    select: {
+      slug: true,
+      name: true,
+      kind: true,
+      status: true,
+      summary: true,
+      repoUrl: true,
+      createdAt: true,
+    },
+  });
+}
+
 export async function getProjectById(id: string) {
   return db.project.findUnique({ where: { id } });
+}
+
+// Proxy 前置判定只关心 slug 命中与否，select slug 让这次查询停留在唯一索引层面
+export async function isProjectSlug(slug: string) {
+  const hit = await db.project.findUnique({
+    where: { slug },
+    select: { slug: true },
+  });
+
+  return hit !== null;
 }
 
 export async function getAdminOverview() {
