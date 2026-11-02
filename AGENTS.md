@@ -12,7 +12,10 @@
 - 样式：Tailwind CSS（禁止引入其他 UI 组件库、CSS 框架、图标库）
 - ORM：Prisma（provider 固定为 postgresql）
 - 数据库：PostgreSQL 16（Docker 容器，库名 laity）
-- 登录：NextAuth.js（后台 /admin 用，仅此一处）
+- 登录：NextAuth.js v4.24.15（后台 /admin 用，仅此一处），提供方固定 GitHub OAuth，
+  放行按 `ALLOWED_GITHUB_IDS` 数字 ID 白名单（非白名单在回调处拒绝，AccessDenied），登录页自建在 `/login`（I012-B）。
+  会话判定共三处：`src/proxy.ts` 前置守卫（matcher 覆盖 `/admin/:path*`）、`src/app/admin/layout.tsx`、
+  各 Server Action 内部的 `getServerSession`（不依赖前端隐藏按钮）
 - 包管理：npm（禁止 pnpm/yarn/bun）
 
 ### 版本事实（最高优先级）

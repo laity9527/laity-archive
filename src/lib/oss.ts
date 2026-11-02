@@ -5,6 +5,7 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: Phase 5b 初始创建。密钥只从环境变量读取；对象名完全由服务端生成，不使用上传文件名
+ * - 2026-11-02: 删掉零引用的 isSupportedImage()，类型判定统一走 EXT_BY_MIME 查表
  */
 import { randomBytes } from "node:crypto";
 import OSS from "ali-oss";
@@ -42,10 +43,6 @@ function buildObjectKey(ext: string) {
   const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 
   return `logs/${year}-${month}/${stamp}-${randomBytes(6).toString("hex")}.${ext}`;
-}
-
-export function isSupportedImage(mime: string) {
-  return mime in EXT_BY_MIME;
 }
 
 export async function uploadImage(file: File): Promise<UploadImageResult> {

@@ -190,7 +190,8 @@ http-proxy-agent 等一批业务上用不到的传递依赖请进来，而这句
 - 未验证项与证据：
   - 第 1–4 条（真上传得外链、本地无落盘、.exe 被拒、6MB 被拒）——AI 侧无 GitHub 会话，Proxy 挡住未登录请求，不伪造会话（I010/I013/I017），需我本人登录点一次；
   - 第 5 条（AUTH_001）——HTTP 层不可达，属结构性未验证，长期靠代码内第二道防线。
-- 范围外发现：`isSupportedImage()` 死代码、`.env` 两个未被读取的键（I023），均记录未动手。
+- 同日补记（本表写完之后发生的事，细节见 Phase-6 环境准备自测表第十一节）：`isSupportedImage()` 死代码经批准已删除；I023 定为代码不动、两个多余变量由我本人从本地 `.env` 删除；preflight 也补了同四条 OSS 判定。本机还做了一次整套生产编排预跑，扒出两条新账 I025（migrator 镜像没跑 `prisma generate`，seed 跑不了）与 I026（`docker compose build` 未刷新 `laity-archive-migrate:prod` 的旧镜像标签，真因未定位）。
+
 - 下一步（按序）：
   1. 我本人登录 `/admin/logs/new` 点一次真上传，回填第 1–4 条：直链在浏览器能否匿名打开（公共读）、`git status` 与 `tmp/`、`uploads/` 无新增图片、.exe 与 >5MB 的拒收提示文案；补 docs/03 带地址栏截图；
   2. 真上传若 404/AccessDenied，先查 I023（`.env` 里 `OSS_PUBLIC_BASE_URL` 与代码硬拼域名不一致）；

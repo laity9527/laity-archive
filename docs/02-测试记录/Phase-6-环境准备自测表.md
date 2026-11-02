@@ -100,3 +100,44 @@
 - 判定：**Phase 6 环境准备 PASS**——镜像能构建、能起、能在容器内复现草稿隔离与哈希复核，上线门禁在本地就拦得住 root 与 http 域名；`nginx -t`、编排、端口暴露面、运行身份全部实测。
 - 仍挂在线上那半：域名/证书/生产 OAuth App/带地址栏截图（第 1b、2、3、5 条的线上部分）。
 - 需要你处理的三件：① 服务器上把 `.env.production.example` 复制成 `.env.production` 填真实值；② 放好 `deploy/certs/laity.crt|key` 并把 `nginx.conf` 里的 `server_name` 换成正式域名；③ 在有官方网络的环境里把 `node:24-slim`、`nginx:1.27-alpine` 与官方逐层比对一次（第六节留了摘要）。
+
+## 十一、2026-11-02 整套编排本机预跑（6b 中能在本机验的部分）
+
+背景：6b 的验收第 1、3 条写在"生产容器启动后"，但除了**公网证书受信**与**真实 GitHub 登录**两项，其余链路都能在本机跑穿。经我指派做一次预跑，用哑值，不碰任何真实凭据。
+
+前置与副作用控制：
+
+| 项 | 做法 | 处置 |
+|---|---|---|
+| 生产变量 | `tmp/dummy-prod.env`，口令/密钥/OAuth 全为 `FAKE_*` 字面量 | 跑完删除 |
+| TLS 证书 | `openssl req -x509` 自签，`CN=laity.example.com`，有效期 1 天 | 跑完删除（`deploy/certs/` 未被 `.gitignore` 覆盖，删后用 `git status` 复核无残留） |
+| 数据库卷 | compose 建的 `laity_prod_data`，跑前是空的（`migrate deploy` 实打实应用了 `20261030070530_init`） | `down` 时**保留**，卷里有我造的三条测试数据；不要了就 `docker volume rm laity_prod_data` |
+| 访问方式 | 不改 hosts，用 `curl --resolve laity.example.com:443:127.0.0.1`；自签证书配 `-k --ssl-no-revoke` | — |
+
+执行序列（全部真实退出码）：
+
+| 步 | 命令 | 结果 |
+|---|---|---|
+| 1 | `docker compose --env-file tmp/dummy-prod.env -f docker-compose.prod.yml build` | 退出 0，`✓ Compiled successfully in 4.3s`、`13/13` 静态页、`naming to laity-archive:prod` |
+| 2 | `... run --rm migrate` | 退出 0，`Applying migration 20261030070530_init` → `All migrations have been successfully applied.` |
+| 3 | `... up -d` | 退出 0。日志顺序可见门禁生效：`laity-preflight Waiting` → `Exited` → `laity-db-prod Healthy` → app/nginx 启动 |
+| 4 | preflight 通过行 | `上线门禁通过：数据库用户 laity_app、口令长度 20、https://laity.example.com、OSS oss-cn-beijing/laity-archive（前缀 logs/）` |
+| 5 | 故意把 `OSS_REGION=` 置空再 `up` | 退出 1，`error while interpolating services.app.environment.OSS_REGION: required variable OSS_REGION is missing a value: OSS Bucket 所在地域，例如 oss-cn-beijing`（app 与 preflight 两处各报一次），**没有任何容器被拉起** |
+
+路由探测（经 nginx TLS，`--resolve` 指向 127.0.0.1）：
+
+| 路径 | 码 | 说明 |
+|---|---|---|
+| `/`、`/logs`、`/projects`、`/projects/earth-mirror`、`/login` | 200 | 前台与登录页均出内容 |
+| `/admin` | 307 → `https://laity.example.com/login?callbackUrl=%2Fadmin` | Proxy 前置守卫在生产镜像里照常工作 |
+| `/logs/probe-draft`（草稿） | 404 | 草稿隔离 |
+| `/logs/no-such-log` | 404 | 响应头 `cache-control: no-store`、`x-robots-tag: noindex`、`Content-Type: text/html; charset=utf-8` |
+| `http://laity.example.com/logs`（80） | 301 → `https://laity.example.com/logs` | 全站跳转 |
+| 7 MB 请求体 POST | 413 | nginx `client_max_body_size 6m` 生效 |
+| 5 MB 请求体 POST | 200 | 未触发 nginx 上限（应用层 5 MB 判定属 5b 运行时项，仍未验） |
+
+存证复核：用 `psql` 造一条已发布日志（正文与 seed 同文本）与一条草稿，另在容器外用与 D5 相同口径独立重算 SHA-256，得 `a0197426d22d51d17a07c7e7546fd548cce8cde5b180870ba5b8e4af5dcca2f5`；库里存的值与详情页印章显示的完全一致；`/`、`/logs`、`/projects`、`/projects/earth-mirror` 四页 grep 草稿标题均为 `0`，项目计数是 `1 LOGS` 而不是 2。
+
+本轮新发现两条（已记 ISSUES）：I025 生产镜像跑不了 seed；I026 `docker compose build` 未刷新 `migrate` 服务的旧镜像标签。
+
+本机预跑覆盖不到的：受信证书链（Let's Encrypt 实发）、真实 GitHub 授权与白名单拦截（I010）、5b 的真上传（需登录）、以及 `docs/03-截图` 的带地址栏留照。
