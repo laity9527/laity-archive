@@ -42,6 +42,7 @@ const ORDER = [
   "src/lib/logs.ts",
   "src/lib/projects.ts",
   "src/lib/publish.ts",
+  "src/lib/oss.ts",
   "src/lib/markdown.tsx",
   "src/auth.ts",
   "src/proxy.ts",
@@ -64,6 +65,7 @@ const ORDER = [
   "src/app/admin/project-actions.ts",
   "src/app/admin/projects/page.tsx",
   "src/app/admin/log-actions.ts",
+  "src/app/admin/upload-action.ts",
   "src/app/admin/logs/new/page.tsx",
   "src/app/admin/logs/[id]/edit/page.tsx",
 ];

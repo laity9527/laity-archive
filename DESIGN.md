@@ -189,6 +189,13 @@ next.config.ts（images.remotePatterns 增 OSS 域名，经本 DESIGN 批准）
 
 **5b 前置动作（人工）**：开通阿里云 OSS Bucket、配置 RAM 子账号最小权限密钥，填入 .env——外部账号与计费操作由我本人执行，AI 停点等待。
 
+**5b 已确认的 OSS 参数（2026-10-30，均为非密钥信息）**：
+- Bucket `laity-archive`，地域华北2（北京），endpoint `oss-cn-beijing.aliyuncs.com`，图片外链域名 `https://laity-archive.oss-cn-beijing.aliyuncs.com`
+- 写入前缀固定 `logs/`；Bucket 为公共读，前台 `<img>` 直链匿名读取，因此不需要 GetObject 权限
+- RAM 策略 `LaityOssUploadPolicy` 已是最小权限：Action 只有 `oss:PutObject`，Resource 限定 `acs:oss:*:*:laity-archive/logs/*`，无删除、无列举
+- 需要的环境变量（**值由我本人写进本地 `.env`，不经过对话、不入库**）：`OSS_REGION`、`OSS_BUCKET`、`OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`；`next.config.ts` 的 `images.remotePatterns` 增上述外链域名
+- 安全提醒：这把 AK 与服务器 root 口令都曾在本次对话里以明文出现，材料跑通后应在 RAM 控制台轮换该 AccessKey，并修改服务器口令、关闭密码登录与 root 直登（改用密钥 + `PasswordAuthentication no`），安全组只放行 22/80/443。
+
 **5b 依赖已批准（2026-10-30）**：走 A 方案 `ali-oss@6.23.0`（MIT，最近发布 2025-12-17）。`npm install --dry-run` 实测新增 **68** 个包，直接依赖含 lodash、urllib@2、xml2js、ws、socks 等；装之前逐个核许可证（GPL/AGPL 一律拒），装完把 package.json 与 package-lock.json 的变化一并上报，含被删条目。被否备选：B `@alicloud/oss20190517@1.0.6`（Apache-2.0，dry-run 47 个包，发布更旧 2024-09-17）；C 零依赖自写 V4 签名 PUT（0 个包，但签名细节要等真库联调才暴露，官方文档也写明优先用 SDK）。
 
 **5b 验收标准**：
