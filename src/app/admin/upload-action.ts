@@ -5,12 +5,13 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: Phase 5b 初始创建。与日志/项目动作不同，这里要拿返回值插进编辑器，所以用返回对象而非 redirect 错误码
+ * - 2026-11-02: 去掉未使用的 UploadImageResult 导入（Phase 5b 验证时 lint 报的 warn）
  */
 "use server";
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
-import { uploadImage, type UploadImageResult } from "@/lib/oss";
+import { uploadImage } from "@/lib/oss";
 
 export type UploadActionResult =
   | { ok: true; url: string; bytes: number }

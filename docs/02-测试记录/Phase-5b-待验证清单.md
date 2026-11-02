@@ -5,6 +5,23 @@
 状态：**代码已写完，一行未验证、一行未提交**
 用途：本会话的 shell 被运行时安全策略冻结（原因见第六节），这份清单是给下一个会话/下一次动手时的接手单。
 
+> 2026-11-02 更新（新会话）：shell 已恢复，第 0 步实测见第八节（已回填）。
+> 第一节的六个文件**已作为 b26b7ef 提交入库**，但"故意不可编译"这一点没变——
+> `ali-oss` 依赖仍未安装，`npx tsc --noEmit` 仍报 TS2307。第二节的装包及之后的验证步骤均未执行。
+>
+> 2026-11-02 续（本轮执行结果，明细见同目录 `Phase-5b-自测表.md`）：第二节已跑到"静态验证＋构建验证"——
+> `ali-oss@6.23.0` 与 `@types/ali-oss@6.23.4` 均经我批准并已装上（lockfile 变化含 4 条被删条目，已上报）；
+> `npm run lint`、`npx tsc --noEmit` 退出 0；跨平台 `npm ci --dry-run` 首跑红（I018 复发），
+> 容器内重算 lockfile 后两侧绿；`npm run build` 首跑红（`urllib` 懒加载 `require('proxy-agent')`），
+> 经批准走 I022 方案 A 在 `next.config.ts` 加 `serverExternalPackages: ["ali-oss"]` 后退出 0，
+> 并用 Phase 6a 的 Dockerfile 实构建验穿 standalone 产物与镜像内运行时解析。
+> **本清单第二节的第 1–4 步（lint / tsc / build / 跨平台 `npm ci`）已全部执行完**；
+> 第 5 步真上传联调需我本人登录点一次（AI 侧无 GitHub 会话，不伪造），也就是第三节验收 1–5 条里的运行时部分；
+> 第 6 步软著材料重跑排在第 5 步之后。
+> 本轮改动全部**未提交**，等真上传回填后一起入库。
+
+
+
 ---
 
 ## 一、当前工作区状态（全部未提交）
@@ -61,6 +78,7 @@ npm install -D @types/ali-oss
 - **nginx 上限**：`deploy/nginx.conf` 的 `client_max_body_size 6m` 与 5MB 限制是配套的（留 1MB 余量），线上改限制要两处一起改。
 - **Markdown 渲染**：默认 `rehype-sanitize` schema 允许 `img` 与 http/https 的 src，`.log-body img` 已有 `max-width:100%`，所以渲染管线未改。若发现图片被清洗掉，先确认是 markdown 语法问题还是 schema 问题，别急着放宽 schema。
 - **未使用 next/image**：正文图片是普通 `<img>`，因此 `next.config.ts` 的 `images.remotePatterns` **本轮没有加**——这与 DESIGN 5b 清单里"next.config.ts（images.remotePatterns 增 OSS 域名）"这一项不符，属我做的简化，需要你追认或要求改回 next/image。
+  **2026-11-02 已追认**：张磊选"追认简化，不加 remotePatterns"，DESIGN.md 5b 文件清单项已按实况作废（见 DESIGN 该节修正块），`next.config.ts` 本轮未动。
 
 ## 五、代码写完后必须跟着改的文档
 
@@ -88,10 +106,21 @@ npm install -D @types/ali-oss
 
 ```
 $ npm run lint
-（待粘贴）
+> laity-archive@0.1.0 lint
+> eslint
+
+D:\ZHANGLEI\laity-archive\src\app\admin\upload-action.ts
+  13:28  warning  'UploadImageResult' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 1 problem (0 errors, 1 warning)
 
 $ npx tsc --noEmit
-（待粘贴）
+src/lib/oss.ts(10,17): error TS2307: Cannot find module 'ali-oss' or its corresponding type declarations.
+（退出码 2）
 ```
 
-预期看到 `ali-oss` 模块/类型声明缺失两类报错；实际输出与预期一致后再执行第二节的 `npm install`。
+与预期一致：`ali-oss` 模块缺失这一条如期出现，说明工作区状态与本清单相符（依赖仍未装）。
+类型声明缺失没有单独成第二条报错，TS2307 的文案已把"或其相应的类型声明"并进了同一条。
+新增一条本清单没预料到的红点：`src/app/admin/upload-action.ts:13` 从 `@/lib/oss` 引入了
+`UploadImageResult` 却没有使用（实际用的是本地定义的 `UploadActionResult`），lint 报未使用变量警告。
+

@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-10-30: 脚手架创建
  * - 2026-10-30: Phase 6 加 output: "standalone"（D6 批准的配置变更，仅这一项）
+ * - 2026-11-02: Phase 5b 加 serverExternalPackages: ["ali-oss"]（经我批准，见 I022）
  */
 import type { NextConfig } from "next";
 
@@ -14,6 +15,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
+  // I022：ali-oss 的依赖 urllib 里有懒加载 require('proxy-agent')，打进 Server bundle 会静态解析失败，
+  // 故排除出打包，运行时用原生 require
+  serverExternalPackages: ["ali-oss"],
   turbopack: {
     rules: {
       "*.css": {

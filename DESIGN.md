@@ -187,13 +187,17 @@ src/proxy.ts（2026-10-30 经我批准：matcher 增 `/projects/:slug`，404 文
 src/lib/oss.ts、src/app/admin/upload-action.ts、src/components/Editor.tsx（接入上传）、
 next.config.ts（images.remotePatterns 增 OSS 域名，经本 DESIGN 批准）
 
+> 2026-11-02 修正：`next.config.ts` 这一项**作废**。正文图片走普通 `<img>`（`rehype-sanitize` 默认允许
+> http/https 的 img/src，`.log-body img` 已限 `max-width:100%`），不经 `next/image`，因此不需要
+> `images.remotePatterns`。这是我追认的简化，理由与验证见 docs/02-测试记录/Phase-5b-自测表.md 第四节。
+
 **5b 前置动作（人工）**：开通阿里云 OSS Bucket、配置 RAM 子账号最小权限密钥，填入 .env——外部账号与计费操作由我本人执行，AI 停点等待。
 
 **5b 已确认的 OSS 参数（2026-10-30，均为非密钥信息）**：
 - Bucket `laity-archive`，地域华北2（北京），endpoint `oss-cn-beijing.aliyuncs.com`，图片外链域名 `https://laity-archive.oss-cn-beijing.aliyuncs.com`
 - 写入前缀固定 `logs/`；Bucket 为公共读，前台 `<img>` 直链匿名读取，因此不需要 GetObject 权限
 - RAM 策略 `LaityOssUploadPolicy` 已是最小权限：Action 只有 `oss:PutObject`，Resource 限定 `acs:oss:*:*:laity-archive/logs/*`，无删除、无列举
-- 需要的环境变量（**值由我本人写进本地 `.env`，不经过对话、不入库**）：`OSS_REGION`、`OSS_BUCKET`、`OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`；`next.config.ts` 的 `images.remotePatterns` 增上述外链域名
+- 需要的环境变量（**值由我本人写进本地 `.env`，不经过对话、不入库**）：`OSS_REGION`、`OSS_BUCKET`、`OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`（2026-11-02 修正：不再包含 `images.remotePatterns`，理由见上方 5b 文件清单的修正块）
 - 安全提醒：这把 AK 与服务器 root 口令都曾在本次对话里以明文出现，材料跑通后应在 RAM 控制台轮换该 AccessKey，并修改服务器口令、关闭密码登录与 root 直登（改用密钥 + `PasswordAuthentication no`），安全组只放行 22/80/443。
 
 **5b 依赖已批准（2026-10-30）**：走 A 方案 `ali-oss@6.23.0`（MIT，最近发布 2025-12-17）。`npm install --dry-run` 实测新增 **68** 个包，直接依赖含 lodash、urllib@2、xml2js、ws、socks 等；装之前逐个核许可证（GPL/AGPL 一律拒），装完把 package.json 与 package-lock.json 的变化一并上报，含被删条目。被否备选：B `@alicloud/oss20190517@1.0.6`（Apache-2.0，dry-run 47 个包，发布更旧 2024-09-17）；C 零依赖自写 V4 签名 PUT（0 个包，但签名细节要等真库联调才暴露，官方文档也写明优先用 SDK）。
@@ -201,6 +205,16 @@ next.config.ts（images.remotePatterns 增 OSS 域名，经本 DESIGN 批准）
 **5b 验收标准**：
 1. 编辑器上传 png 返回 OSS 外链，正文引用可显示；服务器本地目录无新增图片文件；
 2. 上传 .exe 或 6MB 文件被拒绝（IMG_001）。
+
+> 2026-11-02 实测回填（详见 docs/02-测试记录/Phase-5b-自测表.md）：第 1、2 条**未验证**——需要登录态，
+> AI 侧没有我的 GitHub 会话（I010），且不伪造会话（I017 已被策略拦过）；待我本人登录点一次上传后回填。
+> 静态项：`npm run lint`、`npx tsc --noEmit` 退出 0；跨平台 `npm ci --dry-run` 首跑红（I018 复发，
+> Windows 装包把 linux 需要的 `@emnapi/core/runtime@1.11.3` 剪掉了），容器内重算 lockfile 后两侧退出 0。
+> `npm run build` **首跑 FAIL**：`ali-oss → urllib@2` 里懒加载 `require('proxy-agent')` 被 Turbopack 静态解析不到，
+> 处置要改 build 配置，故先挂 I022 等批准。**2026-11-02 经我批准走 A**：`next.config.ts` 加
+> `serverExternalPackages: ["ali-oss"]`（不新增依赖，不装 `proxy-agent`），复跑 build 退出 0；
+> 并用 Phase 6a 的 Dockerfile 实构建一次，镜像内 `require('ali-oss')` 与客户端实例化均成功，
+> 证明 standalone 产物完整。证据见 Phase-5b 自测表第一、三节。
 
 ### Phase 6：生产部署 + 软著材料整理
 交付物：自有服务器上 HTTPS 可访问的生产站点；docs/04 软著材料成套。
