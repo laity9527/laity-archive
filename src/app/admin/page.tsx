@@ -6,10 +6,13 @@
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-10-30: 最近动态加编辑链接、底部加新建日志入口（Phase 4，经批准改本清单外文件）
+ * - 2026-11-02: 补 instant 注释说明（false 是退出即时导航校验，不改变渲染方式）
  */
 import Link from "next/link";
 import { getAdminOverview } from "@/lib/projects";
 
+// 概览统计走未缓存查询，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
+// 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
 
 export default async function AdminHomePage() {

@@ -1,11 +1,13 @@
 /**
  * 文件：src/components/StatusBoard.tsx
- * 描述：首页档案状态看板：只展示已有公开日志的项目，含类型、状态与最近更新日期
+ * 描述：首页档案状态看板：全部项目（含零日志），含类型、状态、日志数与最近更新日期
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 创建，数据由首页从已发布日志归并得到，不额外查询项目表
+ * - 2026-11-02: latest 允许为 null（零日志项目不拿创建时间冒充最近更新），改由 src/lib/projects.ts 的 getArchiveBoard 供数
  */
+import Link from "next/link";
 
 export type StatusBoardEntry = {
   name: string;
@@ -13,7 +15,7 @@ export type StatusBoardEntry = {
   kind: string;
   status: string;
   count: number;
-  latest: Date;
+  latest: Date | null;
 };
 
 type StatusBoardProps = {
@@ -42,7 +44,12 @@ export function StatusBoard({ entries }: StatusBoardProps) {
           >
             {entry.status === "LIVE" ? "●" : "○"}
           </span>
-          <span className="text-base">{entry.name}</span>
+          <Link
+            href={`/projects/${entry.slug}`}
+            className="text-base hover:underline hover:decoration-1 hover:underline-offset-4"
+          >
+            {entry.name}
+          </Link>
           <span className="font-mono text-[11px] tracking-[0.2em] text-ink-soft">
             {entry.kind.toUpperCase()}
           </span>
@@ -50,7 +57,8 @@ export function StatusBoard({ entries }: StatusBoardProps) {
             {entry.status}
           </span>
           <span className="ml-auto font-mono text-[11px] text-ink-soft">
-            {entry.count} LOGS · {entry.latest.toISOString().slice(0, 10)}
+            {entry.count} LOGS
+            {entry.latest ? ` · ${entry.latest.toISOString().slice(0, 10)}` : " · 尚未发布"}
           </span>
         </li>
       ))}

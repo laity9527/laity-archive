@@ -6,48 +6,68 @@
  * 修改记录：
  * - 2026-10-30: 初始创建占位版
  * - 2026-10-30: Phase 2 完整版，看板与最新日志均读真库（未缓存查询由 Suspense 包裹）
+ * - 2026-11-02: 看板改由 getArchiveBoard 供数（零日志项目也上榜），新增精选区与 /projects 入口（I029/I030，经批准补做）
  */
 import Link from "next/link";
 import { Suspense } from "react";
-import { StatusBoard, type StatusBoardEntry } from "@/components/StatusBoard";
+import { StatusBoard } from "@/components/StatusBoard";
 import { Timeline } from "@/components/Timeline";
 import { getSafeLogs } from "@/lib/logs";
+import { getArchiveBoard } from "@/lib/projects";
 
 async function ArchiveOverview() {
-  const logs = await getSafeLogs();
+  const [board, logs] = await Promise.all([getArchiveBoard(), getSafeLogs()]);
 
-  const byProject = new Map<string, StatusBoardEntry>();
-  for (const log of logs) {
-    const entry = byProject.get(log.project.slug);
-    if (entry) {
-      entry.count += 1;
-      if (log.beforeDate > entry.latest) {
-        entry.latest = log.beforeDate;
-      }
-    } else {
-      byProject.set(log.project.slug, {
-        name: log.project.name,
-        slug: log.project.slug,
-        kind: log.project.kind,
-        status: log.project.status,
-        count: 1,
-        latest: log.beforeDate,
-      });
-    }
-  }
-
-  const entries = [...byProject.values()].sort(
-    (a, b) => b.latest.getTime() - a.latest.getTime(),
-  );
+  // 精选规则（本轮定的，无数据库字段）：有已发布日志的项目按最近更新取前 3；
+  // 零日志项目只进下面的状态看板，不进精选
+  const featured = board.filter((project) => project.count > 0).slice(0, 3);
   const latestLogs = logs.slice(0, 3);
 
   return (
     <>
-      <section>
+      {featured.length > 0 && (
+        <section>
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
+              FEATURED PROJECTS
+            </h2>
+            <Link
+              href="/projects"
+              className="border-b border-ink font-mono text-[11px] hover:underline hover:decoration-1 hover:underline-offset-4"
+            >
+              全部作品 →
+            </Link>
+          </div>
+          <ul className="border-t border-ink">
+            {featured.map((project) => (
+              <li key={project.slug} className="border-b border-hairline py-6">
+                <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                  <Link
+                    href={`/projects/${project.slug}`}
+                    className="text-lg hover:underline hover:decoration-1 hover:underline-offset-4"
+                  >
+                    {project.name}
+                  </Link>
+                  <span className="font-mono text-[11px] tracking-[0.2em] text-ink-soft">
+                    {project.kind.toUpperCase()} · {project.status} · {project.count} LOGS
+                  </span>
+                </div>
+                {project.summary && (
+                  <p className="mt-2 max-w-prose text-sm text-ink-soft">
+                    {project.summary}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className={featured.length > 0 ? "mt-20" : ""}>
         <h2 className="mb-4 font-mono text-[10px] tracking-[0.2em] text-ink-soft">
           ARCHIVE STATUS
         </h2>
-        <StatusBoard entries={entries} />
+        <StatusBoard entries={board} />
       </section>
 
       <section className="mt-20">

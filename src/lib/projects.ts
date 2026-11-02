@@ -6,9 +6,15 @@
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-10-30: Phase 5a 补 listPublicProjects / getPublicProjectBySlug，只取可公开展示的字段
+ * - 2026-11-02: 补 PROJECT_KINDS / PROJECT_STATUSES 单源常量，替掉散在校验与表单里的字面量
+ * - 2026-11-02: 补 getArchiveBoard()：首页看板与精选的统一取数口，强制只统计已发布日志且零日志项目也上榜
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+
+// 合法取值与 prisma/schema.prisma 的注释保持一致；改这里要同步改 schema 注释
+export const PROJECT_KINDS: string[] = ["product", "tool", "site"];
+export const PROJECT_STATUSES: string[] = ["WIP", "LIVE", "ARCHIVED"];
 
 export type ProjectInput = {
   id?: string;
@@ -46,6 +52,7 @@ export async function listPublicProjects() {
       status: true,
       summary: true,
       repoUrl: true,
+      createdAt: true,
       logs: {
         where: { isPublished: true },
         select: { beforeDate: true },
@@ -53,6 +60,74 @@ export async function listPublicProjects() {
       },
     },
   });
+}
+
+export type ArchiveBoardEntry = {
+  name: string;
+  slug: string;
+  kind: string;
+  status: string;
+  summary: string | null;
+  count: number;
+  // 零日志项目没有"最近更新"可展示，用 null 表示，不拿创建时间冒充
+  latest: Date | null;
+};
+
+// 首页看板与精选的唯一取数口：强制只统计已发布日志，零日志项目也要出现在看板里
+export async function getArchiveBoard(): Promise<ArchiveBoardEntry[]> {
+  const projects = await db.project.findMany({
+    select: {
+      name: true,
+      slug: true,
+      kind: true,
+      status: true,
+      summary: true,
+      createdAt: true,
+      logs: {
+        where: { isPublished: true },
+        select: { beforeDate: true },
+        orderBy: { beforeDate: "desc" },
+      },
+    },
+  });
+
+  const rows = projects.map((project) => ({
+    name: project.name,
+    slug: project.slug,
+    kind: project.kind,
+    status: project.status,
+    summary: project.summary,
+    count: project.logs.length,
+    latest: project.logs[0]?.beforeDate ?? null,
+    createdAt: project.createdAt,
+  }));
+
+  rows.sort((a, b) => {
+    if (a.latest && b.latest) {
+      return b.latest.getTime() - a.latest.getTime();
+    }
+
+    if (a.latest) {
+      return -1;
+    }
+
+    if (b.latest) {
+      return 1;
+    }
+
+    // 两边都还没发布过日志：按建项时间倒序排在后面
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
+
+  return rows.map((row) => ({
+    name: row.name,
+    slug: row.slug,
+    kind: row.kind,
+    status: row.status,
+    summary: row.summary,
+    count: row.count,
+    latest: row.latest,
+  }));
 }
 
 export async function getPublicProjectBySlug(slug: string) {

@@ -119,7 +119,12 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | deleteProject | {id} | {ok} | AUTH_001；PRJ_001 项目下仍有日志，禁止删除 |
 | uploadImage（P1） | FormData(file) | {url} | AUTH_001；IMG_001 类型/大小不合法（仅 jpg/png/webp/gif，≤5MB） |
 
-错误返回统一结构：{ ok: false, code: string, message: string }；成功：{ ok: true, data }。
+动作有两种形态（2026-11-02 经我确认，SPEC 原写"统一 `{ok,code,message}`"与实际不符，按实际改）：
+
+- 页面表单动作（saveLogDraft / publishLog / unpublishLog / saveProject / deleteProject）：成功与失败都 `redirect` 回原页，用 URL 参数表达结果——`?saved=1`、`?published=1`、`?unpublished=1`、`?error=CODE`。这样结果可复核、可截图留证，是 Phase 4 既定验收口径；
+- 编辑器内动作（uploadImage）：调用方要拿返回值插进正文，因此返回对象 `{ ok: true, url, bytes }` 或 `{ ok: false, code }`。
+
+两种形态都不带 `message` 字段：错误码到用户文案的映射统一收在 `src/lib/error-text.ts`，其中 `VAL_001` 按来源表单（log / project）取细则，未知码原样显示码本身。
 
 ## 四、非目标清单（再次明确）
 

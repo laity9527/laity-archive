@@ -5,11 +5,13 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: Phase 5a 初始创建
+ * - 2026-11-02: 更正 instant 注释：false 是退出即时导航校验，不是把路由改成动态
  */
 import Link from "next/link";
 import { listPublicProjects } from "@/lib/projects";
 
-// 未缓存查询需要整段阻塞渲染，与详情页同一处理方式
+// 项目列表走未缓存查询，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
+// 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
 
 export default async function ProjectsPage() {

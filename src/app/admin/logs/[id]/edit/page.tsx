@@ -5,15 +5,25 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
+ * - 2026-11-02: 已发布状态下增"下架"动作与 UNPUBLISHED 提示（补 SPEC:117 的 unpublishLog）
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { publishLogAction, saveLogAction } from "@/app/admin/log-actions";
+import {
+  publishLogAction,
+  saveLogAction,
+  unpublishLogAction,
+} from "@/app/admin/log-actions";
 import { Editor } from "@/components/Editor";
+import { errorTextOf } from "@/lib/error-text";
+import { pickParam } from "@/lib/forms";
 import { getAdminLogById } from "@/lib/logs";
 import { listProjects } from "@/lib/projects";
 import { toDateTimeLocal } from "@/lib/publish";
 
+// 本页读会话与单条日志，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
+// 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
 
 type EditLogPageProps = {
@@ -22,19 +32,9 @@ type EditLogPageProps = {
     error?: string | string[];
     saved?: string | string[];
     published?: string | string[];
+    unpublished?: string | string[];
   }>;
 };
-
-const ERROR_TEXT: Record<string, string> = {
-  AUTH_001: "会话已失效，请重新登录。",
-  VAL_001: "参数不合法：标题必填（≤120 字）、slug 用小写字母数字连字符、BEFORE 不能为空、AFTER 不早于 BEFORE。",
-  LOG_001: "slug 已被占用，换一个。",
-  LOG_002: "日志不存在，可能已被删除。",
-};
-
-function pickParam(value: string | string[] | undefined) {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
 
 export default async function EditLogPage({
   params,
@@ -50,9 +50,10 @@ export default async function EditLogPage({
 
   const projects = await listProjects();
   const errorCode = pickParam(query.error);
-  const errorText = errorCode ? (ERROR_TEXT[errorCode] ?? errorCode) : null;
+  const errorText = errorCode ? errorTextOf(errorCode, "log") : null;
   const saved = pickParam(query.saved);
   const published = pickParam(query.published);
+  const unpublished = pickParam(query.unpublished);
 
   return (
     <>
@@ -91,6 +92,12 @@ export default async function EditLogPage({
       {published && (
         <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
           PUBLISHED · 已发布，前台可见
+        </p>
+      )}
+
+      {unpublished && (
+        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+          UNPUBLISHED · 已下架，前台不再可见，历史摘要与发布时间保留
         </p>
       )}
 
@@ -231,6 +238,24 @@ export default async function EditLogPage({
           </button>
           <span className="ml-6 font-mono text-[10px] text-ink-soft">
             发布 = 按当前正文算 SHA-256 + 记录服务器时间，两者同时写入
+          </span>
+        </form>
+      )}
+
+      {log.isPublished && (
+        <form
+          action={unpublishLogAction}
+          className="mt-8 border-t border-hairline pt-6"
+        >
+          <input type="hidden" name="id" value={log.id} />
+          <button
+            type="submit"
+            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink"
+          >
+            下架
+          </button>
+          <span className="ml-6 font-mono text-[10px] text-ink-soft">
+            下架 = 前台立即不可见，保留历史摘要与发布时间，正文不动
           </span>
         </form>
       )}

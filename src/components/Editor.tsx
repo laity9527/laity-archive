@@ -6,11 +6,13 @@
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-10-30: Phase 5b 接入图片上传（Server Action 返回直链，插入到当前页签的光标位置）
+ * - 2026-11-02: 上传错误文案改读 src/lib/error-text.ts 的共用表
  */
 "use client";
 
 import { useRef, useState } from "react";
 import { uploadImageAction } from "@/app/admin/upload-action";
+import { errorTextOf } from "@/lib/error-text";
 import { Markdown } from "@/lib/markdown";
 
 type EditorProps = {
@@ -25,11 +27,6 @@ type Status =
   | { kind: "busy" }
   | { kind: "done"; text: string }
   | { kind: "error"; text: string };
-
-const UPLOAD_ERROR_TEXT: Record<"AUTH_001" | "IMG_001", string> = {
-  AUTH_001: "会话已失效，请重新登录后再试。",
-  IMG_001: "图片不合格：仅支持 jpg / png / webp / gif，且不超过 5MB。",
-};
 
 // alt 文本里的方括号与换行会破坏 Markdown 图片语法
 function safeAlt(name: string) {
@@ -97,7 +94,7 @@ export function Editor({ initialBefore, initialAfter }: EditorProps) {
         insertAtCursor(`\n![${safeAlt(file.name)}](${result.url})\n`);
         setStatus({ kind: "done", text: `已上传 · ${result.bytes} 字节` });
       } else {
-        setStatus({ kind: "error", text: UPLOAD_ERROR_TEXT[result.code] });
+        setStatus({ kind: "error", text: errorTextOf(result.code) });
       }
     } catch {
       setStatus({ kind: "error", text: "上传失败，请查看服务端日志。" });

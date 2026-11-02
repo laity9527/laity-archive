@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-10-30: 第二道守卫的跳转目标改为自建 /login?callbackUrl=%2Fadmin（I012-B）
+ * - 2026-11-02: 更正 instant 注释：false 是退出即时导航校验，不是把路由改成动态
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -13,7 +14,8 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 
-// 后台读会话与数据库，整体阻塞渲染，不进静态壳
+// 后台读会话与数据库，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
+// 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
 
 export const metadata: Metadata = {

@@ -1,0 +1,35 @@
+/**
+ * 文件：src/lib/error-text.ts
+ * 描述：错误码到用户文案的唯一映射表，供后台各页与登录页共用；VAL_001 因表单不同给不同细则
+ * 作者：张磊
+ * 创建日期：2026-11-02
+ * 修改记录：
+ * - 2026-11-02: 合并原先散在 5 处的文案表；AUTH_001 统一成"会话已失效，请重新登录后再试。"
+ */
+
+export const ERROR_TEXT: Record<string, string> = {
+  AUTH_001: "会话已失效，请重新登录后再试。",
+  LOG_001: "slug 已被占用，换一个。",
+  LOG_002: "日志不存在，可能已被删除。",
+  PRJ_001: "该项目下还有日志，禁止删除。",
+  PRJ_002: "slug 已被占用，换一个。",
+  IMG_001: "图片不合格：仅支持 jpg / png / webp / gif，且不超过 5MB。",
+  AccessDenied: "这个 GitHub 账号不在白名单里，登录被拒绝。",
+  Verification: "登录链接已过期，请重新发起登录。",
+  Configuration: "登录配置有误：检查 GITHUB_ID / GITHUB_SECRET / NEXTAUTH_URL 与 OAuth 回调地址。",
+  Default: "登录没有完成，可以再试一次。",
+};
+
+// VAL_001 的细则取决于出错的是哪张表单，不能合成一句
+const VAL_001_TEXT: Record<"log" | "project", string> = {
+  log: "参数不合法：标题必填（≤120 字）、slug 用小写字母数字连字符、BEFORE 不能为空、AFTER 不早于 BEFORE。",
+  project: "参数不合法：slug 只能用小写字母、数字与连字符（2–64 位），名称必填。",
+};
+
+export function errorTextOf(code: string, form?: "log" | "project"): string {
+  if (code === "VAL_001") {
+    return form ? VAL_001_TEXT[form] : "参数不合法，请检查表单。";
+  }
+
+  return ERROR_TEXT[code] ?? code;
+}

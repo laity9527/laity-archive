@@ -5,27 +5,21 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供，kind/status 选项取自 lib 单源常量
  */
 import Link from "next/link";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
-import { getProjectById, listProjects } from "@/lib/projects";
+import { errorTextOf } from "@/lib/error-text";
+import { pickParam } from "@/lib/forms";
+import { PROJECT_KINDS, PROJECT_STATUSES, getProjectById, listProjects } from "@/lib/projects";
 
+// 本页查库并读编辑参数，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
+// 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
 
 type ProjectsPageProps = {
   searchParams: Promise<{ error?: string | string[]; edit?: string | string[] }>;
 };
-
-const ERROR_TEXT: Record<string, string> = {
-  AUTH_001: "会话已失效，请重新登录。",
-  VAL_001: "参数不合法：slug 只能用小写字母、数字与连字符（2–64 位），名称必填。",
-  PRJ_001: "该项目下还有日志，禁止删除。",
-  PRJ_002: "slug 已被占用，换一个。",
-};
-
-function pickParam(value: string | string[] | undefined) {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
 
 function Field({
   label,
@@ -91,7 +85,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   const projects = await listProjects();
   const editing = editId ? await getProjectById(editId) : null;
-  const errorText = errorCode ? (ERROR_TEXT[errorCode] ?? errorCode) : null;
+  const errorText = errorCode ? errorTextOf(errorCode, "project") : null;
 
   return (
     <>
@@ -161,14 +155,14 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           <Select
             label="KIND"
             name="kind"
-            options={["product", "tool", "site"]}
-            defaultValue={editing?.kind ?? "product"}
+            options={PROJECT_KINDS}
+            defaultValue={editing?.kind ?? PROJECT_KINDS[0]}
           />
           <Select
             label="STATUS"
             name="status"
-            options={["WIP", "LIVE", "ARCHIVED"]}
-            defaultValue={editing?.status ?? "WIP"}
+            options={PROJECT_STATUSES}
+            defaultValue={editing?.status ?? PROJECT_STATUSES[0]}
           />
           <Field label="SUMMARY" name="summary" defaultValue={editing?.summary ?? undefined} />
           <Field label="REPO URL" name="repoUrl" defaultValue={editing?.repoUrl ?? undefined} />

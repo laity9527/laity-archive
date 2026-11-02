@@ -6,10 +6,12 @@
  * 修改记录：
  * - 2026-10-30: 初始创建最小版（列表 + Suspense 包裹未缓存数据库查询）
  * - 2026-10-30: Phase 2 完整版，补齐双层筛选与时间轴
+ * - 2026-11-02: pickParam 改由 src/lib/forms.ts 提供
  */
 import Link from "next/link";
 import { Suspense } from "react";
 import { Timeline } from "@/components/Timeline";
+import { pickParam } from "@/lib/forms";
 import { getSafeLogs } from "@/lib/logs";
 
 type LogsPageProps = {
@@ -18,10 +20,6 @@ type LogsPageProps = {
     tag?: string | string[];
   }>;
 };
-
-function pickParam(value: string | string[] | undefined) {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
 
 function logsHref(params: { project?: string; tag?: string }) {
   const search = new URLSearchParams();

@@ -5,6 +5,7 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建（Phase 6 软著材料，登记名与版本经我确认）
+ * - 2026-11-02: 收录清单补 content-hash / forms / time / error-text 四个新 lib 模块（收敛重构产物）
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -42,6 +43,10 @@ const ORDER = [
   "src/lib/logs.ts",
   "src/lib/projects.ts",
   "src/lib/publish.ts",
+  "src/lib/content-hash.ts",
+  "src/lib/forms.ts",
+  "src/lib/time.ts",
+  "src/lib/error-text.ts",
   "src/lib/oss.ts",
   "src/lib/markdown.tsx",
   "src/auth.ts",

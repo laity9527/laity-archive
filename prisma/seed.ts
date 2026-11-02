@@ -6,9 +6,10 @@
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-10-30: 按 D5 口径为种子日志计算 contentHash，供 Phase 2 详情页印章展示
+ * - 2026-11-02: 哈希口径改读 src/lib/content-hash.ts，不再自带一份实现
  */
-import { createHash } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import { computeContentHash } from "../src/lib/content-hash.ts";
 
 const prisma = new PrismaClient();
 
@@ -17,9 +18,7 @@ const logBefore = "构建耗时从 3.2s 涨到 11.8s，计划改为构建期预�
 const logAfter = "预构建后首次打开 1.1s，构建期多 4s，可接受。";
 
 function contentHashOf(title: string, before: string, after: string | null) {
-  return createHash("sha256")
-    .update(`${title}\n${before}\n${after ?? ""}`, "utf8")
-    .digest("hex");
+  return computeContentHash(title, before, after);
 }
 
 async function main() {

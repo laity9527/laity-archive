@@ -5,34 +5,28 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
  */
 import Link from "next/link";
 import { saveLogAction } from "@/app/admin/log-actions";
 import { Editor } from "@/components/Editor";
+import { errorTextOf } from "@/lib/error-text";
+import { pickParam } from "@/lib/forms";
 import { listProjects } from "@/lib/projects";
 import { toDateTimeLocal } from "@/lib/publish";
 
+// 本页查库并取表单默认值，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
+// 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
 
 type NewLogPageProps = {
   searchParams: Promise<{ error?: string | string[] }>;
 };
 
-const ERROR_TEXT: Record<string, string> = {
-  AUTH_001: "会话已失效，请重新登录。",
-  VAL_001: "参数不合法：标题必填（≤120 字）、slug 用小写字母数字连字符、BEFORE 不能为空、AFTER 不早于 BEFORE。",
-  LOG_001: "slug 已被占用，换一个。",
-  LOG_002: "日志不存在，可能已被删除。",
-};
-
-function pickParam(value: string | string[] | undefined) {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
 export default async function NewLogPage({ searchParams }: NewLogPageProps) {
   const params = await searchParams;
   const errorCode = pickParam(params.error);
-  const errorText = errorCode ? (ERROR_TEXT[errorCode] ?? errorCode) : null;
+  const errorText = errorCode ? errorTextOf(errorCode, "log") : null;
   const projects = await listProjects();
 
   return (

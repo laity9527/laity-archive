@@ -53,6 +53,31 @@
 - 代价：多一个一次性容器；检查项是字符串规则，换更强的口令策略要回来改这一处。
 - 连带：通过时打印脱敏行（用户名 + 口令长度 + 域名，不打印值），正好充当验收第 2 条要的"脱敏检查记录"。
 
+### D13：首页看板与精选改走专用取数口，精选规则先不依赖数据库字段
+- 背景：SPEC F01 要"精选项目"、SPEC:102 要首页用项目表，而实现是拿 `getSafeLogs` 的结果反推，零日志项目根本不上榜（I029）。
+- 决定：`src/lib/projects.ts` 新增 `getArchiveBoard()`（内部强制只统计已发布日志，返回 count 与可空的 latest），
+  首页看板与精选都从它取数；精选规则定为「有已发布日志的项目按最近发布时间取前三」。
+- 为什么这样选：手工置顶需要给 Project 加字段并出迁移，成本与风险都更高；先用无字段规则把 F01 补上，
+  要改成人工挑选再单独走数据库变更。零日志项目 `latest` 用 `null` 表达、界面显示"尚未发布"，
+  不拿创建时间冒充更新时间。
+- 影响：`src/app/page.tsx`、`src/components/StatusBoard.tsx` 行为变化，前台隔离铁律不变（封装内强制 `isPublished: true`）。
+
+### D14：下架动作独立存在，SPEC 的错误返回描述按实现改写
+- 背景：SPEC:117 定义了 `unpublishLog` 但代码里从未实现（I028）；SPEC:122 又写"统一 `{ok,code,message}`"与实际不符（I031）。
+- 决定：补 `unpublishLog(id)`——`updateMany` 一次完成存在性判定与状态翻转，历史 `contentHash`/`publishedAt` 保留不清空，
+  与 D9 的留痕规则一致；SPEC 的契约描述改为如实区分两种形态：页面表单动作 redirect 带 URL 参数
+  （`?saved / ?published / ?unpublished / ?error=CODE`，可截图留证），编辑器内 `uploadImage` 返回对象；
+  两者都不带 message，文案单源在 `src/lib/error-text.ts`。
+- 为什么这样选：URL 参数留证是 Phase 4 已验收的口径，改代码去追 SPEC 那句话会推翻既有验收证据；
+  而 SPEC 那一行只是描述，改描述零风险。
+- 影响：`SPEC.md` Server Actions 一节；`src/lib/publish.ts`、`src/app/admin/log-actions.ts`、编辑页新增表单。
+
+### D15：为 seed 与运行时共用哈希口径，开 `allowImportingTsExtensions`
+- 背景：D5 的 SHA-256 口径在 `src/lib/content-hash.ts` 与 `prisma/seed.ts` 各有一份（I027），改一处忘另一处会让种子数据印章与复核值背离。
+- 决定：`tsconfig.json` 加 `allowImportingTsExtensions: true`（`noEmit` 本就为 true，满足该选项前置），seed 用 `.ts` 后缀导入共享模块。
+- 实测：`npx prisma db seed` 在本地真库跑通，证明 Node 运行时能吃这种导入，此前只卡在类型检查。
+- 边界：这是编译器配置变更（AGENTS.md 红线内），经我批准，只加这一个键，其它配置不动。
+
 ### D7：/logs/:slug 与 /projects/:slug 的真 404 由 Proxy 前置判定
 - 决策：src/proxy.ts 的 matcher 为 `["/logs/:slug", "/projects/:slug", "/admin/:path*"]`；日志按"是否已发布"判定，项目按"slug 是否存在"判定（`select slug` 落在唯一索引上），未命中直接返回带 404 状态码的极简纸白页（noindex + no-store），文案按路由类型分别给出、请求里的 slug 一律不拼进 HTML。
 - 理由：本项目开了 Cache Components（pPR），流式响应固定以 200 开头，页面级 notFound() 只能在正文已流式之后才执行，实测未发布日志与不存在项目都返回 200 + 错误页。Next 官方文档对动态路由真 404 的处方就是 Proxy 前置检查；rewrite 携带 status 实测同样被渲染路由的 200 覆盖，只有直接返回 Response 才保留状态码（两种写法都已实测）。
@@ -215,6 +240,13 @@ next.config.ts（images.remotePatterns 增 OSS 域名，经本 DESIGN 批准）
 > `serverExternalPackages: ["ali-oss"]`（不新增依赖，不装 `proxy-agent`），复跑 build 退出 0；
 > 并用 Phase 6a 的 Dockerfile 实构建一次，镜像内 `require('ali-oss')` 与客户端实例化均成功，
 > 证明 standalone 产物完整。证据见 Phase-5b 自测表第一、三节。
+>
+> 同日两处补充（均经我批准，记在 5b 名下）：① `next.config.ts` 加 `experimental.serverActions.bodySizeLimit: "6mb"`。
+> 本地 Next 16 文档写明动作请求体默认上限 1MB，`>1MB` 的图会在进 `uploadImage()` 之前被框架拒掉且不映射 IMG_001，
+> 也就是 SPEC 的「≤5MB」此前根本达不到；6mb 与 nginx 的 `client_max_body_size 6m` 配套。② 5b 之后做过一轮全仓库双轴审查，
+> 把 D5 哈希口径、`pickParam`/`readField`/`SLUG_PATTERN`、`formatUtc`、错误码文案、`kind`/`status` 合法值
+> 收敛成 `src/lib/{content-hash,forms,time,error-text,projects}` 单源，明细见 docs/02-测试记录/2026-11-02-全仓库双轴审查与收敛重构.md。
+
 
 ### Phase 6：生产部署 + 软著材料整理
 交付物：自有服务器上 HTTPS 可访问的生产站点；docs/04 软著材料成套。

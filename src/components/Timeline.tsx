@@ -5,16 +5,14 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 创建，时间统一按 UTC 展示并显式标注
+ * - 2026-11-02: formatUtc 改由 src/lib/time.ts 提供
  */
+import { formatUtc } from "@/lib/time";
 
 type TimelineProps = {
   beforeDate: Date;
   afterDate: Date | null;
 };
-
-function formatUtc(date: Date) {
-  return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
-}
 
 export function Timeline({ beforeDate, afterDate }: TimelineProps) {
   return (

@@ -5,26 +5,19 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: I012-B 创建，替换 NextAuth 默认登录页；callbackUrl 只接受本站相对路径，防开放重定向
+ * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { SignInButton } from "@/components/SignInButton";
 import { authOptions } from "@/auth";
+import { ERROR_TEXT } from "@/lib/error-text";
+import { pickParam } from "@/lib/forms";
 
-// 读会话与查询参数，整段阻塞渲染，不出静态壳
+// 本页读会话与查询参数，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
+// 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
-
-const ERROR_TEXT: Record<string, string> = {
-  AccessDenied: "这个 GitHub 账号不在白名单里，登录被拒绝。",
-  Verification: "登录链接已过期，请重新发起登录。",
-  Configuration: "登录配置有误：检查 GITHUB_ID / GITHUB_SECRET / NEXTAUTH_URL 与 OAuth 回调地址。",
-  Default: "登录没有完成，可以再试一次。",
-};
-
-function pickParam(value: string | string[] | undefined) {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
 
 // 只认本站相对路径：以 / 开头、不以 // 开头（后者是协议相对 URL，会跳到外部站点）
 function safeCallbackUrl(value: string | undefined) {

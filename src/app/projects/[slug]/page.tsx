@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-10-30: Phase 5a 初始创建；不存在的 slug 走 notFound，日志仅取已发布
  * - 2026-10-30: 更正说明：页面级 notFound 换不了状态码，真 404 由 src/proxy.ts 前置判定（与详情页同一路数）
+ * - 2026-11-02: 补 instant 注释说明（false 是退出即时导航校验，不改变渲染方式）
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,6 +14,8 @@ import { Timeline } from "@/components/Timeline";
 import { getSafeLogs } from "@/lib/logs";
 import { getPublicProjectBySlug } from "@/lib/projects";
 
+// 本页按 slug 查项目与其已发布日志，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
+// 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
 
 export default async function ProjectDetailPage({

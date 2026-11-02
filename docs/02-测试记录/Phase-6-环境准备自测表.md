@@ -25,7 +25,7 @@
 |---|---|---|---|---|
 | 1 | `docker build` 成功 | `docker build --target runner -t laity-archive:prod .` | 首次失败在 `npm ci`（见第三节）；换用重算后的 lockfile 后：`#19 naming to docker.io/library/laity-archive:prod done`、`build_exit=0`；补 openssl 后重建同样 0。镜像 `laity-archive:prod 551MB`（补 openssl 前 547MB） | PASS（本地） |
 | 1b | 生产容器启动后 `curl -I https://<域名>` 200、证书有效 | 本地用自签名证书起完整栈（compose override 把 80/443 换到 18080/18443、证书挂 tmp/certs） | `curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}" http://127.0.0.1:18080/logs` → `301 -> https://127.0.0.1/logs`；`https://127.0.0.1:18443/login` → `200`，头里 `Server: nginx`（版本被 server_tokens off 藏掉）、`Strict-Transport-Security: max-age=31536000`、`X-Content-Type-Options: nosniff`、`Referrer-Policy: strict-origin-when-cross-origin`、`X-Frame-Options: SAMEORIGIN`；`docker exec laity-nginx-prod nginx -t` → `syntax is ok / test is successful` | 本地 PASS；**线上域名与受信证书未验证**（无域名/证书） |
-| 2 | 生产环境变量检查：口令非 root、密钥不复用（脱敏记录） | 新加 preflight 一次性容器做硬门禁；分别用 root 配置与合规配置跑 | root 配置：`上线门禁未通过：数据库用户仍是 root`，`root_gate_exit=1`；`docker compose ... up -d` 整体被拦停：`service "preflight" didn't complete successfully: exit 1`，`up_exit=1`，db 从未启动（`laity-db-prod Created` 而非 Up）。http 域名：`上线门禁未通过：NEXTAUTH_URL 必须是 https:// 开头的正式域名（当前：http://laity.example.com）`，`http_gate_exit=1`。合规配置：`上线门禁通过：数据库用户 laity_smoke、口令长度 28、https://laity.example.com`（只报长度不报值），`ok_gate_exit=0`。另外 compose 层 `${VAR:?}` 对空值也拦：`error while interpolating services.app.environment.NEXTAUTH_SECRET: required variable NEXTAUTH_SECRET is missing a value: 生产密钥，不得与开发环境复用`，`compose_exit=1` | PASS（本地即生效，上线同样生效） |
+| 2 | 生产环境变量检查：口令非 root、密钥不复用（脱敏记录） | 新加 preflight 一次性容器做硬门禁；分别用 root 配置与合规配置跑 | root 配置：`上线门禁未通过：数据库用户仍是 root`，`root_gate_exit=1`；`docker compose ... up -d` 整体被拦停：`service "preflight" didn't complete successfully: exit 1`，`up_exit=1`，db 从未启动（`laity-db-prod Created` 而非 Up）。http 域名：`上线门禁未通过：NEXTAUTH_URL 必须是 https:// 开头的正式域名（当前：http://laity.cn）`，`http_gate_exit=1`。合规配置：`上线门禁通过：数据库用户 laity_smoke、口令长度 28、https://laity.cn`（只报长度不报值），`ok_gate_exit=0`。另外 compose 层 `${VAR:?}` 对空值也拦：`error while interpolating services.app.environment.NEXTAUTH_SECRET: required variable NEXTAUTH_SECRET is missing a value: 生产密钥，不得与开发环境复用`，`compose_exit=1` | PASS（本地即生效，上线同样生效） |
 | 3 | 线上重跑 Phase 2 第 1 条（草稿隔离）与 Phase 4 第 3 条（哈希复核） | 在**容器里的生产镜像内**跑：`docker compose run --rm migrate` 建表 → 往 /app 拷探针脚本用镜像自带的 @prisma/client 灌数据 → 经 nginx 抓取 | 迁移：`1 migration found in prisma/migrations` / `Applying migration 20261030070530_init` / `All migrations have been successfully applied.`；哈希：`{"storedHash":"8eecb41728ff1bbc35791fdfb5561ce79f0245dd4ccc729a7474e49d10c6db38","recomputed":"8eecb417…","match":true,"publishedAt":"2026-10-30T09:59:37.200Z"}`；印章页 `CONTENT HASH · 8eecb41728ff1bbc35791fdfb5561ce79f0245dd4ccc729a7474e49d10c6db38`、`PUBLISHED AT · 2026-10-30 09:59 UTC`；草稿隔离：`/`、`/logs`、`/projects`、`/projects/probe6` 抓 `探测六草稿不可见` 命中全是 `0`，`/logs/probe6-draft` → `404`，`/logs/probe6-published` → `200` | 镜像内 PASS；**线上未验证**（同一镜像，缺线上环境这一层） |
 | 4 | docs/04 软著材料成套 | 本轮未做 | — | 未验证（按计划等代码定稿后单独做） |
 | 5 | docs/03 线上带地址栏截图 | 本轮未做 | — | 未验证（等线上） |
@@ -110,9 +110,9 @@
 | 项 | 做法 | 处置 |
 |---|---|---|
 | 生产变量 | `tmp/dummy-prod.env`，口令/密钥/OAuth 全为 `FAKE_*` 字面量 | 跑完删除 |
-| TLS 证书 | `openssl req -x509` 自签，`CN=laity.example.com`，有效期 1 天 | 跑完删除（`deploy/certs/` 未被 `.gitignore` 覆盖，删后用 `git status` 复核无残留） |
+| TLS 证书 | `openssl req -x509` 自签，`CN=laity.cn`，有效期 1 天 | 跑完删除（`deploy/certs/` 未被 `.gitignore` 覆盖，删后用 `git status` 复核无残留） |
 | 数据库卷 | compose 建的 `laity_prod_data`，跑前是空的（`migrate deploy` 实打实应用了 `20261030070530_init`） | `down` 时**保留**，卷里有我造的三条测试数据；不要了就 `docker volume rm laity_prod_data` |
-| 访问方式 | 不改 hosts，用 `curl --resolve laity.example.com:443:127.0.0.1`；自签证书配 `-k --ssl-no-revoke` | — |
+| 访问方式 | 不改 hosts，用 `curl --resolve laity.cn:443:127.0.0.1`；自签证书配 `-k --ssl-no-revoke` | — |
 
 执行序列（全部真实退出码）：
 
@@ -121,7 +121,7 @@
 | 1 | `docker compose --env-file tmp/dummy-prod.env -f docker-compose.prod.yml build` | 退出 0，`✓ Compiled successfully in 4.3s`、`13/13` 静态页、`naming to laity-archive:prod` |
 | 2 | `... run --rm migrate` | 退出 0，`Applying migration 20261030070530_init` → `All migrations have been successfully applied.` |
 | 3 | `... up -d` | 退出 0。日志顺序可见门禁生效：`laity-preflight Waiting` → `Exited` → `laity-db-prod Healthy` → app/nginx 启动 |
-| 4 | preflight 通过行 | `上线门禁通过：数据库用户 laity_app、口令长度 20、https://laity.example.com、OSS oss-cn-beijing/laity-archive（前缀 logs/）` |
+| 4 | preflight 通过行 | `上线门禁通过：数据库用户 laity_app、口令长度 20、https://laity.cn、OSS oss-cn-beijing/laity-archive（前缀 logs/）` |
 | 5 | 故意把 `OSS_REGION=` 置空再 `up` | 退出 1，`error while interpolating services.app.environment.OSS_REGION: required variable OSS_REGION is missing a value: OSS Bucket 所在地域，例如 oss-cn-beijing`（app 与 preflight 两处各报一次），**没有任何容器被拉起** |
 
 路由探测（经 nginx TLS，`--resolve` 指向 127.0.0.1）：
@@ -129,10 +129,10 @@
 | 路径 | 码 | 说明 |
 |---|---|---|
 | `/`、`/logs`、`/projects`、`/projects/earth-mirror`、`/login` | 200 | 前台与登录页均出内容 |
-| `/admin` | 307 → `https://laity.example.com/login?callbackUrl=%2Fadmin` | Proxy 前置守卫在生产镜像里照常工作 |
+| `/admin` | 307 → `https://laity.cn/login?callbackUrl=%2Fadmin` | Proxy 前置守卫在生产镜像里照常工作 |
 | `/logs/probe-draft`（草稿） | 404 | 草稿隔离 |
 | `/logs/no-such-log` | 404 | 响应头 `cache-control: no-store`、`x-robots-tag: noindex`、`Content-Type: text/html; charset=utf-8` |
-| `http://laity.example.com/logs`（80） | 301 → `https://laity.example.com/logs` | 全站跳转 |
+| `http://laity.cn/logs`（80） | 301 → `https://laity.cn/logs` | 全站跳转 |
 | 7 MB 请求体 POST | 413 | nginx `client_max_body_size 6m` 生效 |
 | 5 MB 请求体 POST | 200 | 未触发 nginx 上限（应用层 5 MB 判定属 5b 运行时项，仍未验） |
 

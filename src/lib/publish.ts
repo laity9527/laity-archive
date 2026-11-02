@@ -5,9 +5,10 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-11-02: 哈希口径改从 src/lib/content-hash.ts 引入，本文件不再自带一份
  */
-import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
+import { computeContentHash } from "@/lib/content-hash";
 import { db } from "@/lib/db";
 
 export type LogInput = {
@@ -31,16 +32,9 @@ export type PublishLogResult =
   | { ok: true; contentHash: string; slug: string }
   | { ok: false; code: "LOG_002" };
 
-// D5 口径：title + "\n" + beforeContent + "\n" + (afterContent ?? "")
-export function computeContentHash(
-  title: string,
-  beforeContent: string,
-  afterContent?: string | null,
-) {
-  return createHash("sha256")
-    .update(`${title}\n${beforeContent}\n${afterContent ?? ""}`, "utf8")
-    .digest("hex");
-}
+export type UnpublishLogResult =
+  | { ok: true; slug: string }
+  | { ok: false; code: "LOG_002" };
 
 // datetime-local 输入框要本地时间字符串，存库仍是 UTC
 export function toDateTimeLocal(value: Date | null | undefined) {
@@ -126,4 +120,20 @@ export async function publishLog(id: string): Promise<PublishLogResult> {
   });
 
   return { ok: true, contentHash, slug: log.slug };
+}
+
+// 下架只翻 isPublished；历史 contentHash 与 publishedAt 保留，与 D9 退回草稿的口径一致
+export async function unpublishLog(id: string): Promise<UnpublishLogResult> {
+  const updated = await db.log.updateMany({
+    where: { id },
+    data: { isPublished: false },
+  });
+
+  if (updated.count === 0) {
+    return { ok: false, code: "LOG_002" };
+  }
+
+  const log = await db.log.findUnique({ where: { id }, select: { slug: true } });
+
+  return { ok: true, slug: log?.slug ?? "" };
 }

@@ -5,6 +5,8 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-11-02: readField 与 SLUG_PATTERN 改由 src/lib/forms.ts 提供
+ * - 2026-11-02: 补 unpublishLogAction（SPEC:117 的下架动作，此前无实现）
  */
 "use server";
 
@@ -12,14 +14,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
-import { publishLog, saveLog, type LogInput } from "@/lib/publish";
-
-const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
-
-function readField(formData: FormData, key: string) {
-  const value = formData.get(key);
-  return typeof value === "string" ? value.trim() : "";
-}
+import { SLUG_PATTERN, readField } from "@/lib/forms";
+import {
+  publishLog,
+  saveLog,
+  unpublishLog,
+  type LogInput,
+} from "@/lib/publish";
 
 function parseDate(raw: string) {
   if (!raw) {
@@ -147,4 +148,28 @@ export async function publishLogAction(formData: FormData) {
 
   refreshLogViews(result.slug);
   redirect(`${backTo}?published=1`);
+}
+
+export async function unpublishLogAction(formData: FormData) {
+  const id = readField(formData, "id");
+  const backTo = id ? `/admin/logs/${id}/edit` : "/admin";
+
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect(`${backTo}?error=AUTH_001`);
+  }
+
+  if (!id) {
+    redirect(`${backTo}?error=VAL_001`);
+  }
+
+  const result = await unpublishLog(id);
+
+  if (!result.ok) {
+    redirect(`${backTo}?error=${result.code}`);
+  }
+
+  refreshLogViews(result.slug);
+  redirect(`${backTo}?unpublished=1`);
 }

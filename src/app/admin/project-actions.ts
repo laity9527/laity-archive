@@ -5,6 +5,7 @@
  * 创建日期：2026-10-30
  * 修改记录：
  * - 2026-10-30: 初始创建
+ * - 2026-11-02: readField / SLUG_PATTERN 改由 src/lib/forms.ts 提供，kind/status 合法值取自 src/lib/projects.ts
  */
 "use server";
 
@@ -12,16 +13,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
-import { deleteProject, saveProject, type ProjectInput } from "@/lib/projects";
-
-const KINDS = ["product", "tool", "site"];
-const STATUSES = ["WIP", "LIVE", "ARCHIVED"];
-const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
-
-function readField(formData: FormData, key: string) {
-  const value = formData.get(key);
-  return typeof value === "string" ? value.trim() : "";
-}
+import { SLUG_PATTERN, readField } from "@/lib/forms";
+import {
+  PROJECT_KINDS,
+  PROJECT_STATUSES,
+  deleteProject,
+  saveProject,
+  type ProjectInput,
+} from "@/lib/projects";
 
 function backToProjects(code: string): never {
   redirect(`/admin/projects?error=${code}`);
@@ -46,7 +45,7 @@ function parseInput(formData: FormData): ProjectInput | null {
     return null;
   }
 
-  if (!KINDS.includes(input.kind) || !STATUSES.includes(input.status)) {
+  if (!PROJECT_KINDS.includes(input.kind) || !PROJECT_STATUSES.includes(input.status)) {
     return null;
   }
 
