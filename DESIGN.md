@@ -96,6 +96,28 @@
   `src/app/{sitemap,robots}.ts`、`src/app/globals.css`、`src/lib/oss.ts`、`deploy/nginx.conf`。
   视觉铁律未动：零圆角、无阴影、无渐变、无图标库、色值只用既有四色。
 
+### D17：上线基线——测试、健康探针、错误页与合规页
+- 背景：功能与产品骨架齐了以后，缺的是"敢不敢放上去"的那一层：没有任何自动化测试、没有与登录无关的健康端点、
+  未知路由落框架默认页、没有隐私说明与备案号位置。
+- 决定与取舍：
+  1. **测试用 Node 自带的 `node --test`，零新依赖**（AGENTS.md 禁止未批依赖）。`npm test` = `node --test "tests/*.test.ts"`
+     （glob 必须自己写引号交给 Node，`node --test tests/` 这种目录写法在 Node 24 会把参数当模块去 require 而报 MODULE_NOT_FOUND）。
+     只测纯逻辑：D5 口径、图片内容签名、slug 与表单工具、错误码文案、时间展示、路由归属。DB 层与需登录的动作层不覆盖——
+     伪造会话去凑覆盖率已经被 I017 拦过一次，不为凑数冒险。
+  2. **健康端点 `/api/health` 必须请求期执行**：Cache Components 下不加 `await connection()` 会被预渲染，
+     返回一个永远不会变的"ok"，那就成了一个会说谎的探针。实测拔库→503、恢复→200。
+  3. **路由归属拆成 `src/lib/routes.ts`**：站点模块 `src/lib/site.ts` 读 `process.env`，被客户端组件 import 会把环境变量打进浏览器包，
+     所以判定逻辑单独成一个无 env 依赖的纯模块给 SiteNav/SiteFooter 共用。拆开后测试立刻抓出原来的裸 `startsWith`
+     会把 `/administrative` 误判成后台——改成按路径段边界匹配并先剥查询串。
+  4. **图片签名判定拆成 `src/lib/image-signature.ts`**：纯计算，拆开后测试不必把 ali-oss SDK 拉进测试进程，`oss.ts` 也回到只管凭据、上限与写入。
+  5. **ICP 备案号走 `SITE_ICP` 环境变量**，未配置时页脚整行不渲染——不硬凑"备案号待补"这种上不了台面的占位文案；
+     值由服务端读、以 prop 下传给客户端页脚，同样是为了不把 `process.env` 带进浏览器包。
+  6. **`error.tsx` 有意不接收 `error` prop**：异常文本可能带内部路径与参数，既不上页面也不落控制台，只留一个「重试」。
+- 影响文件：`tests/*`（6 个文件 30 条断言）、`src/lib/{routes,image-signature,site,sitemap-data}.ts`、`src/lib/oss.ts`、
+  `src/components/{SiteNav,SiteFooter}.tsx`、`src/app/{layout,error,not-found,robots,sitemap}.{tsx,ts}`、
+  `src/app/privacy/page.tsx`、`src/app/api/health/route.ts`、`package.json`（只加 `test` 脚本）、两个 `.env` 模板（加 `SITE_ICP`）。
+- 有意不做：CI 流水线（AGENTS.md 把 CI 配置划为红线，需单独立项批准）；把 `/api/health` 换进 compose 的 healthcheck（编排变更，同样待批）。
+
 ### D7：/logs/:slug 与 /projects/:slug 的真 404 由 Proxy 前置判定
 - 决策：src/proxy.ts 的 matcher 为 `["/logs/:slug", "/projects/:slug", "/admin/:path*"]`；日志按"是否已发布"判定，项目按"slug 是否存在"判定（`select slug` 落在唯一索引上），未命中直接返回带 404 状态码的极简纸白页（noindex + no-store），文案按路由类型分别给出、请求里的 slug 一律不拼进 HTML。
 - 理由：本项目开了 Cache Components（pPR），流式响应固定以 200 开头，页面级 notFound() 只能在正文已流式之后才执行，实测未发布日志与不存在项目都返回 200 + 错误页。Next 官方文档对动态路由真 404 的处方就是 Proxy 前置检查；rewrite 携带 status 实测同样被渲染路由的 200 覆盖，只有直接返回 Response 才保留状态码（两种写法都已实测）。
@@ -119,6 +141,15 @@
 - 理由：Project 模型没有发布开关，"哪些字段可以给访客看"只能由查询层说了算；靠 `include` 全量返回再在页面里挑，等于把以后加进表的私有字段默认发给访客。计数若走 `_count` 全量会把草稿数量也漏出去。
 - 代价：项目本身无法"下线"（想藏一个项目只能删掉或改名）；将来若要给项目加发布开关，需改 schema 并同步这两处查询。
 - 连带：数据层落在 src/lib/projects.ts（AGENTS.md 禁止页面直查库），已在 Phase 5a 清单里注明。
+
+### D18：把"门禁记得跑"和"材料看得全"都交给机器判
+- 决策一（CI，I037）：新增 `.github/workflows/ci.yml`，顺序与人工门禁一致 `npm ci → prisma generate → lint → tsc → test → prisma migrate deploy → build`，再加两步材料自检：`node tools/软著材料生成.mjs`（收录完整性 + 窗口适配）与 `git diff --exit-code -- docs/04-软著材料`（成品必须与重新生成结果逐字节一致）。
+- 理由：这四条此前全靠我本机手敲，"忘了跑"就是发版；而 I018 那类"Windows 安装把 linux 平台条目从锁文件里删掉"的问题，只有 `npm ci` 跑在 linux 上才第一次变成常驻防线。材料两步是本轮踩出来的——第九轮我"按分段感觉"判断收录装得下窗口，实际把 `proxy.ts` 折走了 130 行；这种事人不可能每轮重算，但机器一行代码就能判。
+- 决策二（给 CI 配一个真库服务，而不是赌"构建期不查库"）：本机想实测"把库停掉还能不能构建"时，安全策略连拦三次（停共享容器 / 打印带口令的连接串），我没有绕。既然结论没拿到，就让 CI 两种情况都成立：一次性 `postgres:16` + `prisma migrate deploy`，顺带证明那条 init 迁移能在全新的 16 上从零应用。工作流里的 env 全是显眼的占位值，不含任何真实凭据。
+- 决策三（健康判据，I036）：app 探针从 `/login`（只证明进程活着）换成 `/api/health` 并解析响应体、要求 `db === true` 才退出 0；`web` 改为等 `app` healthy 再起。代价是库抖动会把 app 标成 unhealthy——可接受，因为 compose 不因 unhealthy 自动重启，`depends_on` 也只在启动时把关、运行期不追溯，不会级联停摆，只是把半死状态如实显示出来。探针表达式另用桩服务器做了五路自检（真健康退 0，503/返回 HTML/字段缺省/端口无人各退 1）：一个恒返回 0 的探针比没有更坏。入口网关不加探针——80 端口直接 301，busybox wget 对重定向判定不稳，与其装一个会误报健康的探针，不如没有。
+- 决策四（收录清单改成数据结构）：`ORDER` 改为 `BANDS`（①②④ 必须整份可见，③ 标 `foldable`），`assertWindowFit()` 按**整页**折算窗口容量。关键算术：后窗口取的是最后 30 个页块，末页只有 9 行也占掉一个名额，所以真实容量是 1459 行而不是 1500 行——按 1500 估会让 `globals.css` 的分隔行与前 13 行正好掉在被切掉的半页里。违规即拒绝生成，并打印行跨度与处置建议。本轮为此让出容量的是 `src/lib/time.ts`（时刻格式化）与 `src/components/Seal.tsx`（印章只是排版，存证真逻辑在 `publish.ts` 与详情页调用处）。
+- 未验证：Actions 的实跑结果要等推送之后；生产编排的健康判据变更只做了 `docker compose config` 渲染核对，整套启动仍需服务器上实跑。
+- 连带：`docs/03-截图/` 改名 `docs/03-功能截图/` 与 AGENTS.md、README 对齐（原打算 `git mv`，实际目录为空且从未入库，Git 不跟踪空目录）；`eslint.config.mjs` 的 ignores 加 `tmp/**`（I039），一次性诊断脚本不参与 lint。
 
 ### D11：后台登录页自建，落点 /login 而不是 /admin/login
 - 决策：`authOptions.pages = { signIn: "/login", error: "/login" }`，登录页与错误提示都在这一个页面里给；Proxy 与 admin 布局的未登录跳转都改成 `/login?callbackUrl=…`；`callbackUrl` 只接受本站相对路径（以 `/` 开头且不以 `//` 开头），否则回落 `/admin`。

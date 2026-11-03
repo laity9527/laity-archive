@@ -5,11 +5,13 @@
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建。此前前台没有任何持久导航，/projects 只能手输 URL（I030 的根因）
+ * - 2026-11-03: 前台/非前台判定改用 src/lib/routes.ts 的 isPublicRoute，与页脚共用一套规则
  */
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { isPublicRoute } from "@/lib/routes";
 
 // 首页由左侧字标承担，导航里不再放第二个指向 / 的链接（同页两个同链接是多余的）
 const SECTIONS = [
@@ -20,8 +22,7 @@ const SECTIONS = [
 export function SiteNav() {
   const pathname = usePathname();
 
-  // 后台自带一套导航，登录页是孤立页，这两处不叠第二层导航
-  if (pathname.startsWith("/admin") || pathname.startsWith("/login")) {
+  if (!isPublicRoute(pathname)) {
     return null;
   }
 

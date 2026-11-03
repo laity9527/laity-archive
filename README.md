@@ -20,6 +20,18 @@ npm run dev                   # http://localhost:3000
 
 环境变量参考 `.env.example`（Phase 1 创建）。
 
+## 发版门禁
+
+```bash
+npm run lint && npx tsc --noEmit && npm run build && npm test
+```
+
+四条全绿才算可发版，`.github/workflows/ci.yml` 在每次 push 与 pull request 上按同样的顺序替人跑一遍，
+外加软著材料两步自检（新文件没登记进收录清单、或改了说明书却忘了重出 HTML，都会红）。
+`npm test` 用 Node 自带的 test runner（零测试依赖），覆盖 D5 摘要口径、
+图片内容签名、slug 与表单工具、错误码文案、时间展示与路由归属判定；数据库层与需登录的动作层不在其内，
+那部分靠 docs/02-测试记录/ 的自测表与人工联调。`tmp/` 下的一次性诊断脚本不参与 lint，免得门禁被废弃探针碰红。
+
 ## 文档索引
 
 | 文件 | 用途 |
@@ -28,7 +40,7 @@ npm run dev                   # http://localhost:3000
 | SPEC.md | 需求规格：功能清单 / 数据模型 / 接口契约 / 非目标 |
 | DESIGN.md | 架构决策记录 + 6 个 Phase 路线图 + 验收标准 |
 | ISSUES.md | 范围外问题台账 |
-| docs/00-开发方法论/ | 五层防线工作法、环境搭建指南 |
+| docs/00-开发方法论/ | 五层防线工作法、环境搭建指南、**上线与回滚手册**（发版步骤、核验判据、故障定位、备份恢复） |
 | docs/01-研发日志/ | 每日指令原文、思考、踩坑 |
 | docs/02-测试记录/ | 各 Phase 自测表 |
 | docs/03-功能截图/ | 带地址栏的运行截图 |

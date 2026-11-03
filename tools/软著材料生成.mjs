@@ -8,6 +8,15 @@
  * - 2026-11-02: 收录清单补 content-hash / forms / time / error-text 四个新 lib 模块（收敛重构产物）
  * - 2026-11-03: 再补 site / sitemap-data 两个 lib、SiteNav 组件与 sitemap / robots 两个路由文件
  * - 2026-11-03: 收录顺序改为"按提交窗口排版"（I034）：数据模型与核心逻辑进前 30 页，站点骨架与访客界面进后 30 页，后台表单页放中间可折走段
+ * - 2026-11-03: 登记上线基线新增的 7 个文件：image-signature / routes 两个 lib 进核心逻辑段，
+ *               health 接口进中间段，SiteFooter / privacy / not-found / error 进后窗口末段
+ * - 2026-11-03: 按折行后真实行数重新配平四段：① +② 收到 1486 行、④ 收到 1473 行，
+ *               均 ≤ 1500 行窗口，proxy.ts 与 globals.css / layout.tsx 不再被切口打断；
+ *               让出窗口的是 error-text / sitemap-data / Editor 与两个本地部署配置
+ * - 2026-11-03: 登记 CI 工作流 .github/workflows/ci.yml（I037），与两个部署配置同组放折走段
+ * - 2026-11-03: 收录清单由 ORDER 改为 BANDS（分四段、③ 标 foldable），新增 assertWindowFit()：
+ *               非折走段文件被窗口切断或整份掉进折走段即拒绝生成。起因是 eslint 配置加了一行注释，
+ *               就把 ①+② 从 1486 顶到 1501 行、proxy.ts 又被切掉一行——这种事不该靠人事后对拍
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -29,68 +38,105 @@ const DOC_LINES_PER_PAGE = 30; // 软著文档：每页不少于 30 行
 const SUBMIT_PAGES_EACH_SIDE = 30; // 超过 60 页时提交前 30 页 + 后 30 页
 
 // 收录顺序 = 排版策略，不是单纯的分层罗列。源程序超过 60 页时只提交前 30 页 + 后 30 页，
-// 中间整段被折走（I034），所以顺序按"两个窗口各放什么"来排：
-//   ① 前窗口：数据模型与运行时配置  ② 前窗口：核心逻辑（存证口径/数据访问/上传/鉴权守卫）
-//   ③ 中间段：接口层与后台表单页——形态重复度高，被折走损失最小
-//   ④ 后窗口：站点骨架与访客可见界面 + 后台动作（审查员要能在提交页里看到界面与存证入口）
+// 中间整段被折走（I034），所以顺序按"两个窗口各放什么"来排，并且各段行数必须装得下窗口：
+//   窗口 = 30 页 × 50 行 = 1500 行（按折行后的真实行数计，不是物理行数）
+//   ① + ② 与 ④ 属于"必须整份可见"的段，③ 是折走段，切口只允许落在 ③ 内部
+// 这条约束不再靠人估：assertWindowFit() 每次生成都按真实行跨度检查，
+// 任一非折走段文件被窗口切断或整份落进折走段就直接失败——第八、九两轮都是"看着装得下"而实际超行，
+// 一行注释的增删就能把 proxy.ts 挤出窗口，这种事只能让机器盯着。
 // 无论怎么排，assertComplete() 都保证 src 与 prisma 下没有一个文件被漏登记
-const ORDER = [
-  // ① 数据模型与运行时配置
-  "prisma/schema.prisma",
-  "prisma/seed.ts",
-  "package.json",
-  "tsconfig.json",
-  "next.config.ts",
-  "eslint.config.mjs",
-  "docker-compose.yml",
-  "docker-compose.prod.yml",
-  "Dockerfile",
-  ".dockerignore",
-  ".env.example",
-  // ② 核心逻辑
-  "src/lib/db.ts",
-  "src/lib/content-hash.ts",
-  "src/lib/publish.ts",
-  "src/lib/logs.ts",
-  "src/lib/projects.ts",
-  "src/lib/error-text.ts",
-  "src/lib/forms.ts",
-  "src/lib/time.ts",
-  "src/lib/site.ts",
-  "src/lib/sitemap-data.ts",
-  "src/lib/oss.ts",
-  "src/lib/markdown.tsx",
-  "src/auth.ts",
-  "src/proxy.ts",
-  // ③ 中间段：接口层与后台表单/动作页——形态重复度高，且其核心逻辑（存证、上传、鉴权）
-  //    已分别出现在 publish.ts / oss.ts / auth.ts+proxy.ts 的前窗口里，折走它们损失最小
-  "src/app/api/auth/[...nextauth]/route.ts",
-  "src/app/robots.ts",
-  "src/app/sitemap.ts",
-  "src/app/admin/layout.tsx",
-  "src/app/admin/log-actions.ts",
-  "src/app/admin/upload-action.ts",
-  "src/app/admin/project-actions.ts",
-  "src/app/admin/page.tsx",
-  "src/app/admin/projects/page.tsx",
-  "src/app/admin/logs/new/page.tsx",
-  "src/app/admin/logs/[id]/edit/page.tsx",
-  "src/components/SignInButton.tsx",
-  // ④ 后窗口：站点骨架与访客可见界面
-  "src/app/globals.css",
-  "src/app/layout.tsx",
-  "src/components/SiteNav.tsx",
-  "src/components/StatusBoard.tsx",
-  "src/components/Timeline.tsx",
-  "src/components/Seal.tsx",
-  "src/components/Editor.tsx",
-  "src/app/page.tsx",
-  "src/app/logs/page.tsx",
-  "src/app/logs/[slug]/page.tsx",
-  "src/app/projects/page.tsx",
-  "src/app/projects/[slug]/page.tsx",
-  "src/app/login/page.tsx",
+const BANDS = [
+  {
+    mark: "①",
+    name: "数据模型与运行时配置",
+    files: [
+      "prisma/schema.prisma",
+      "prisma/seed.ts",
+      "package.json",
+      "tsconfig.json",
+      "next.config.ts",
+      "eslint.config.mjs",
+      "docker-compose.prod.yml",
+      "Dockerfile",
+      ".env.example",
+    ],
+  },
+  {
+    mark: "②",
+    name: "核心逻辑：存证口径 → 数据访问 → 输入校验 → 类型嗅探与上传 → 渲染消毒 → 鉴权与前置守卫",
+    files: [
+      "src/lib/db.ts",
+      "src/lib/content-hash.ts",
+      "src/lib/publish.ts",
+      "src/lib/logs.ts",
+      "src/lib/projects.ts",
+      "src/lib/forms.ts",
+      "src/lib/routes.ts",
+      "src/lib/site.ts",
+      "src/lib/image-signature.ts",
+      "src/lib/oss.ts",
+      "src/lib/markdown.tsx",
+      "src/auth.ts",
+      "src/proxy.ts",
+    ],
+  },
+  {
+    mark: "③",
+    name: "折走段：文案表与时刻格式化、出口层、后台表单/动作页、运维配置——形态重复度高，且它们调用的核心逻辑（存证、上传、鉴权）已整份出现在前窗口里",
+    foldable: true,
+    files: [
+      "src/lib/error-text.ts",
+      "src/lib/time.ts",
+      "src/app/api/auth/[...nextauth]/route.ts",
+      "src/app/api/health/route.ts",
+      "src/lib/sitemap-data.ts",
+      "src/app/sitemap.ts",
+      "src/app/robots.ts",
+      "src/app/admin/layout.tsx",
+      "src/app/admin/log-actions.ts",
+      "src/app/admin/upload-action.ts",
+      "src/app/admin/project-actions.ts",
+      "src/app/admin/page.tsx",
+      "src/app/admin/projects/page.tsx",
+      "src/app/admin/logs/new/page.tsx",
+      "src/app/admin/logs/[id]/edit/page.tsx",
+      "src/components/Editor.tsx",
+      "src/components/SignInButton.tsx",
+      // 印章组件在这里：它只是把 contentHash 与发布时间排版出来，存证的真逻辑在
+      // publish.ts / content-hash.ts（前窗口）与详情页（后窗口，含 <Seal /> 的调用处）
+      "src/components/Seal.tsx",
+      // 本地开发库编排、构建上下文排除规则、生产环境变量模板、CI 工作流：都是纯配置，
+      // 生产编排 docker-compose.prod.yml 与 Dockerfile 已在前窗口呈现部署形态
+      "docker-compose.yml",
+      ".dockerignore",
+      ".env.production.example",
+      ".github/workflows/ci.yml",
+    ],
+  },
+  {
+    mark: "④",
+    name: "站点外壳（样式令牌 + 根布局 + 导航页脚）与访客可见界面，末段为合规页（隐私 / 404 / 错误边界）",
+    files: [
+      "src/app/globals.css",
+      "src/app/layout.tsx",
+      "src/components/SiteNav.tsx",
+      "src/components/SiteFooter.tsx",
+      "src/components/StatusBoard.tsx",
+      "src/components/Timeline.tsx",
+      "src/app/page.tsx",
+      "src/app/logs/page.tsx",
+      "src/app/logs/[slug]/page.tsx",
+      "src/app/projects/page.tsx",
+      "src/app/projects/[slug]/page.tsx",
+      "src/app/privacy/page.tsx",
+      "src/app/login/page.tsx",
+      "src/app/not-found.tsx",
+      "src/app/error.tsx",
+    ],
+  },
 ];
+
+const ORDER = BANDS.flatMap((band) => band.files);
 
 function walk(dir, acc = []) {
   for (const name of readdirSync(dir)) {
@@ -117,6 +163,84 @@ function assertComplete() {
   if (absent.length > 0) {
     throw new Error(`收录清单里有磁盘上不存在的文件：\n  ${absent.join("\n  ")}`);
   }
+}
+
+// 按真实行流求出每个文件在"折行后行流"里占的跨度：从自己的分隔行起，到下一个分隔行前止
+function fileSpans(lines) {
+  const marks = [];
+
+  lines.forEach((line, i) => {
+    const m = /^—— 文件：(.+) ——$/.exec(line);
+    if (m) marks.push({ file: m[1], start: i + 1 });
+  });
+
+  return marks.map((mk, i) => ({
+    file: mk.file,
+    start: mk.start,
+    end: i + 1 < marks.length ? marks[i + 1].start - 1 : lines.length,
+  }));
+}
+
+// 窗口适配自检：非折走段的每个文件必须整份落在前窗口或后窗口之内。
+// 被切口打断、或整份掉进折走段，都直接失败——窗口大小是"折行后 1500 行"，
+// 与物理行数无关，任何一处注释增删都可能把它挤出去，所以这条必须机器判定。
+function assertWindowFit(lines) {
+  const windowRows = SUBMIT_PAGES_EACH_SIDE * CODE_LINES_PER_PAGE;
+  const total = lines.length;
+
+  if (total <= windowRows * 2) {
+    return { 需要折页: false, 总行数: total, 窗口行数: windowRows };
+  }
+
+  // 窗口必须按"整页"算，不是按"末尾 1500 行"算：buildPages 取的是最后 30 个页块，
+  // 末页不足 50 行时那半页也占一个名额，所以后窗口能装的行数比 1500 少。
+  // 第八、九轮两次都是按 1500 估，结果 globals.css 的头部正好掉在被切掉的半页里
+  const totalPages = Math.ceil(total / CODE_LINES_PER_PAGE);
+  const front = { from: 1, to: SUBMIT_PAGES_EACH_SIDE * CODE_LINES_PER_PAGE };
+  const back = {
+    from: (totalPages - SUBMIT_PAGES_EACH_SIDE) * CODE_LINES_PER_PAGE + 1,
+    to: total,
+  };
+  const mustBeWhole = new Set(BANDS.filter((b) => !b.foldable).flatMap((b) => b.files));
+  const spans = fileSpans(lines);
+  const inside = (s, w) => s.start >= w.from && s.end <= w.to;
+
+  const violations = spans.filter(
+    (s) => mustBeWhole.has(s.file) && !(inside(s, front) || inside(s, back))
+  );
+  const at = (row) => spans.find((s) => row >= s.start && row <= s.end);
+
+  if (violations.length > 0) {
+    const detail = violations
+      .map((s) => {
+        const how =
+          s.start <= front.to && s.end > front.to
+            ? `被前窗口切口打断（前窗口止于第 ${front.to} 行，本文件 ${s.start}-${s.end}）`
+            : s.start < back.from && s.end >= back.from
+              ? `头部被后窗口切口切掉（后窗口起于第 ${back.from} 行，本文件 ${s.start}-${s.end}）`
+              : `整份落在折走段（本文件 ${s.start}-${s.end}，折走段 ${front.to + 1}-${back.from - 1}）`;
+        return `  ${s.file}：${how}`;
+      })
+      .join("\n");
+
+    throw new Error(
+      `以下文件必须整份可见，却没进窗口，拒绝生成：\n${detail}\n` +
+        `处置：把该文件所在段里行数最少、最不重要的一个移进折走段（BANDS 里 foldable: true 的 ③ 段）。` +
+        `窗口容量：前 ${front.to - front.from + 1} 行 / 后 ${back.to - back.from + 1} 行（按整页折算，不是固定 1500）`
+    );
+  }
+
+  return {
+    需要折页: true,
+    总行数: total,
+    总页数: totalPages,
+    前窗口: `第 1-${front.to} 行（第 1-${SUBMIT_PAGES_EACH_SIDE} 页）`,
+    后窗口: `第 ${back.from}-${back.to} 行（第 ${totalPages - SUBMIT_PAGES_EACH_SIDE + 1}-${totalPages} 页，末页仅 ${total - (totalPages - 1) * CODE_LINES_PER_PAGE} 行，容量按整页折算是 ${back.to - back.from + 1} 行）`,
+    前窗口止于: `第 ${front.to} 行（该行属于 ${at(front.to)?.file ?? "?"}）`,
+    后窗口起于: `第 ${back.from} 行（该行属于 ${at(back.from)?.file ?? "?"}）`,
+    必须整份可见文件数: mustBeWhole.size,
+    折走段行数: back.from - 1 - front.to,
+  };
 }
 
 function readCodeLines() {
@@ -413,7 +537,9 @@ function wrapItemsToCols(items, limit) {
 
 assertComplete();
 
-const code = buildPages(readCodeLines(), CODE_LINES_PER_PAGE, { bodyClass: "code" });
+const codeLines = readCodeLines();
+const windowFit = assertWindowFit(codeLines);
+const code = buildPages(codeLines, CODE_LINES_PER_PAGE, { bodyClass: "code" });
 writeFileSync(
   join(ROOT, OUT_DIR, "源程序文档.html"),
   `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>${SOFT_NAME} ${SOFT_VERSION} 源程序文档</title><style>${STYLE}</style></head><body>${coverPage(
@@ -457,6 +583,7 @@ console.log(
         省略页数: doc.skipped,
       },
       收录文件数: ORDER.length,
+      窗口适配: windowFit,
     },
     null,
     1,

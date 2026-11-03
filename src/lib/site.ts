@@ -5,6 +5,7 @@
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建，收拢此前散落的站点名与描述
+ * - 2026-11-03: 补 siteIcp()：ICP 备案号走环境变量，未备案时页脚不出该行（上线合规位）
  */
 
 // NEXTAUTH_URL 在开发（http://localhost:3000）与生产（https://<正式域名>）两套环境里
@@ -18,4 +19,12 @@ export const siteDescription =
 
 export function siteUrl(): string {
   return (configured ?? "http://localhost:3000").replace(/\/+$/, "");
+}
+
+// 备案号只在服务端读取，作为 prop 传给页脚组件——页脚是客户端组件，
+// 直接 import 本模块会把 process.env 打进浏览器包
+export function siteIcp(): string | null {
+  const value = process.env.SITE_ICP?.trim();
+
+  return value ? value : null;
 }

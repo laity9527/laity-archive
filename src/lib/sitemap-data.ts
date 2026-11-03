@@ -5,6 +5,7 @@
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建
+ * - 2026-11-03: 公开路由清单加 /privacy（隐私与数据说明页）
  */
 import { connection } from "next/server";
 import { getSafeLogs } from "@/lib/logs";
@@ -28,6 +29,7 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     { url: `${base}/` },
     { url: `${base}/logs` },
     { url: `${base}/projects` },
+    { url: `${base}/privacy` },
     ...logs.map((log) => ({
       url: `${base}/logs/${log.slug}`,
       lastModified: log.updatedAt,

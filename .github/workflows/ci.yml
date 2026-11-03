@@ -1,0 +1,95 @@
+# 文件：.github/workflows/ci.yml
+# 描述：发版门禁的自动化执行：npm ci → prisma generate → lint → tsc → test → 迁移应用 → build → 软著材料完整性自检
+# 作者：张磊
+# 创建日期：2026-11-03
+# 修改记录：
+# - 2026-11-03: 初始创建（I037）。四道门禁此前全靠人在本机敲，忘跑就直接发版；材料收录完整性自检也放进来，
+#               因为第九轮实测发现"新文件没登记就生成"只能靠人对拍，机器完全能拦
+#
+# 说明：
+#   1. 这里的环境变量全是一次性占位值，不对应任何真实环境，也不含任何凭据——CI 用的一次性 Postgres
+#      里没有数据，口令写死在公开文件里不构成风险；真实值始终只在本地 .env 与服务器 .env.production。
+#   2. 给 CI 配一个真的 postgres:16 服务，是因为"next build 期会不会查库"这一条本机没实测出来
+#      （停库实验被安全策略拦下）。有库在，两种情况都成立；顺带用 migrate deploy 证明那条 init
+#      迁移能在一个全新的 16 上从零应用。
+#   3. npm ci（而非 npm install）本身就是跨平台锁文件门禁：I018 那类"Windows 安装删掉 linux
+#      平台 @emnapi 条目"的问题，在这里会直接装不出来。
+
+name: 发版门禁
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gates:
+    name: lint / 类型 / 测试 / 构建 / 材料
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ci-placeholder-not-a-real-secret
+      GITHUB_ID: ci-placeholder
+      GITHUB_SECRET: ci-placeholder
+      ALLOWED_GITHUB_IDS: "0"
+      OSS_REGION: oss-cn-beijing
+      OSS_BUCKET: ci-no-upload
+      OSS_ACCESS_KEY_ID: ci-placeholder
+      OSS_ACCESS_KEY_SECRET: ci-placeholder
+      SITE_ICP: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: 安装依赖（锁文件必须与本机一致，且不重新生成）
+        run: npm ci
+
+      - name: 生成 Prisma 客户端
+        run: npx prisma generate
+
+      - name: 代码检查
+        run: npm run lint
+
+      - name: 类型检查
+        run: npx tsc --noEmit
+
+      - name: 单元测试（Node 内置测试器，不装测试框架）
+        run: npm test
+
+      - name: 在全新库上应用迁移
+        run: npx prisma migrate deploy
+
+      - name: 构建
+        run: npm run build
+
+      # 材料自检两步是连着的：先靠 assertComplete() 拦住"新增源文件没登记收录清单"，
+      # 再要求生成结果与仓库里已提交的 HTML 完全一致——改了说明书 md 却忘了重出 HTML 也拦得住。
+      # 生成的 HTML 只存在于 CI 的工作区，不会被推回仓库。
+      - name: 软著材料收录完整性自检
+        run: node tools/软著材料生成.mjs
+
+      - name: 材料与说明书是否同步
+        run: git diff --exit-code -- docs/04-软著材料

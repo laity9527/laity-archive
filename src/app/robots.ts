@@ -14,8 +14,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // 后台与登录页没有公开价值，且会暴露 callbackUrl 参数形态
-      disallow: ["/admin", "/login"],
+      // 后台与登录页没有公开价值；/api 里只有运维端点，不需要被抓取
+      disallow: ["/admin", "/login", "/api"],
     },
     sitemap: `${siteUrl()}/sitemap.xml`,
   };

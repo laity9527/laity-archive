@@ -7,11 +7,13 @@
  * - 2026-10-30: 基于脚手架创建，替换为项目元信息，去默认字体与暗色
  * - 2026-10-30: 接入 Inter / Noto Serif SC / JetBrains Mono（next/font），字体变量供全站使用
  * - 2026-11-03: 元信息升级为 metadataBase + 标题模板 + Open Graph，并挂载前台持久导航 SiteNav
+ * - 2026-11-03: 挂页脚 SiteFooter（隐私入口 + ICP 备案号合规位），备案号在服务端读取后以 prop 下传
  */
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Noto_Serif_SC } from "next/font/google";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SiteNav } from "@/components/SiteNav";
-import { siteDescription, siteName, siteUrl } from "@/lib/site";
+import { siteDescription, siteIcp, siteName, siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -64,9 +66,10 @@ const fontVariables = [
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="zh-CN" className={`${fontVariables} h-full antialiased`}>
-      <body className="min-h-full bg-paper font-sans text-ink">
+      <body className="flex min-h-full flex-col bg-paper font-sans text-ink">
         <SiteNav />
-        {children}
+        <div className="flex-1">{children}</div>
+        <SiteFooter icp={siteIcp()} />
       </body>
     </html>
   );

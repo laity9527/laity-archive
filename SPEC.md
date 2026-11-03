@@ -36,6 +36,8 @@
 | F11 | 作为访客，我能浏览项目列表与项目详情，以便按作品维度看档案 | /projects、/projects/[slug] |
 | F12 | 作为访客，我在任何页面都知道自己在哪、怎么走去别处，以便把本站当正常网站使用 | 前台持久导航（字标 = 首页 + 开发日志 + 作品档案）、当前页 `aria-current`、跳到正文、正文容器 `id="main"`、筛选无结果时给"清除筛选"出口 |
 | F13 | 作为搜索引擎/分享方，我能拿到规范的站点信息，以便收录与预览卡片正常 | 每页 `title`/`description`（详情页标题跟内容、描述取"经验总结"）、`metadataBase` + Open Graph + Twitter card、`/robots.txt`（屏蔽 /admin 与 /login）、`/sitemap.xml`（只含已发布内容，请求期取数）、键盘焦点可见 `:focus-visible` |
+| F14 | 作为站长，我需要一个不依赖登录的健康检查端点和一个诚实的错误页，以便上线后能判断"是站点挂了还是数据库挂了" | `/api/health` 返回 `{status, db}`，数据库不可达时 503 且不泄露任何异常细节；未匹配路由走品牌化 404；渲染异常走错误边界并可重试 |
+| F15 | 作为访客，我想知道这个站拿了我什么、存了什么、怎么删，以便本站满足上线合规要求 | `/privacy` 隐私与数据说明页（按当前实现逐条写，不承诺做不到的事）；页脚提供入口与 ICP 备案号位（备案号走 `SITE_ICP` 环境变量，未配置则不渲染该行） |
 
 ### P2 / 非目标（本期坚决不做）
 
@@ -109,8 +111,10 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | /admin/projects | P0 | 需登录 | 项目管理 |
 | /admin/logs/new、/admin/logs/[id]/edit | P0 | 需登录 | 双栏编辑器；已发布日志的编辑页提供「下架」动作 |
 | /api/auth/* | P0 | NextAuth | GitHub OAuth 回调 |
-| /robots.txt | P1 | 静态生成 | 放行公开路径，屏蔽 /admin 与 /login，指向 sitemap |
-| /sitemap.xml | P1 | getSafeLogs + 项目表（请求期取数） | 只含公开路由与已发布内容，草稿与 /admin 不出现 |
+| /robots.txt | P1 | 静态生成 | 放行公开路径，屏蔽 /admin、/login 与 /api，指向 sitemap |
+| /sitemap.xml | P1 | getSafeLogs + 项目表（请求期取数） | 只含公开路由（含 /privacy）与已发布内容，草稿与 /admin 不出现 |
+| /privacy | P1 | 静态 | 隐私与数据说明（F15），进 sitemap 与页脚 |
+| /api/health | P1 | 一次性 `SELECT 1` | 运维探针，需登录无关；no-store + noindex |
 
 ### Server Actions
 
@@ -136,3 +140,15 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 2. 不做富文本所见即所得编辑器——Markdown 双栏纯文本足够；
 3. 不做日志版本历史/回收站——git 与数据库备份承担该职责；
 4. 不做移动端 App/小程序——响应式 Web 覆盖。
+## 五、上线基线（工程与合规）
+
+| 项 | 要求 | 现状 |
+|---|---|---|
+| 回归测试 | 纯逻辑必须有可重复运行的测试：D5 摘要口径、图片内容签名、slug 与表单取值、错误码文案完整性、时间展示、路由归属判定 | `npm test`（Node 自带 test runner，零新依赖），30 条断言全绿；DB 层与需登录的动作层不在覆盖内，仍靠自测表与人工联调 |
+| 构建门禁 | `npm run lint`、`npx tsc --noEmit`、`npm run build` 必须全 0 才算可发版 | 全 0 |
+| 健康检查 | 提供与登录无关的 `/api/health`，能区分"进程活着"与"数据库连得上"，异常不外泄细节 | 已实现，实测库停止时 503 `{"status":"degraded","db":false}`、恢复后 200；生产编排的 app 探针已改打这一条并校验响应体 `db === true`（I036），`web` 等 `app` healthy 再起 |
+| 持续集成 | 四条门禁不能只靠人记得跑（I037） | `.github/workflows/ci.yml`：`npm ci` → `prisma generate` → lint → tsc → test → `prisma migrate deploy` → build → 软著材料两步自检（漏登记新文件、HTML 与说明书不同步都会红）。配一次性 `postgres:16` 服务，因为"构建期是否查库"本机未能实测；工作流 env 全为占位值。Actions 实跑待推送后确认 |
+| 错误处理 | 未匹配路由有品牌化 404；渲染异常有可重试的错误边界且不显示内部信息 | `src/app/not-found.tsx`、`src/app/error.tsx` |
+| 合规位 | 隐私与数据说明页按真实行为撰写；ICP 备案号走 `SITE_ICP` 环境变量，未备案不硬凑文案 | `/privacy` 已上线；备案号待我本人在备案通过后填入 |
+| 部署与回滚 | 有一份可照着做的上线/回滚手册，含迁移镜像标签必须刷新这一条（I026） | `docs/00-开发方法论/上线与回滚手册.md` |
+| 安全头与传输 | TLS 1.2/1.3、HSTS、`nosniff`、`X-Frame-Options`、后台与 404 禁止索引 | nginx + Proxy 已配，本机预跑实测响应头齐 |

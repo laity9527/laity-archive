@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 一次性诊断脚本（已在 .gitignore）：参与 lint 会让发版门禁被废弃探针碰红
+    "tmp/**",
   ]),
 ]);
 

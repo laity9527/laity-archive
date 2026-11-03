@@ -6,6 +6,8 @@
 # - 2026-10-30: 初始创建（Phase 6 环境准备，对应 D6）
 # - 2026-11-02: app 服务补 OSS_REGION/OSS_BUCKET/OSS_ACCESS_KEY_ID/OSS_ACCESS_KEY_SECRET 四行（I024，Phase 5b 生产上传打通）
 # - 2026-11-02: preflight 同步补这四条判定，通过行改为附带地域与桶名（脱敏，不打密钥）。实测注意：变量缺失时 compose 的插值检查先失败，preflight 根本不会起跑，这层的作用是门禁清单自证 + 日后放宽 ${VAR:?} 时的兜底
+# - 2026-11-03: I036 落地：app 探针从 /login 换成 /api/health 并校验响应体 db=true，start_period 20s→30s；
+#               web 改为等 app healthy 再起（nginx 自身不加探针，理由见 web 处注释）
 #
 # 用前必读：
 #   1. cp .env.production.example .env.production，填真实值，两个口令不要与开发环境复用；
@@ -108,12 +110,16 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     healthcheck:
-      # /login 不查库，探针只证明进程活着并能出 HTTP；数据库连通性由 migrate 与页面表现判断
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      # I036：探针改打 /api/health 并要求响应体里 db 为 true——这样"healthy"同时代表
+      # 进程在、路由通、且应用真能连上库，而不是原来 /login 那种"进程活着"的弱信号。
+      # 代价是库抖动会把 app 标成 unhealthy；compose 不因 unhealthy 自动重启（restart 只看退出），
+      # 且 depends_on 只在启动时把关、运行期不追溯，所以不会形成级联停摆，只是把状态如实显示出来
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>r.json()).then(j=>process.exit(j.db===true?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      # 冷启动要多等一次库连接池建立，比原来打静态登录页的 20s 放宽到 30s
+      start_period: 30s
     networks: [laity_back]
 
   migrate:
@@ -133,7 +139,11 @@ services:
     container_name: laity-nginx-prod
     restart: unless-stopped
     depends_on:
-      - app
+      # 等 app 真正常服务（库可连）再起 nginx，避免冷启动窗口里整站被 502；
+      # nginx 自身不加探针：80 端口按 nginx.conf 直接 301 到 https，busybox wget 对重定向的
+      # 判定不稳，且证书是外部投放的，本机无从端到端验，宁可不加也不写一个会误报健康的探针
+      app:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
