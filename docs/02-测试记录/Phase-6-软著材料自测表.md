@@ -182,3 +182,29 @@
 - 泄密自检（按 `<div class="ln">` 行节点取文本）：六个密钥键可见值仍全空，无残留。
 - **新出现的软著风险（挂 I034）**：页数从 79 涨到 85，中间省略段从 19 页涨到 25 页，导致 `50` 个收录文件里 **15 个不在提交页中**（`page.tsx`、`SiteNav.tsx`、`Editor.tsx`、`StatusBoard.tsx`、`Seal.tsx`、`Timeline.tsx`、`login/page.tsx`、`logs/page.tsx`、`logs/[slug]/page.tsx`、`globals.css`、`layout.tsx`、`sitemap.ts`、`robots.ts`、`SignInButton.tsx`、`api/auth/[...nextauth]/route.ts`）。"前后各 30 页"本身合规，但界面层被整段折走会让材料看起来只剩数据层与 lib，需要决定是调收录顺序还是申请更多页数。
 - I021（打印成 PDF 的真实分页）仍未验，本轮只是行数变了。
+
+## 十四、2026-11-03 处理 I034：收录顺序改成"按提交窗口排版"（第八轮）
+
+- 问题回顾：源程序 85 页只提交前后各 30 页，原来的顺序按"数据模型 → 配置 → lib → 页面 → 组件"分层罗列，
+  结果**界面层整段落在被折走的中间 25 页里**（第七轮实测：15 个文件不出现，含 `page.tsx`、`SiteNav.tsx`、`Editor.tsx`）。
+  材料合规，但审查员翻不到界面实现。
+- 处置：只改 `ORDER` 顺序，不改页数、不改规则。新顺序按"两个窗口各装什么"设计：
+  ① 数据模型与运行时配置 ② 核心逻辑（存证口径 / 数据访问 / 上传 / 鉴权与前置守卫）→ 填满前窗口；
+  ③ 接口层与后台表单动作页（形态重复度高，其核心逻辑已在②里以另一形态出现）→ 放中间可折走段；
+  ④ 站点骨架与访客可见界面 → 填满后窗口。脚本里这段理由写成注释，避免以后有人"顺手改回按字母排"。
+- 实测结果（生成后用脚本按 `<section class="page">` 分块判定归属）：
+
+```
+收录 50 个；提交页内 39 个；折进中间段 11 个
+前窗口出现 25 个文件，末尾三个： src/lib/markdown.tsx、src/auth.ts、src/proxy.ts
+后窗口出现 14 个文件： SignInButton、globals.css、layout.tsx、SiteNav、StatusBoard、Timeline、
+  Seal、Editor、page.tsx、logs/page、logs/[slug]、projects/page、projects/[slug]、login/page
+两窗口都出现（跨界）：无
+```
+
+- 折走的 11 个是：`api/auth/[...nextauth]/route.ts`、`robots.ts`、`sitemap.ts` 与 8 个后台页面/动作文件。
+  其中 `robots.ts`/`sitemap.ts` 是极短模板化文件，后台动作的逻辑主体在 `src/lib/publish.ts`、`src/lib/oss.ts`、
+  `src/auth.ts`、`src/proxy.ts`（都在前窗口），上传的界面侧 `Editor.tsx` 在后窗口——**功能面没有整体缺口**。
+- 结构复核：页块 `61`、每页行数分布 `0,47,50`、页眉 `60`、最大显示列 `96/96`、超限 `0`；
+  说明书侧不变（`13` 块、`0,24,30`、超限 `0`）；密钥残留自检仍为"无"。
+- 副作用：源程序总行数与页数未变（4247 行 / 85 页），本轮只换顺序，因此软著提交的页数与说明书都不需要重新调整。

@@ -7,6 +7,7 @@
  * - 2026-10-30: 初始创建（Phase 6 软著材料，登记名与版本经我确认）
  * - 2026-11-02: 收录清单补 content-hash / forms / time / error-text 四个新 lib 模块（收敛重构产物）
  * - 2026-11-03: 再补 site / sitemap-data 两个 lib、SiteNav 组件与 sitemap / robots 两个路由文件
+ * - 2026-11-03: 收录顺序改为"按提交窗口排版"（I034）：数据模型与核心逻辑进前 30 页，站点骨架与访客界面进后 30 页，后台表单页放中间可折走段
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -27,58 +28,68 @@ const CODE_LINES_PER_PAGE = 50; // 软著源程序：每页不少于 50 行
 const DOC_LINES_PER_PAGE = 30; // 软著文档：每页不少于 30 行
 const SUBMIT_PAGES_EACH_SIDE = 30; // 超过 60 页时提交前 30 页 + 后 30 页
 
-// 源程序收录顺序：数据模型 → 配置与部署 → 数据访问层 → 鉴权 → 页面 → 组件 → 样式
+// 收录顺序 = 排版策略，不是单纯的分层罗列。源程序超过 60 页时只提交前 30 页 + 后 30 页，
+// 中间整段被折走（I034），所以顺序按"两个窗口各放什么"来排：
+//   ① 前窗口：数据模型与运行时配置  ② 前窗口：核心逻辑（存证口径/数据访问/上传/鉴权守卫）
+//   ③ 中间段：接口层与后台表单页——形态重复度高，被折走损失最小
+//   ④ 后窗口：站点骨架与访客可见界面 + 后台动作（审查员要能在提交页里看到界面与存证入口）
+// 无论怎么排，assertComplete() 都保证 src 与 prisma 下没有一个文件被漏登记
 const ORDER = [
+  // ① 数据模型与运行时配置
   "prisma/schema.prisma",
   "prisma/seed.ts",
   "package.json",
-  "next.config.ts",
   "tsconfig.json",
+  "next.config.ts",
   "eslint.config.mjs",
   "docker-compose.yml",
   "docker-compose.prod.yml",
   "Dockerfile",
   ".dockerignore",
   ".env.example",
+  // ② 核心逻辑
   "src/lib/db.ts",
+  "src/lib/content-hash.ts",
+  "src/lib/publish.ts",
   "src/lib/logs.ts",
   "src/lib/projects.ts",
-  "src/lib/publish.ts",
-  "src/lib/content-hash.ts",
+  "src/lib/error-text.ts",
   "src/lib/forms.ts",
   "src/lib/time.ts",
-  "src/lib/error-text.ts",
   "src/lib/site.ts",
   "src/lib/sitemap-data.ts",
   "src/lib/oss.ts",
   "src/lib/markdown.tsx",
   "src/auth.ts",
   "src/proxy.ts",
+  // ③ 中间段：接口层与后台表单/动作页——形态重复度高，且其核心逻辑（存证、上传、鉴权）
+  //    已分别出现在 publish.ts / oss.ts / auth.ts+proxy.ts 的前窗口里，折走它们损失最小
   "src/app/api/auth/[...nextauth]/route.ts",
-  "src/app/sitemap.ts",
   "src/app/robots.ts",
-  "src/app/layout.tsx",
+  "src/app/sitemap.ts",
+  "src/app/admin/layout.tsx",
+  "src/app/admin/log-actions.ts",
+  "src/app/admin/upload-action.ts",
+  "src/app/admin/project-actions.ts",
+  "src/app/admin/page.tsx",
+  "src/app/admin/projects/page.tsx",
+  "src/app/admin/logs/new/page.tsx",
+  "src/app/admin/logs/[id]/edit/page.tsx",
+  "src/components/SignInButton.tsx",
+  // ④ 后窗口：站点骨架与访客可见界面
   "src/app/globals.css",
-  "src/app/page.tsx",
-  "src/app/login/page.tsx",
-  "src/components/Seal.tsx",
+  "src/app/layout.tsx",
   "src/components/SiteNav.tsx",
   "src/components/StatusBoard.tsx",
   "src/components/Timeline.tsx",
+  "src/components/Seal.tsx",
   "src/components/Editor.tsx",
-  "src/components/SignInButton.tsx",
+  "src/app/page.tsx",
   "src/app/logs/page.tsx",
   "src/app/logs/[slug]/page.tsx",
   "src/app/projects/page.tsx",
   "src/app/projects/[slug]/page.tsx",
-  "src/app/admin/layout.tsx",
-  "src/app/admin/page.tsx",
-  "src/app/admin/project-actions.ts",
-  "src/app/admin/projects/page.tsx",
-  "src/app/admin/log-actions.ts",
-  "src/app/admin/upload-action.ts",
-  "src/app/admin/logs/new/page.tsx",
-  "src/app/admin/logs/[id]/edit/page.tsx",
+  "src/app/login/page.tsx",
 ];
 
 function walk(dir, acc = []) {
