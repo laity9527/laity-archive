@@ -78,6 +78,24 @@
 - 实测：`npx prisma db seed` 在本地真库跑通，证明 Node 运行时能吃这种导入，此前只卡在类型检查。
 - 边界：这是编译器配置变更（AGENTS.md 红线内），经我批准，只加这一个键，其它配置不动。
 
+### D16：补一层"产品骨架"——持久导航、元信息、抓取规则与可达性
+- 背景：六个 Phase 把功能做齐了，但站点骨架是缺的：前台没有持久导航（`/projects` 只能手输 URL，即 I030 的根因）、
+  全站只有一行 title/description、没有 `robots.txt` 与 `sitemap.xml`、详情页标题不跟随内容、键盘焦点无可见样式。
+  这些不在任何 Phase 的验收清单里，所以没人做也没人发现——**功能完备不等于产品合格**。
+- 决定：新增 `src/components/SiteNav.tsx`（根布局挂载，`/admin` 与 `/login` 自行不渲染，当前页用 `aria-current`）、
+  `src/lib/site.ts`（站点标识与 URL 单源，复用 `NEXTAUTH_URL` 不新增环境变量）、
+  `src/lib/sitemap-data.ts` + `src/app/{sitemap,robots}.ts`；五个前台页补 `id="main"` 承接"跳到正文"；
+  `globals.css` 加 `:focus-visible` 主墨色 2px 实线（守零圆角与无阴影）；详情页改 `generateMetadata`，
+  描述优先取"经验总结"字段（它本身就是这条复盘的结论）。
+- 为什么这样选：导航做成客户端组件按路径自判，而不是给五个页面各插一遍——重复五遍的东西一定会漏改一处；
+  也不用 route group 包一层布局，那要移动路由文件、违背 AGENTS.md 的目录约定。
+  站点 URL 复用 `NEXTAUTH_URL`：再加一个 `SITE_URL` 就多一处"改了 A 忘了 B"的漂移点，而两者本就必须是同一个对外地址。
+- 同时收掉两条产品正确性缺陷：上传类型判定改读文件内容签名（I032，`file.type` 可伪造且真 PNG 被误报时会错拒）、
+  已发布但缺摘要时前台显式提示"存证缺失"而不是安静地不画印章（存证是本站唯一的差异化卖点，静默降级最伤信任）。
+- 影响文件：`src/app/layout.tsx`、五个前台页、`src/components/SiteNav.tsx`、`src/lib/{site,sitemap-data,logs,projects}.ts`、
+  `src/app/{sitemap,robots}.ts`、`src/app/globals.css`、`src/lib/oss.ts`、`deploy/nginx.conf`。
+  视觉铁律未动：零圆角、无阴影、无渐变、无图标库、色值只用既有四色。
+
 ### D7：/logs/:slug 与 /projects/:slug 的真 404 由 Proxy 前置判定
 - 决策：src/proxy.ts 的 matcher 为 `["/logs/:slug", "/projects/:slug", "/admin/:path*"]`；日志按"是否已发布"判定，项目按"slug 是否存在"判定（`select slug` 落在唯一索引上），未命中直接返回带 404 状态码的极简纸白页（noindex + no-store），文案按路由类型分别给出、请求里的 slug 一律不拼进 HTML。
 - 理由：本项目开了 Cache Components（pPR），流式响应固定以 200 开头，页面级 notFound() 只能在正文已流式之后才执行，实测未发布日志与不存在项目都返回 200 + 错误页。Next 官方文档对动态路由真 404 的处方就是 Proxy 前置检查；rewrite 携带 status 实测同样被渲染路由的 200 覆盖，只有直接返回 Response 才保留状态码（两种写法都已实测）。

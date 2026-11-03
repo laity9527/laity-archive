@@ -6,9 +6,17 @@
  * 修改记录：
  * - 2026-10-30: Phase 5a 初始创建
  * - 2026-11-02: 更正 instant 注释：false 是退出即时导航校验，不是把路由改成动态
+ * - 2026-11-03: 补页面标题与描述；正文容器加 id 供"跳到正文"使用
  */
+import type { Metadata } from "next";
 import Link from "next/link";
 import { listPublicProjects } from "@/lib/projects";
+
+export const metadata: Metadata = {
+  title: "作品档案",
+  description:
+    "按作品维度归档：每个项目的类型、状态、简介，以及它下面已发布的开发复盘条数。",
+};
 
 // 项目列表走未缓存查询，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
@@ -18,7 +26,7 @@ export default async function ProjectsPage() {
   const projects = await listPublicProjects();
 
   return (
-    <main className="mx-auto max-w-[1080px] px-6 py-24">
+    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
       <Link
         href="/"
         className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"

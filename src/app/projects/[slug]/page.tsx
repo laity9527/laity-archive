@@ -7,12 +7,33 @@
  * - 2026-10-30: Phase 5a 初始创建；不存在的 slug 走 notFound，日志仅取已发布
  * - 2026-10-30: 更正说明：页面级 notFound 换不了状态码，真 404 由 src/proxy.ts 前置判定（与详情页同一路数）
  * - 2026-11-02: 补 instant 注释说明（false 是退出即时导航校验，不改变渲染方式）
+ * - 2026-11-03: 按项目名生成页面标题与描述；正文容器加 id 供"跳到正文"使用
  */
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Timeline } from "@/components/Timeline";
 import { getSafeLogs } from "@/lib/logs";
 import { getPublicProjectBySlug } from "@/lib/projects";
+
+// 详情页标题跟着项目名走；项目不存在时给中性标题，页面本身会走 404
+export async function generateMetadata({
+  params,
+}: PageProps<"/projects/[slug]">): Promise<Metadata> {
+  const { slug } = await params;
+  const project = await getPublicProjectBySlug(slug);
+
+  if (!project) {
+    return { title: "项目不存在" };
+  }
+
+  return {
+    title: project.name,
+    description:
+      project.summary?.trim() ||
+      `${project.name}（${project.kind} · ${project.status}）的作品档案：判断与验证过程按时间轴归档。`,
+  };
+}
 
 // 本页按 slug 查项目与其已发布日志，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
@@ -31,7 +52,7 @@ export default async function ProjectDetailPage({
   const logs = await getSafeLogs({ project: slug });
 
   return (
-    <main className="mx-auto max-w-[1080px] px-6 py-24">
+    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
       <Link
         href="/projects"
         className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"

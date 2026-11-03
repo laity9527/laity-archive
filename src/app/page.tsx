@@ -119,7 +119,7 @@ async function ArchiveOverview() {
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-[1080px] px-6 py-24">
+    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
       <header>
         <h1 className="text-4xl font-medium tracking-tight md:text-5xl">
           不囤想法，直接上线。

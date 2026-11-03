@@ -32,8 +32,10 @@
 
 | 编号 | 用户故事 | 说明 |
 |---|---|---|
-| F10 | 作为管理员，我能上传图片得到 OSS 外链，以便正文插图不落服务器本地 | Server Action 转发阿里云 OSS |
+| F10 | 作为管理员，我能上传图片得到 OSS 外链，以便正文插图不落服务器本地 | Server Action 转发阿里云 OSS；类型判定读文件内容签名（magic bytes），不看浏览器上报的 MIME |
 | F11 | 作为访客，我能浏览项目列表与项目详情，以便按作品维度看档案 | /projects、/projects/[slug] |
+| F12 | 作为访客，我在任何页面都知道自己在哪、怎么走去别处，以便把本站当正常网站使用 | 前台持久导航（字标 = 首页 + 开发日志 + 作品档案）、当前页 `aria-current`、跳到正文、正文容器 `id="main"`、筛选无结果时给"清除筛选"出口 |
+| F13 | 作为搜索引擎/分享方，我能拿到规范的站点信息，以便收录与预览卡片正常 | 每页 `title`/`description`（详情页标题跟内容、描述取"经验总结"）、`metadataBase` + Open Graph + Twitter card、`/robots.txt`（屏蔽 /admin 与 /login）、`/sitemap.xml`（只含已发布内容，请求期取数）、键盘焦点可见 `:focus-visible` |
 
 ### P2 / 非目标（本期坚决不做）
 
@@ -99,14 +101,16 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 
 | 路由 | 优先级 | 数据来源 | 说明 |
 |---|---|---|---|
-| / | P0 | getSafeLogs + 项目表 | 首页 |
-| /logs | P0 | getSafeLogs（支持 project/tag 筛选参数） | 日志大厅 |
-| /logs/[slug] | P0 | getSafeLogBySlug（仅已发布） | 详情+防伪印章；未发布 slug 返回 404 |
+| / | P0 | getArchiveBoard + getSafeLogs | 首页：精选区（有已发布日志的项目按最近发布取前三）+ 状态看板（含零日志项目，显示"尚未发布"）+ 最新日志 |
+| /logs | P0 | getSafeLogs（支持 project/tag 筛选参数） | 日志大厅；筛选无命中时给"清除筛选"出口 |
+| /logs/[slug] | P0 | getSafeLogBySlug（仅已发布） | 详情+防伪印章；未发布 slug 返回 404；已发布但缺摘要/时间时显式提示"存证缺失"，不静默省略印章 |
 | /projects、/projects/[slug] | P1 | 项目表 + getSafeLogs | 作品维度 |
 | /admin | P0 | 需登录 | 后台入口/概览 |
 | /admin/projects | P0 | 需登录 | 项目管理 |
-| /admin/logs/new、/admin/logs/[id]/edit | P0 | 需登录 | 双栏编辑器 |
+| /admin/logs/new、/admin/logs/[id]/edit | P0 | 需登录 | 双栏编辑器；已发布日志的编辑页提供「下架」动作 |
 | /api/auth/* | P0 | NextAuth | GitHub OAuth 回调 |
+| /robots.txt | P1 | 静态生成 | 放行公开路径，屏蔽 /admin 与 /login，指向 sitemap |
+| /sitemap.xml | P1 | getSafeLogs + 项目表（请求期取数） | 只含公开路由与已发布内容，草稿与 /admin 不出现 |
 
 ### Server Actions
 
