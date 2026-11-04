@@ -14,6 +14,9 @@
 #               compose 构建到项目默认名 laity-archive-migrate:latest，而部署步骤核对的是 :prod 标签，
 #               于是"连跑两次 ID 不变"量的根本是 compose 不碰的那个标签。实测钉死后 :prod 由
 #               4b925be03f65 刷新为 d161c2e131b8，且新镜像内 /usr/bin/openssl 存在
+# - 2026-11-04: 本机整套预演时发现并修掉一个真实事故：compose 项目名默认取目录名，生产与开发编排同目录
+#               即同项目，`-f docker-compose.prod.yml down` 连带删掉了开发容器 laity-postgres（数据卷幸存）。
+#               加 name: laity-prod 把两套编排隔开；本机实测生产项目名为 laity-prod、开发仍为 laity-archive
 #
 # 用前必读：
 #   1. cp .env.production.example .env.production，填真实值，两个口令不要与开发环境复用；
@@ -22,6 +25,12 @@
 #      docker compose --env-file .env.production -f docker-compose.prod.yml build
 #      docker compose --env-file .env.production -f docker-compose.prod.yml run --rm migrate
 #      docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+
+# 项目名单独起名：compose 的项目名默认取自**所在目录名**，而本文件与本地开发用的
+# docker-compose.yml 在同一目录 → 两者同属项目 laity-archive。后果是实测过的：
+# 用 `docker compose -f docker-compose.prod.yml down` 预演生产栈时，把开发容器 laity-postgres
+# 一起删掉了（数据卷因不在本次声明的卷列表里而幸存）。钉死项目名后两套编排互不波及。
+name: laity-prod
 
 services:
   # 上线门禁：DESIGN 风险清单写死"口令不改不发版"。compose 的 ${VAR:?} 只能拦空值，
