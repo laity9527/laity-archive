@@ -239,7 +239,7 @@ GET  /login                          → http=200，正文含"管理员口令"�
 | 条 | 改了什么 | 判据与实测 |
 |---|---|---|
 | I044 | AGENTS.md 三处过期事实：技术栈锁定的登录行、环境实况里"真实上传联调"的前置、合规红线段的 preflight 清单最后一项；文件头 修订留痕 追加一行 | 登录行现写"内置 Credentials（id `admin`）+ `ADMIN_PASSWORD` + `token.isAdmin`"，并新增一条约束"`src/proxy.ts` 不得 import `src/auth.ts`"（口令比较用 `node:crypto`，不该进前置守卫）——这条不是风格偏好，是本轮真实踩过的耦合点 |
-| I045 | ci.yml 删除 `GITHUB_ID` / `GITHUB_SECRET` / `ALLOWED_GITHUB_IDS` 三行 | **没有**替换成 `ADMIN_PASSWORD` 占位：CI 全程不调 `authorize`，`tests/admin-password.test.ts` 自带哑值，新增一个没人读的变量正是本条要治的病。改后 `npm run lint/tsc/test/build` 全 0；Actions 实跑要等我推送，本条不预先宣布收口 |
+| I045 | ci.yml 删除 `GITHUB_ID` / `GITHUB_SECRET` / `ALLOWED_GITHUB_IDS` 三行 | **没有**替换成 `ADMIN_PASSWORD` 占位：CI 全程不调 `authorize`，`tests/admin-password.test.ts` 自带哑值，新增一个没人读的变量正是本条要治的病。改后 `npm run lint/tsc/test/build` 全 0；Actions 实跑已过：推送 `d7959bf` 后 run 41778791390 的 18 步全 success（含第 5 步 `npm ci`、第 10 步 56 条单元测试、第 13/14 步材料完整性与同步比对），本条据此收口 |
 | I046 | `deploy/nginx.conf` 加登录端点限速 | 见下 |
 
 限速的落法与验证：`limit_req_zone $binary_remote_addr zone=laity_auth:10m rate=5r/m` 必须写在 server 块之外（conf.d 被 include 进 `http{}`，放进 server 会 `[emerg]`）；新的 `location = /api/auth/callback/admin` 挂 `limit_req zone=laity_auth burst=5 nodelay` 与 `limit_req_status 429`；`proxy_set_header` 等公共参数从 `location /` 提到 server 层，两条 location 共用一份，避免"改了通用头部漏改登录那条"的漂移。
