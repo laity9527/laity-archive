@@ -12,13 +12,18 @@
  *               不再接受"任何有效会话"
  * - 2026-11-04: publishLogAction 改为"先存再发"（D25）：原先发布表单只带 id，改了正文不点保存直接发布
  *               会把库里的旧内容发出去，而页面写的是"按当前正文算摘要"
+ * - 2026-11-04: parseInput 改成 {ok, input} | {ok:false, field}（D26）：原先 9 条规则共用一句 VAL_001，
+ *               用户看到的是一整张表单的规则而非错在哪；id/projectId 也在此处按形状与存在性挡下，
+ *               不再让脏 id 拼进 redirect 或变成未捕获的外键错
  */
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
-import { SLUG_PATTERN, readField } from "@/lib/forms";
+import type { LogField } from "@/lib/error-text";
+import { ID_PATTERN, LIMITS, SLUG_PATTERN, readField } from "@/lib/forms";
+import { listProjectIds } from "@/lib/projects";
 import {
   deleteLog,
   publishLog,
@@ -44,22 +49,29 @@ function parseTags(raw: string) {
     .filter((tag) => tag.length > 0);
 }
 
-function parseInput(formData: FormData): LogInput | null {
+type ParseResult = { ok: true; input: LogInput } | { ok: false; field: LogField };
+
+function parseInput(formData: FormData): ParseResult {
   const beforeDate = parseDate(readField(formData, "beforeDate"));
   const rawAfter = readField(formData, "afterDate");
   const afterDate = rawAfter ? parseDate(rawAfter) : null;
   const tags = parseTags(readField(formData, "tags"));
+  const rawId = readField(formData, "id");
+
+  if (rawId && !ID_PATTERN.test(rawId)) {
+    return { ok: false, field: "id" };
+  }
 
   if (!beforeDate) {
-    return null;
+    return { ok: false, field: "beforeDate" };
   }
 
   if (rawAfter && !afterDate) {
-    return null;
+    return { ok: false, field: "afterDate" };
   }
 
   const input: LogInput = {
-    id: readField(formData, "id") || undefined,
+    id: rawId || undefined,
     projectId: readField(formData, "projectId"),
     slug: readField(formData, "slug"),
     title: readField(formData, "title"),
@@ -71,31 +83,50 @@ function parseInput(formData: FormData): LogInput | null {
     lessonLearned: readField(formData, "lessonLearned"),
   };
 
-  if (!SLUG_PATTERN.test(input.slug) || input.title.length === 0 || input.title.length > 120) {
-    return null;
+  if (!SLUG_PATTERN.test(input.slug)) {
+    return { ok: false, field: "slug" };
+  }
+
+  if (input.title.length === 0 || input.title.length > LIMITS.title) {
+    return { ok: false, field: "title" };
   }
 
   if (input.projectId.length === 0) {
-    return null;
+    return { ok: false, field: "project" };
   }
 
-  if (tags.length > 10 || tags.some((tag) => tag.length > 24)) {
-    return null;
+  if (tags.length > LIMITS.tags || tags.some((tag) => tag.length > LIMITS.tag)) {
+    return { ok: false, field: "tags" };
   }
 
   if (input.beforeContent.length === 0) {
-    return null;
+    return { ok: false, field: "beforeContent" };
   }
 
   if (afterDate && afterDate.getTime() < beforeDate.getTime()) {
-    return null;
+    return { ok: false, field: "afterDate" };
   }
 
-  if ((input.lessonLearned ?? "").length > 500) {
-    return null;
+  if ((input.lessonLearned ?? "").length > LIMITS.lesson) {
+    return { ok: false, field: "lessonLearned" };
   }
 
-  return input;
+  return { ok: true, input };
+}
+
+// 表单里的 projectId 是客户端可控值：不存在的外键值会一路走到 write 并抛 P2003（500），
+// 所以在挡一道"确实是本项目里的项目"，比让数据库报错更好读
+async function assertProjectExists(projectId: string, backTo: string) {
+  const ids = await listProjectIds();
+
+  if (!ids.includes(projectId)) {
+    redirect(`${backTo}?error=VAL_001&field=project`);
+  }
+}
+
+// 校验失败时把出错字段一起带回去：页面据此标住那一个控件，而不是把整张表单的规则念一遍
+function reject(backTo: string, field: LogField): never {
+  redirect(`${backTo}?error=VAL_001&field=${field}`);
 }
 
 function refreshLogViews(slug: string) {
@@ -107,7 +138,7 @@ function refreshLogViews(slug: string) {
 
 export async function saveLogAction(formData: FormData) {
   const id = readField(formData, "id");
-  const backTo = id ? `/admin/logs/${id}/edit` : "/admin/logs/new";
+  const backTo = ID_PATTERN.test(id) ? `/admin/logs/${id}/edit` : "/admin/logs/new";
 
   const session = await requireAdminSession();
 
@@ -115,11 +146,15 @@ export async function saveLogAction(formData: FormData) {
     redirect(`${backTo}?error=AUTH_001`);
   }
 
-  const input = parseInput(formData);
+  const parsed = parseInput(formData);
 
-  if (!input) {
-    redirect(`${backTo}?error=VAL_001`);
+  if (!parsed.ok) {
+    reject(backTo, parsed.field);
   }
+
+  const { input } = parsed;
+
+  await assertProjectExists(input.projectId, backTo);
 
   const result = await saveLog(input);
 
@@ -133,7 +168,7 @@ export async function saveLogAction(formData: FormData) {
 
 export async function publishLogAction(formData: FormData) {
   const id = readField(formData, "id");
-  const backTo = id ? `/admin/logs/${id}/edit` : "/admin/logs/new";
+  const backTo = ID_PATTERN.test(id) ? `/admin/logs/${id}/edit` : "/admin/logs/new";
 
   const session = await requireAdminSession();
 
@@ -141,18 +176,22 @@ export async function publishLogAction(formData: FormData) {
     redirect(`${backTo}?error=AUTH_001`);
   }
 
-  if (!id) {
-    redirect(`${backTo}?error=VAL_001`);
+  if (!ID_PATTERN.test(id)) {
+    reject(backTo, "id");
   }
 
   // 先存再发：发布按钮与表单字段同在一张表单（per-button formAction），
   // 原先它只带一个 id，改了正文不点"保存"直接发布会把库里的旧内容发出去，
   // 而页面上写的是"按当前正文算 SHA-256"——所见必须等于所发
-  const input = parseInput(formData);
+  const parsed = parseInput(formData);
 
-  if (!input) {
-    redirect(`${backTo}?error=VAL_001`);
+  if (!parsed.ok) {
+    reject(backTo, parsed.field);
   }
+
+  const { input } = parsed;
+
+  await assertProjectExists(input.projectId, backTo);
 
   const saved = await saveLog({ ...input, id });
 
@@ -175,7 +214,7 @@ export async function publishLogAction(formData: FormData) {
 
 export async function unpublishLogAction(formData: FormData) {
   const id = readField(formData, "id");
-  const backTo = id ? `/admin/logs/${id}/edit` : "/admin";
+  const backTo = ID_PATTERN.test(id) ? `/admin/logs/${id}/edit` : "/admin";
 
   const session = await requireAdminSession();
 
@@ -183,8 +222,8 @@ export async function unpublishLogAction(formData: FormData) {
     redirect(`${backTo}?error=AUTH_001`);
   }
 
-  if (!id) {
-    redirect(`${backTo}?error=VAL_001`);
+  if (!ID_PATTERN.test(id)) {
+    reject(backTo, "id");
   }
 
   const result = await unpublishLog(id);
@@ -200,6 +239,7 @@ export async function unpublishLogAction(formData: FormData) {
 // 彻底删除：行连同摘要一起消失，与"下架"不同，因此回跳的是后台首页而不是编辑页
 export async function deleteLogAction(formData: FormData) {
   const id = readField(formData, "id");
+  const backTo = ID_PATTERN.test(id) ? `/admin/logs/${id}/edit` : "/admin";
 
   const session = await requireAdminSession();
 
@@ -207,14 +247,14 @@ export async function deleteLogAction(formData: FormData) {
     redirect(`/admin?error=AUTH_001`);
   }
 
-  if (!id) {
-    redirect(`/admin?error=VAL_001`);
+  if (!ID_PATTERN.test(id)) {
+    reject(backTo, "id");
   }
 
   const result = await deleteLog(id, readField(formData, "confirmSlug"));
 
   if (!result.ok) {
-    redirect(`/admin/logs/${id}/edit?error=${result.code}`);
+    redirect(`${backTo}?error=${result.code}`);
   }
 
   refreshLogViews(result.slug);

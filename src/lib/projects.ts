@@ -28,11 +28,19 @@ export type ProjectInput = {
 
 export type SaveProjectResult =
   | { ok: true; id: string }
-  | { ok: false; code: "PRJ_002" };
+  | { ok: false; code: "PRJ_002" | "PRJ_004" };
 
 export type DeleteProjectResult =
   | { ok: true }
-  | { ok: false; code: "PRJ_001" };
+  | { ok: false; code: "PRJ_001" | "PRJ_004" };
+
+// 日志表单里的 projectId 是客户端可控值：不存在的外键会一路走到写入并抛 P2003（500），
+// 所以动作层先取一次 id 集合做存在性判定，只取 id 一列
+export async function listProjectIds(): Promise<string[]> {
+  const rows = await db.project.findMany({ select: { id: true } });
+
+  return rows.map((row) => row.id);
+}
 
 export async function listProjects() {
   return db.project.findMany({
@@ -198,11 +206,16 @@ export async function saveProject(input: ProjectInput): Promise<SaveProjectResul
 
     return { ok: true, id: project.id };
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return { ok: false, code: "PRJ_002" };
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return { ok: false, code: "PRJ_002" };
+      }
+
+      // 带着 id 更新却命中 0 行：编辑表单是在别的标签页/更早时刻打开的，那行已经不在了。
+      // 原先这里不捕，P2025 直接抛出去变成 500
+      if (error.code === "P2025") {
+        return { ok: false, code: "PRJ_004" };
+      }
     }
 
     throw error;
@@ -216,13 +229,15 @@ export async function deleteProject(id: string): Promise<DeleteProjectResult> {
     return { ok: true };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // P2003 外键约束：项目下还有日志；P2025 记录不存在视为已删除
+      // P2003 外键约束：项目下还有日志
       if (error.code === "P2003") {
         return { ok: false, code: "PRJ_001" };
       }
 
+      // P2025 是"没删掉任何行"，不是"已经是删除状态"。返回 ok:true 会让页面显示删除成功，
+      // 而列表里那一行可能只是还没刷新——报实错
       if (error.code === "P2025") {
-        return { ok: true };
+        return { ok: false, code: "PRJ_004" };
       }
     }
 

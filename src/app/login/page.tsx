@@ -11,6 +11,8 @@
  *               非管理员会话不该被自动送进 /admin 再被守卫弹回来
  * - 2026-11-04: 读会话前先 await connection()：预渲染里 NextAuth 会给缺失的 csrf cookie 生成随机值，
  *               Cache Components 判它不稳定，dev 下整条路由反复重渲染
+ * - 2026-11-04: safeCallbackUrl 搬到 src/lib/forms.ts 并补上反斜杠判定（D26）：留在页面里就测不到，
+ *               而 `/\host` 这种写法能绕过只挡 `//` 的旧判定跳去外站
  */
 import Link from "next/link";
 import { connection } from "next/server";
@@ -18,20 +20,11 @@ import { redirect } from "next/navigation";
 import { SignInButton } from "@/components/SignInButton";
 import { requireAdminSession } from "@/auth";
 import { ERROR_TEXT } from "@/lib/error-text";
-import { pickParam } from "@/lib/forms";
+import { pickParam, safeCallbackUrl } from "@/lib/forms";
 
 // 本页读会话与查询参数，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
-
-// 只认本站相对路径：以 / 开头、不以 // 开头（后者是协议相对 URL，会跳到外部站点）
-function safeCallbackUrl(value: string | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/admin";
-  }
-
-  return value;
-}
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   // 先声明请求期渲染，再读会话：预渲染里 NextAuth 见不到 csrf cookie 就用 randomBytes 现造一个，

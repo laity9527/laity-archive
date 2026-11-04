@@ -235,6 +235,20 @@
 - 门禁：`npm run lint` 0、`npx tsc --noEmit` 0、`npm test` 60/60、`npm run build` 0。实测产生的两条临时日志（`publish-flow-selftest-tmp`、`pending-label-selftest-tmp`）都用后台的彻底删除清掉，概览回到 1 项目 / 1 已发布 / 0 草稿，前台两条 slug 均 404。
 - 连带：SPEC 的 F06 与动作契约表（`publishLog` 行的入参与错误码）、`/privacy` 与应急预案里的会话寿命、说明书 5.4/5.6 与 5.1、DESIGN D20 ② 的"30 天"表述，以及软著材料重出。
 
+### D26：后台写路径的正确性收口——被拒的提交不许吃掉正在写的字
+- 背景：我第四次让助手"运行程序并按经验优化（页面美观、功能权限等方面），可以暂时突破相关 md 文件的限制，需要口令时通知我"。口令这轮没用到——上一轮我登录签发的会话还在（`/api/auth/session` 的 `expires` 是 12 小时后），助手没有索取任何值。这轮量的是**后台写路径的语义**，外观上一轮已实测无可修缺陷。范围按我点名的"只修正确性"，外观与无障碍项一律记账不动手。
+- 量到的六条（都可复现，判据见 Phase-7 自测表第十六节）：① 被服务端拒掉的保存会把整页打字内容销毁；② `VAL_001` 一个码覆盖 9 条规则、不说是哪条；③ 项目保存/删除跳回裸列表页（无成功回显）、删除还是一击生效；④ `/login` 的 `Configuration` 文案念出 `NEXTAUTH_SECRET`/`NEXTAUTH_URL` 两个键名，而这张页面对外可访问；⑤ `safeCallbackUrl` 挡了 `//host` 没挡 `/\host`；⑥ 表单里的原始 id 直接拼进 redirect、`projectId` 不校验存在性、项目行被人先删掉时 `saveProject` 抛 P2025 变 500、`deleteProject` 把"没删到任何行"报成删除成功。
+- 决策一（规则单源搬到可测层）：`src/lib/forms.ts` 收 `LIMITS`（标题 120 / 标签 10 个 / 单个 24 / 总结 500 / 项目名 80 / 简介 200）、`ID_PATTERN`、`SLUG_SOURCE` 与从页面里搬出来的 `safeCallbackUrl`。**搬的理由是能被 `node --test` 直接 import**：留在 Server Component 页面里就测不到，而"反斜杠能不能绕过回调"这种判定恰好需要一条常驻测试。
+- 决策二（`VAL_001` 具名字段）：`parseInput` 返回 `{ok,input} | {ok:false,field}`，回跳形态从 `?error=VAL_001` 扩成 `?error=VAL_001&field=title`。**这是往既有的 URL 参数约定里加一个参数，不是换约定**——I031 定案的"页面动作一律 redirect、结果可用 URL 截图留证"原样成立。被否的替代是让动作"不 redirect 直接返回"：那样 `title/slug/tags` 仍会从库里重渲染丢掉，React 在动作后还会重置表单，真要留下输入只剩 `useActionState` 包一层客户端表单壳，正是本项目要避免的东西。
+- 决策三（丢稿两道防线）：第一道是浏览器侧 `required`/`maxLength`/`pattern`，让最常见的触发点在提交前就出不去；第二道是 `Editor` 在捕获阶段把两份正文写进 `sessionStorage`（键 `laity:draft:<id|"new">`），**仅当页面带 `?error=` 回来时**才在 `useState` 的初始函数里回填，回填后立刻删除暂存。选初始函数而不是 effect 里的 `setState`，是因为 eslint 的 `react-hooks/set-state-in-effect` 拒绝后者，而这条路径本来就该在首次渲染落定（预览区与 dirty 判定读同一份 state）；`typeof window === "undefined"` 的守卫不能省——客户端组件也要过服务端那一遍渲染。
+- 决策四（删除项目两步生效）：`SubmitButton` 加 `confirmLabel`，第一次点击只把文案换成"再点一次确认删除"并置上隐藏位 `confirmDelete=on`，第二次才提交；服务端缺这一位就回 `PRJ_003`。**这条边界必须写明**：它是防手滑，不是访问控制——脚本直调照样能带上该位，和 LOG_003 的自证性质同一口径。日志的彻底删除仍要求原样回填 slug（那条是不可逆且判据更强）。
+- 决策五（配置状态不再外泄）：`Configuration` 文案改为"登录没有配好，服务器侧缺少必需的密钥或地址，请查看服务端日志。"，并由测试钉住它不含 `NEXTAUTH|SECRET|_URL|ADMIN_PASSWORD`（不区分大小写）。AGENTS.md 早就写了"配置状态只在服务器日志、公开页不透露"，这轮是补齐文案这一处。
+- 决策六（脏 id 与并发删除）：`id` 一律过 `ID_PATTERN` 才允许拼进回跳地址；`saveLog/saveProject` 前校验 `projectId` 存在（动作层取一次 id 集合，只取一列）；`P2025` 不再抛 500，更新与删除各自回 `PRJ_004`。**`deleteProject` 原先把 P2025 判成"已经是删除状态"返回 `ok:true`**，页面会显示删除成功而那一行可能还在列表里——按"没删到任何行就是失败"改正。
+- 一处护栏真拦住了我：`pattern={SLUG_PATTERN.source}` 在浏览器里报 `Invalid character class`——属性按 `v` flag 编译，字符类里尾随的 `-` 在那儿非法。改成 `SLUG_SOURCE`（`-` 转义）并由服务端从它派生 `SLUG_PATTERN`，再加一条"两侧都能编译"的测试。这不是我想多了，是控制台先报的。
+- 材料窗口第四次被挤破：`①+②` 涨到 1501 行、`src/proxy.ts` 被前窗口切开，`assertWindowFit()` 拒绝出件。按它给的处置把 `src/lib/image-signature.ts`（46 行，读文件头比表、调用方上传动作本就在折走段）从 ② 平移进 ③，出件 6213 行 / 125 页 / 收录 65，幂等复跑 MD5 相同。`tmp/whole-check.mjs` 的 MUST 清单同步摘掉该文件并注明理由——**这份清单是我自己写的，分带调整后它先报了假错**，两处都得跟着真实设计走。
+- 记账不动手（范围外，按我点名的"只修正确性"）：8 处状态横幅缺 `role=alert`；`confirmSlug` 输入框仍只有 placeholder；`/login` 的 `<main>` 无 `id="main"` 且无跳转链接；日志正文里的 `#` 会被渲染成第二个 `<h1>` 且脱离字号系统（`globals.css` 只样式化 `.log-body h2/h3`，sanitize 默认 schema 放行 h1）；后台导航缺 `aria-current`/`aria-label`；`globals.css` 三处硬编码 `#e7e7e2`；`licenses` 页 `text-[13px]` 不在字号阶上；复选框 `items-baseline` 错位；首页仍全量取日志再 `slice(0,3)`、`listAdminLogs` 零调用未删；节流桶不回收（内存无界）；`/admin` 的 `notFound()` 落公共 404；四处日期渲染口径不一；`login/page.tsx` 里两次 `await connection()` 重复。另有一条判断记录：登录失败与审计日志本站不做（与 `/privacy` 的"不追踪"承诺冲突，单人站价值≈0），`sensitiveConfirmed` 维持自证不改。
+- 未实测（如实标注）：`PRJ_003` 的服务端分支——助手在本机把删除目标指向真实项目"地球 Mirror"被运行时安全策略拦下（判据合理：那是不可逆动作，我没有拿到对该资源的点名），我没有换写法绕；已验的是客户端第一次点击只置位不提交、第二次点击在**临时项目**上真删成功并回显 `?deleted=1`，服务端那一行的代码是同一处判定的取反。HTTP 层 `AUTH_001`（I013）、真实 OSS 上传成功分支、nginx `limit_req` 线上计时、`:focus-visible` 视觉环同上一轮仍未实测。
+
 ## 二、分阶段路线图（7 个 Phase，每个都是可运行最小闭环；Phase 8/9 为待裁决备选）
 
 通则：每个 Phase 开新会话 + 执行指令卡；完成后独立验收 → git commit → 截图/日志归档。

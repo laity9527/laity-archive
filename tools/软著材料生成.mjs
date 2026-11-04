@@ -83,7 +83,6 @@ const BANDS = [
       "src/lib/projects.ts",
       "src/lib/forms.ts",
       "src/lib/sensitive-scan.ts",
-      "src/lib/image-signature.ts",
       "src/lib/oss.ts",
       "src/lib/markdown.tsx",
       "src/lib/admin-password.ts",
@@ -98,6 +97,10 @@ const BANDS = [
     files: [
       "src/lib/error-text.ts",
       "src/lib/time.ts",
+      // 图片类型嗅探是"读文件头几个字节比表"，调用它的上传动作本就在 ③；
+      // 本轮 forms.ts / projects.ts / error-text 各自长了几行，①+② 第 1501 行起把 proxy.ts 切开，
+      // 按 assertWindowFit 的处置建议由它让位（存证、鉴权、消毒三类真逻辑仍整份在前窗口）
+      "src/lib/image-signature.ts",
       // 许可清单是一张静态表（值来自 node_modules 实测），逻辑在 tests/licenses.test.ts 的对拍里
       "src/lib/licenses.ts",
       // 站点标识同样是"一串常量 + 读环境变量"，没有算法；第十二轮（取消 GitHub 登录）为让出口令模块的位置移进 ③，

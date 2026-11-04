@@ -10,6 +10,9 @@
  * - 2026-11-04: 隐藏的文件输入补 aria-label——它没有可见文案也没有关联 label，读屏下是个无名控件
  * - 2026-11-04: 正文与初始值不一致时挂 beforeunload 拦截；任一表单提交即清除标记，
  *               避免"刚点保存就被浏览器问要不要离开"
+ * - 2026-11-04: 提交时把两份正文暂存进 sessionStorage，仅在服务端打回（页面带 ?error= 回来）时回填
+ *               （D26）——原先被拒的保存会 redirect 回编辑页并从库里重渲染，写到一半的字整段没，
+ *               而清 dirty 标记又恰好把丢稿拦截在这条路上解除武装
  */
 "use client";
 
@@ -21,6 +24,10 @@ import { Markdown } from "@/lib/markdown";
 type EditorProps = {
   initialBefore: string;
   initialAfter: string;
+  // 暂存按记录 id 分键；新建页传 "new"
+  draftKey: string;
+  // 只有服务端打回（页面带 ?error=）才回填，正常保存/发布成功不复活旧稿
+  restoreDraft?: boolean;
 };
 
 type Tab = "before" | "after";
@@ -36,10 +43,43 @@ function safeAlt(name: string) {
   return name.replace(/[[\]\r\n]/g, "").slice(0, 60) || "图片";
 }
 
-export function Editor({ initialBefore, initialAfter }: EditorProps) {
+function stashKey(draftKey: string) {
+  return `laity:draft:${draftKey}`;
+}
+
+// 读不到、解不出、形状不对，一律按"没有暂存"处理：不能让一次坏数据把编辑器卡住。
+// 客户端组件也要过服务端那一遍渲染（硬加载带 ?error= 的文档时），那时没有 window
+function readStash(draftKey: string) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      window.sessionStorage.getItem(stashKey(draftKey)) ?? "",
+    ) as { before?: unknown; after?: unknown };
+
+    return {
+      before: typeof parsed.before === "string" ? parsed.before : undefined,
+      after: typeof parsed.after === "string" ? parsed.after : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function Editor({
+  initialBefore,
+  initialAfter,
+  draftKey,
+  restoreDraft = false,
+}: EditorProps) {
   const [tab, setTab] = useState<Tab>("before");
-  const [before, setBefore] = useState(initialBefore);
-  const [after, setAfter] = useState(initialAfter);
+  // 服务端打回时（页面带 ?error=）把提交前留下的正文捡回来。放在 useState 的初始函数里，
+  // 不挂在 effect 的 setState 上：预览区与 dirty 判定都读同一份 state，回填一次就与手打无异
+  const recovered = restoreDraft ? readStash(draftKey) : null;
+  const [before, setBefore] = useState(recovered?.before ?? initialBefore);
+  const [after, setAfter] = useState(recovered?.after ?? initialAfter);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const beforeRef = useRef<HTMLTextAreaElement>(null);
   const afterRef = useRef<HTMLTextAreaElement>(null);
@@ -53,6 +93,13 @@ export function Editor({ initialBefore, initialAfter }: EditorProps) {
     dirtyRef.current = dirty;
   }, [dirty]);
 
+  // 回填过一次就作废暂存：留在 sessionStorage 里，下次同一 id 带着别的错误回来会复活旧稿
+  useEffect(() => {
+    if (restoreDraft) {
+      window.sessionStorage.removeItem(stashKey(draftKey));
+    }
+  }, [restoreDraft, draftKey]);
+
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!dirtyRef.current) {
@@ -63,8 +110,19 @@ export function Editor({ initialBefore, initialAfter }: EditorProps) {
       event.preventDefault();
     };
 
-    // 任何一次表单提交（保存/发布/下架/删除）都不算"丢弃"：先清标记，免得刚点保存就被问要不要离开
+    // 提交不算"丢弃"，所以先清拦截标记；但被服务端拒掉的那一次要把正文留在 sessionStorage 里，
+    // 否则页面从库里重渲染，写到一半的字就没了（只在带 ?error= 回来时才回填）
     const onSubmit = () => {
+      if (dirtyRef.current) {
+        window.sessionStorage.setItem(
+          stashKey(draftKey),
+          JSON.stringify({
+            before: beforeRef.current?.value ?? before,
+            after: afterRef.current?.value ?? after,
+          }),
+        );
+      }
+
       dirtyRef.current = false;
     };
 
@@ -75,7 +133,7 @@ export function Editor({ initialBefore, initialAfter }: EditorProps) {
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("submit", onSubmit, true);
     };
-  }, []);
+  }, [draftKey, before, after]);
 
   const tabClass = (value: Tab) =>
     `border-b pb-1 font-mono text-[10px] tracking-[0.2em] ${

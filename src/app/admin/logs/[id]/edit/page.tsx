@@ -23,7 +23,7 @@ import {
 import { Editor } from "@/components/Editor";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
-import { pickParam } from "@/lib/forms";
+import { LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
 import { getAdminLogById } from "@/lib/logs";
 import { listProjects } from "@/lib/projects";
 import { toDateTimeLocal } from "@/lib/publish";
@@ -37,6 +37,7 @@ type EditLogPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
     error?: string | string[];
+    field?: string | string[];
     saved?: string | string[];
     published?: string | string[];
     unpublished?: string | string[];
@@ -57,10 +58,14 @@ export default async function EditLogPage({
 
   const projects = await listProjects();
   const errorCode = pickParam(query.error);
-  const errorText = errorCode ? errorTextOf(errorCode, "log") : null;
+  const errorField = pickParam(query.field);
+  const errorText = errorCode ? errorTextOf(errorCode, "log", errorField) : null;
   const saved = pickParam(query.saved);
   const published = pickParam(query.published);
   const unpublished = pickParam(query.unpublished);
+
+  // 出错字段只用于把浏览器焦点标在那一个控件上；具体文案由 errorTextOf 按同一 field 取
+  const bad = (field: string) => errorCode === "VAL_001" && errorField === field;
 
   // 扫的是库里的正文（与发布动作同一口径），所以这里显示的就是发布时会被拦的内容
   const hits = scanSensitive(
@@ -93,7 +98,10 @@ export default async function EditLogPage({
       </p>
 
       {errorText && (
-        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p
+          id="form-error"
+          className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
+        >
           {errorCode} · {errorText}
         </p>
       )}
@@ -141,6 +149,10 @@ export default async function EditLogPage({
           <input
             name="title"
             defaultValue={log.title}
+            required
+            maxLength={LIMITS.title}
+            aria-invalid={bad("title") || undefined}
+            aria-describedby={bad("title") ? "form-error" : undefined}
             className="border border-hairline bg-transparent px-3 py-2 text-sm text-ink"
           />
         </label>
@@ -152,6 +164,10 @@ export default async function EditLogPage({
           <input
             name="slug"
             defaultValue={log.slug}
+            required
+            pattern={SLUG_SOURCE}
+            aria-invalid={bad("slug") || undefined}
+            aria-describedby={bad("slug") ? "form-error" : undefined}
             className="border border-hairline bg-transparent px-3 py-2 font-mono text-sm text-ink"
           />
         </label>
@@ -180,6 +196,8 @@ export default async function EditLogPage({
           <input
             name="tags"
             defaultValue={log.tags.join(", ")}
+            aria-invalid={bad("tags") || undefined}
+            aria-describedby={bad("tags") ? "form-error" : undefined}
             className="border border-hairline bg-transparent px-3 py-2 font-mono text-sm text-ink"
           />
         </label>
@@ -212,6 +230,8 @@ export default async function EditLogPage({
           <Editor
             initialBefore={log.beforeContent}
             initialAfter={log.afterContent ?? ""}
+            draftKey={log.id}
+            restoreDraft={Boolean(errorCode)}
           />
         </div>
 
@@ -222,6 +242,9 @@ export default async function EditLogPage({
           <textarea
             name="lessonLearned"
             defaultValue={log.lessonLearned ?? ""}
+            maxLength={LIMITS.lesson}
+            aria-invalid={bad("lessonLearned") || undefined}
+            aria-describedby={bad("lessonLearned") ? "form-error" : undefined}
             rows={4}
             className="w-full border border-hairline bg-transparent px-3 py-2 font-mono text-[12px] leading-relaxed text-ink"
           />

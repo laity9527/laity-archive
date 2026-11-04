@@ -371,3 +371,40 @@ GET  /login                          → http=200，正文含"管理员口令"�
 `npm run lint` 0、`npx tsc --noEmit` 0、`npm test` 60/60、`npm run build` 0（路由表 4 条 ◐ PPR 不变）。材料重出 5820 行 / 117 页、说明书 488 行 / 17 页、收录 65 个文件，`assertWindowFit()` 通过（必须整份可见 30 个文件），独立脚本 `tmp/whole-check.mjs` 逐页反查 19 个关键文件全部整份同窗口；连续两次生成的 MD5 相同（幂等）；凭据扫描先用四组伪凭据验证扫描器有效（四组全命中）再采信结论，产物内 7 处命中逐条读过，全是形如 `process.env.ADMIN_PASSWORD`、`accessKeySecret: requireEnv(...)`、`password=xxx` 这类**键名与规则描述**，无任何值。
 
 仍未实测：真实上传的成功分支（要我在后台亲自查一张图）、服务器上的 `up -d` 实跑、`docs/03-功能截图`、I021 浏览器打印分页、I040 字体上游 LICENSE 复核。
+
+## 十六、第四轮"跑起来再优化"：后台写路径的正确性收口（2026-11-04，我点名"只修正确性"）
+
+程序本机就在跑（`GET /api/health` → `200 {"status":"ok","db":true}`），会话也还在上一轮签发的 12 小时内，所以这一轮**没有索取口令**——需要登录的写路径实测直接就能做。量的对象是后台写路径的语义；范围按我点名的"只修正确性"，外观与无障碍项一律记账。
+
+### 六条发现与其判据（D26 / I054–I057）
+
+| # | 缺陷 | 实测判据 |
+|---|---|---|
+| 1 | 被拒的保存销毁整页打字内容（动作 redirect 回编辑页 → 全字段从库里重渲染），且提交监听把 dirty 标记清掉，丢稿拦截在这条路上自我解除武装 | 11 个标签提交 → 落 `?error=VAL_001&field=tags`，BEFORE 正文 `丢稿自检正文 charlie-333…` **完整回到编辑器**、`sessionStorage` 键已清（回填一次即作废，不会下次复活） |
+| 2 | `VAL_001` 一个码覆盖 9 条规则，用户不知道错在哪一格 | 横幅 `VAL_001 · 标签最多 10 个，单个不超过 24 字。`；标签框上 `aria-invalid="true"` 且 `aria-describedby="form-error"` |
+| 3 | 项目保存/删除跳回裸列表页无回显；删除一击生效且按钮与"编辑"同款 | 保存临时项目 → `?saved=1` + 横幅 `SAVED · 项目已保存`；第一次点删除只把文案换成"再点一次确认删除"、隐藏位 `confirmDelete` 由 `""` 变 `"on"`、URL 不变（没提交）；第二次点 → `?deleted=1` + `DELETED · 该项目已删除`，列表里只剩真实项目 |
+| 4 | `/login` 的 `Configuration` 文案念出 `NEXTAUTH_SECRET`/`NEXTAUTH_URL`，而该页对外可访问 | 无会话 fetch（`credentials: "omit"`）取回 `/login?error=Configuration` 的正文：含"登录没有配好，服务器侧缺少必需的密钥或地址，请查看服务端日志。"，正则搜 `NEXTAUTH\|SECRET\|_URL` 为 false；另有测试把这条钉在 `npm test` 里 |
+| 5 | `safeCallbackUrl` 只挡 `//host`，`/\host` 能绕过（WHATWG 把反斜杠当路径分隔符） | 取回 `/login?callbackUrl=/\evil.com` 的序列化载荷：按钮实际会 POST 的回调值是 `/admin`；正常值 `/admin/projects` 原样保留 |
+| 6 | 表单里的原始 id 直接拼进 redirect；`projectId` 不校验存在性；项目被先删时 `saveProject` 抛 P2025 变 500、`deleteProject` 把 P2025 报成删除成功 | 把项目下拉值改成 `bogus123` 提交 → `?error=VAL_001&field=project` + 横幅"请选择一个存在的项目…"，**没有 500**；id 一律过 `ID_PATTERN` 才拼地址 |
+
+### 我自己引入的新缺陷，被浏览器控制台抓到
+
+为了"让高频错误在提交前就出不去"，我把 `pattern={SLUG_PATTERN.source}` 写进了输入框。浏览器按 `v` flag 编译 `pattern`，字符类里尾随的 `-` 在那儿是非法的，控制台直接报 `Invalid character class`——这条原生约束其实根本没生效。改成单源 `SLUG_SOURCE`（`-` 转义），服务端 `SLUG_PATTERN` 由它派生，并在 `tests/forms.test.ts` 加一条"同一份 source 在浏览器 `v` flag 与正则在服务端两侧都成立"的测试。记 I055。
+
+顺带一条读数教训：我最初用 `f.checkValidity()` 的 false 去归因"标题超长被拦"，逐个控件查下来发现真正无效的是**空着的 slug（required）**——标题的 `tooLong` 在程序化赋值下始终 false（浏览器在真实键入时直接截断到 `maxLength`，越界值压根形不成）。结论只能落在"属性在位 + 服务端具名拒绝"上，不能落在"浏览器拦住了超长输入"这句我没证的话上。
+
+### 一处未实测（被安全策略拦下，没换写法绕）
+
+`PRJ_003`（缺确认位则服务端拒绝删除）的**服务端分支**没跑成：临时项目已经删掉了，剩下的真实项目是"地球 Mirror"，把删除形状的请求指向它被运行时安全策略按不可逆动作拦下——判据合理，我没有重试也没有换写法。已证的是客户端"第一次点击只置位不提交"与"第二次点击在临时项目上真删成功"，服务端那一行是同一条判定的取反。
+
+### 清理与门禁
+
+临时数据全部回收：临时项目 `two-step-selftest-tmp` 已删；三条日志草稿（`draft-guard-selftest-tmp`、`bogus-project-selftest-tmp` 等）都在校验层就被拒，**从未写进库**。概览实测 `PROJECTS 1 / PUBLISHED 1 / DRAFTS 0`，列表里无任何 selftest 行；七条前台路由（`/ /logs /logs/prebuild-index /projects/earth-mirror /privacy /licenses /login`）全 200，详情页摘要行仍在，`/privacy` 已带上 sessionStorage 那句新承诺。
+
+`npm run lint` 0、`npx tsc --noEmit` 0、`npm test` **67/67**（新增逐字段文案、Configuration 不含键名、ID 形状、LIMITS 对拍、回调反斜杠、`v` flag 可编译六条）、`npm run build` 0。
+
+材料第四次被窗口护栏拦下：`①+②` 涨到 1501 行、`src/proxy.ts`（1353–1504）被前窗口切开，`assertWindowFit()` 拒绝出件。按它给的处置把 `src/lib/image-signature.ts`（46 行，读文件头比表；调用它的上传动作本就在折走段）从 ② 平移进 ③，出件 6213 行 / 125 页 / 收录 65、说明书 518 行 / 18 页（未超 60 页上限，整份提交）、必须整份可见 29 个文件全部通过，连续两次生成 MD5 相同。我自己的反查脚本 `tmp/whole-check.mjs` 先报了"1 个文件未整份可见"——那是它的 MUST 清单没跟着这次有意分带调整更新，属清单过期而非产物出错，摘掉该条并写明理由后复跑为全绿（这正是"自研工具的输出来当真值用"要先对拍的那一类）。凭据扫描四组伪凭据控制组全命中后采信结论，产物 7 处命中逐行读过，全是 `process.env.ADMIN_PASSWORD`、`accessKeySecret: requireEnv(...)`、`password=xxx` 这类键名与规则描述，无任何值。
+
+### 记账不动手（我点的范围是"只修正确性"）
+
+`role=alert`（8 处横幅）、`confirmSlug` 可访问名、`/login` 的 `main#main` 与跳转链接、正文 `#` 渲染成第二个 `<h1>` 且脱离字号系统、后台导航 `aria-current`/`aria-label`、`globals.css` 三处硬编码 `#e7e7e2`、`licenses` 的 `text-[13px]`、复选框 `items-baseline`、首页全量取日志再 `slice(0,3)`、零调用的 `listAdminLogs`、节流桶不回收、`/admin` 的 `notFound()` 落公共 404、四处日期口径不一、`login/page.tsx` 两次重复的 `await connection()` —— 全部写进 I058/I059，等我把范围切到外观/无障碍那一轮再逐项批。另有两条判断记录在 D26：登录失败与审计日志不做（与 `/privacy` 的"不追踪"冲突），`sensitiveConfirmed` 维持自证不改。

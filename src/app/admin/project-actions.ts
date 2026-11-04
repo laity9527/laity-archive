@@ -7,13 +7,16 @@
  * - 2026-10-30: 初始创建
  * - 2026-11-02: readField / SLUG_PATTERN 改由 src/lib/forms.ts 提供，kind/status 合法值取自 src/lib/projects.ts
  * - 2026-11-04: 两个动作的会话判定改走 requireAdminSession（带管理员标记的会话），与前置守卫同一口径
+ * - 2026-11-04: 校验拆到具体字段、删除要求二次确认位、成功也带 ?saved=1/?deleted=1（D26）——
+ *               原先删除一击生效且成功后跳回裸列表页，既没有确认步也没有任何结果反馈
  */
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
-import { SLUG_PATTERN, readField } from "@/lib/forms";
+import type { ProjectField } from "@/lib/error-text";
+import { ID_PATTERN, LIMITS, SLUG_PATTERN, readField } from "@/lib/forms";
 import {
   PROJECT_KINDS,
   PROJECT_STATUSES,
@@ -22,11 +25,19 @@ import {
   type ProjectInput,
 } from "@/lib/projects";
 
-function backToProjects(code: string): never {
-  redirect(`/admin/projects?error=${code}`);
+const BASE = "/admin/projects";
+
+function backToProjects(code: string, field?: ProjectField): never {
+  const fieldPart = field ? `&field=${field}` : "";
+
+  redirect(`${BASE}?error=${code}${fieldPart}`);
 }
 
-function parseInput(formData: FormData): ProjectInput | null {
+type ParseResult =
+  | { ok: true; input: ProjectInput }
+  | { ok: false; field: ProjectField };
+
+function parseInput(formData: FormData): ParseResult {
   const input: ProjectInput = {
     id: readField(formData, "id") || undefined,
     slug: readField(formData, "slug"),
@@ -37,27 +48,36 @@ function parseInput(formData: FormData): ProjectInput | null {
     repoUrl: readField(formData, "repoUrl"),
   };
 
+  if (input.id && !ID_PATTERN.test(input.id)) {
+    // id 非法时不返回它：调用方会把校验过的值拼进回跳地址
+    input.id = undefined;
+  }
+
   if (!SLUG_PATTERN.test(input.slug)) {
-    return null;
+    return { ok: false, field: "slug" };
   }
 
-  if (input.name.length === 0 || input.name.length > 80) {
-    return null;
+  if (input.name.length === 0 || input.name.length > LIMITS.projectName) {
+    return { ok: false, field: "name" };
   }
 
-  if (!PROJECT_KINDS.includes(input.kind) || !PROJECT_STATUSES.includes(input.status)) {
-    return null;
+  if (!PROJECT_KINDS.includes(input.kind)) {
+    return { ok: false, field: "kind" };
   }
 
-  if ((input.summary ?? "").length > 200) {
-    return null;
+  if (!PROJECT_STATUSES.includes(input.status)) {
+    return { ok: false, field: "status" };
+  }
+
+  if ((input.summary ?? "").length > LIMITS.projectSummary) {
+    return { ok: false, field: "summary" };
   }
 
   if (input.repoUrl && !/^https?:\/\/\S+$/.test(input.repoUrl)) {
-    return null;
+    return { ok: false, field: "repoUrl" };
   }
 
-  return input;
+  return { ok: true, input };
 }
 
 function refreshProjectViews() {
@@ -74,20 +94,20 @@ export async function saveProjectAction(formData: FormData) {
     backToProjects("AUTH_001");
   }
 
-  const input = parseInput(formData);
+  const parsed = parseInput(formData);
 
-  if (!input) {
-    backToProjects("VAL_001");
+  if (!parsed.ok) {
+    backToProjects("VAL_001", parsed.field);
   }
 
-  const result = await saveProject(input);
+  const result = await saveProject(parsed.input);
 
   if (!result.ok) {
     backToProjects(result.code);
   }
 
   refreshProjectViews();
-  redirect("/admin/projects");
+  redirect(`${BASE}?saved=1`);
 }
 
 export async function deleteProjectAction(formData: FormData) {
@@ -99,8 +119,14 @@ export async function deleteProjectAction(formData: FormData) {
 
   const id = readField(formData, "id");
 
-  if (!id) {
-    backToProjects("VAL_001");
+  if (!ID_PATTERN.test(id)) {
+    backToProjects("VAL_001", "slug");
+  }
+
+  // 确认位由"再点一次"的按钮在第二次点击时置上。它是防手滑而不是访问控制——
+  // 脚本直调照样能带上，所以页面文案与 DESIGN 都按这个口径写（D26）
+  if (readField(formData, "confirmDelete") !== "on") {
+    backToProjects("PRJ_003");
   }
 
   const result = await deleteProject(id);
@@ -110,5 +136,5 @@ export async function deleteProjectAction(formData: FormData) {
   }
 
   refreshProjectViews();
-  redirect("/admin/projects");
+  redirect(`${BASE}?deleted=1`);
 }

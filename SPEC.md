@@ -113,7 +113,7 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | /logs/[slug] | P0 | getSafeLogBySlug（仅已发布） | 详情+防伪印章；未发布 slug 返回 404；已发布但缺摘要/时间时显式提示"存证缺失"，不静默省略印章 |
 | /projects、/projects/[slug] | P1 | 项目表 + getSafeLogs | 作品维度 |
 | /admin | P0 | 需登录 | 后台入口/概览 |
-| /admin/projects | P0 | 需登录 | 项目管理 |
+| /admin/projects | P0 | 需登录 | 项目管理；新建与编辑共用一张表单，删除走两步生效（第一次点击置确认位、第二次才提交，缺确认位回 `PRJ_003`） |
 | /admin/logs/new、/admin/logs/[id]/edit | P0 | 需登录 | 双栏编辑器；草稿页在同一张表单里给「保存修改」与「保存并发布」两个动作，已发布日志的编辑页提供「下架」动作 |
 | /api/auth/* | P0 | NextAuth | 管理员口令登录的 CSRF/回调/退出端点 |
 | /robots.txt | P1 | 静态生成 | 放行公开路径，屏蔽 /admin、/login 与 /api，指向 sitemap |
@@ -126,17 +126,17 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 
 | Action | 入参 | 出参 | 错误码 |
 |---|---|---|---|
-| saveLogDraft | {id?, title, slug, projectId, tags[], beforeContent, afterContent?, beforeDate, afterDate?, lessonLearned?} | {id} | AUTH_001 未登录；VAL_001 参数校验失败；LOG_001 slug 重复 |
-| publishLog（页面动作 `publishLogAction`，D25） | 整张表单字段 + {id, sensitiveConfirmed?}：先按表单字段执行一次保存，lib 层 `publishLog(id)` 再按**库里刚存下的正文**计算摘要 | {contentHash, publishedAt} | AUTH_001；VAL_001 表单校验失败（此时既不写也不发）；LOG_001 slug 重复；LOG_002 日志不存在；LOG_003 正文含疑似敏感信息且未确认（正文已存、未发布） |
-| unpublishLog | {id} | {ok} | AUTH_001；LOG_002 |
+| saveLogDraft | {id?, title, slug, projectId, tags[], beforeContent, afterContent?, beforeDate, afterDate?, lessonLearned?} | {id} | AUTH_001 未登录；VAL_001 参数校验失败并带 `&field=<出错字段>`；LOG_001 slug 重复 |
+| publishLog（页面动作 `publishLogAction`，D25） | 整张表单字段 + {id, sensitiveConfirmed?}：先按表单字段执行一次保存，lib 层 `publishLog(id)` 再按**库里刚存下的正文**计算摘要 | {contentHash, publishedAt} | AUTH_001；VAL_001 表单校验失败（此时既不写也不发，带 `&field=`）；LOG_001 slug 重复；LOG_002 日志不存在；LOG_003 正文含疑似敏感信息且未确认（正文已存、未发布） |
+| unpublishLog | {id} | {ok} | AUTH_001；LOG_002；id 形状非法（`ID_PATTERN`）时 VAL_001&field=id，不拼进回跳地址 |
 | deleteLog | {id, confirmSlug} | {ok} | AUTH_001；LOG_002；LOG_004 确认 slug 与库中不一致，删除未执行 |
-| saveProject | {id?, slug, name, kind, status, summary?, repoUrl?} | {id} | AUTH_001；VAL_001；PRJ_002 slug 重复 |
-| deleteProject | {id} | {ok} | AUTH_001；PRJ_001 项目下仍有日志，禁止删除 |
+| saveProject | {id?, slug, name, kind, status, summary?, repoUrl?} | {id} | AUTH_001；VAL_001 带 `&field=<出错字段>`；PRJ_002 slug 重复；PRJ_004 该项目已被删除（P2025，D26） |
+| deleteProject | {id, confirmDelete} | {ok} | AUTH_001；PRJ_001 项目下仍有日志，禁止删除；PRJ_003 缺少二次确认位，删除未执行；PRJ_004 项目不存在（不再当作"已删除"返回成功，D26） |
 | uploadImage（P1） | FormData(file) | {url} | AUTH_001；IMG_001 类型/大小不合法（仅 jpg/png/webp/gif，≤5MB） |
 
 动作有两种形态（2026-11-02 经我确认，SPEC 原写"统一 `{ok,code,message}`"与实际不符，按实际改）：
 
-- 页面表单动作（saveLogDraft / publishLog / unpublishLog / saveProject / deleteProject）：成功与失败都 `redirect` 回原页，用 URL 参数表达结果——`?saved=1`、`?published=1`、`?unpublished=1`、`?error=CODE`。这样结果可复核、可截图留证，是 Phase 4 既定验收口径；
+- 页面表单动作（saveLogDraft / publishLog / unpublishLog / saveProject / deleteProject）：成功与失败都 `redirect` 回原页，用 URL 参数表达结果——`?saved=1`、`?published=1`、`?unpublished=1`、`?deleted=1`、`?error=CODE`；校验类错误再带一个 `&field=<出错字段>`（D26），让页面把提示标到那一个控件上而不是复述整张表单的规则。这样结果可复核、可截图留证，是 Phase 4 既定验收口径；
 - 编辑器内动作（uploadImage）：调用方要拿返回值插进正文，因此返回对象 `{ ok: true, url, bytes }` 或 `{ ok: false, code }`。
 
 两种形态都不带 `message` 字段：错误码到用户文案的映射统一收在 `src/lib/error-text.ts`，其中 `VAL_001` 按来源表单（log / project）取细则，未知码原样显示码本身。

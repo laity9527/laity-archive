@@ -13,7 +13,7 @@ import { saveLogAction } from "@/app/admin/log-actions";
 import { Editor } from "@/components/Editor";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
-import { pickParam } from "@/lib/forms";
+import { LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
 import { listProjects } from "@/lib/projects";
 import { toDateTimeLocal } from "@/lib/publish";
 
@@ -22,14 +22,19 @@ import { toDateTimeLocal } from "@/lib/publish";
 export const instant = false;
 
 type NewLogPageProps = {
-  searchParams: Promise<{ error?: string | string[] }>;
+  searchParams: Promise<{
+    error?: string | string[];
+    field?: string | string[];
+  }>;
 };
 
 export default async function NewLogPage({ searchParams }: NewLogPageProps) {
   const params = await searchParams;
   const errorCode = pickParam(params.error);
-  const errorText = errorCode ? errorTextOf(errorCode, "log") : null;
+  const errorField = pickParam(params.field);
+  const errorText = errorCode ? errorTextOf(errorCode, "log", errorField) : null;
   const projects = await listProjects();
+  const bad = (field: string) => errorCode === "VAL_001" && errorField === field;
 
   return (
     <>
@@ -44,7 +49,10 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
       </div>
 
       {errorText && (
-        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p
+          id="form-error"
+          className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
+        >
           {errorCode} · {errorText}
         </p>
       )}
@@ -65,6 +73,10 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
             </span>
             <input
               name="title"
+              required
+              maxLength={LIMITS.title}
+              aria-invalid={bad("title") || undefined}
+              aria-describedby={bad("title") ? "form-error" : undefined}
               className="border border-hairline bg-transparent px-3 py-2 text-sm text-ink"
             />
           </label>
@@ -76,6 +88,10 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
             <input
               name="slug"
               placeholder="prebuild-index"
+              required
+              pattern={SLUG_SOURCE}
+              aria-invalid={bad("slug") || undefined}
+              aria-describedby={bad("slug") ? "form-error" : undefined}
               className="border border-hairline bg-transparent px-3 py-2 font-mono text-sm text-ink"
             />
           </label>
@@ -104,6 +120,8 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
             <input
               name="tags"
               placeholder="search, prisma"
+              aria-invalid={bad("tags") || undefined}
+              aria-describedby={bad("tags") ? "form-error" : undefined}
               className="border border-hairline bg-transparent px-3 py-2 font-mono text-sm text-ink"
             />
           </label>
@@ -115,7 +133,10 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
             <input
               type="datetime-local"
               name="beforeDate"
+              required
               defaultValue={toDateTimeLocal(new Date())}
+              aria-invalid={bad("beforeDate") || undefined}
+              aria-describedby={bad("beforeDate") ? "form-error" : undefined}
               className="border border-hairline bg-transparent px-3 py-2 font-mono text-sm text-ink"
             />
           </label>
@@ -127,12 +148,19 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
             <input
               type="datetime-local"
               name="afterDate"
+              aria-invalid={bad("afterDate") || undefined}
+              aria-describedby={bad("afterDate") ? "form-error" : undefined}
               className="border border-hairline bg-transparent px-3 py-2 font-mono text-sm text-ink"
             />
           </label>
 
           <div className="md:col-span-2">
-            <Editor initialBefore="" initialAfter="" />
+            <Editor
+              initialBefore=""
+              initialAfter=""
+              draftKey="new"
+              restoreDraft={Boolean(errorCode)}
+            />
           </div>
 
           <label className="flex flex-col gap-2 md:col-span-2">
@@ -141,6 +169,9 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
             </span>
             <textarea
               name="lessonLearned"
+              maxLength={LIMITS.lesson}
+              aria-invalid={bad("lessonLearned") || undefined}
+              aria-describedby={bad("lessonLearned") ? "form-error" : undefined}
               rows={4}
               className="w-full border border-hairline bg-transparent px-3 py-2 font-mono text-[12px] leading-relaxed text-ink"
             />

@@ -6,12 +6,23 @@
  * 修改记录：
  * - 2026-11-03: 初始创建
  * - 2026-11-04: 登录侧码表随口令登录调整：AccessDenied → CredentialsSignin
+ * - 2026-11-04: 补 PRJ_003/PRJ_004、逐字段文案完整性，以及 Configuration 不得念出环境变量名（D26）
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ERROR_TEXT, errorTextOf } from "../src/lib/error-text.ts";
 
-const SPEC_CODES = ["AUTH_001", "VAL_001", "LOG_001", "LOG_002", "PRJ_001", "PRJ_002", "IMG_001"];
+const SPEC_CODES = [
+  "AUTH_001",
+  "VAL_001",
+  "LOG_001",
+  "LOG_002",
+  "PRJ_001",
+  "PRJ_002",
+  "PRJ_003",
+  "PRJ_004",
+  "IMG_001",
+];
 
 test("SPEC 里的每个错误码都有文案（除按表单分支的 VAL_001）", () => {
   for (const code of SPEC_CODES.filter((c) => c !== "VAL_001")) {
@@ -50,4 +61,30 @@ test("IMG_001 文案与操作说明书里引用的那句完全一致", () => {
     ERROR_TEXT.IMG_001,
     "图片不合格：仅支持 jpg / png / webp / gif，且不超过 5MB。",
   );
+});
+
+// 这一行渲染在公开的 /login 上（?error=Configuration 任何人敲得到），配置状态属于服务器侧信息
+test("Configuration 文案不念出环境变量名", () => {
+  const text = ERROR_TEXT.Configuration;
+
+  assert.doesNotMatch(text, /NEXTAUTH|SECRET|_URL|ADMIN_PASSWORD/i);
+  assert.ok(text.length > 0);
+});
+
+test("VAL_001 带 field 时给具体那一条，而不是复述整张表单的规则", () => {
+  assert.equal(errorTextOf("VAL_001", "log", "title"), "标题必填，且不超过 120 字。");
+  assert.match(errorTextOf("VAL_001", "project", "name"), /80 字/);
+
+  // 只说标题的不能再带上 slug 的规则，否则用户不知道错在哪
+  const title = errorTextOf("VAL_001", "log", "title");
+
+  assert.doesNotMatch(title, /slug/);
+});
+
+test("field 不认识或缺失时回落到整句，绝不出现 undefined", () => {
+  const fallback = errorTextOf("VAL_001", "log", "not_a_field");
+
+  assert.match(fallback, /标题必填/);
+  assert.doesNotMatch(fallback, /undefined/);
+  assert.doesNotMatch(errorTextOf("VAL_001", undefined, "title"), /undefined/);
 });

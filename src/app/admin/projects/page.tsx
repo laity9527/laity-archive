@@ -7,12 +7,14 @@
  * - 2026-10-30: 初始创建
  * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供，kind/status 选项取自 lib 单源常量
  * - 2026-11-04: 新建/保存与删除按钮改用 SubmitButton：提交进行中禁用，避免重复创建或重复删除
+ * - 2026-11-04: 删除改两步生效（再点一次确认）、保存/删除带 ?saved=1/?deleted=1 回显、
+ *               VAL_001 按 ?field= 标到具体控件（D26）
  */
 import Link from "next/link";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
-import { pickParam } from "@/lib/forms";
+import { LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
 import { PROJECT_KINDS, PROJECT_STATUSES, getProjectById, listProjects } from "@/lib/projects";
 
 // 本页查库并读编辑参数，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
@@ -20,19 +22,34 @@ import { PROJECT_KINDS, PROJECT_STATUSES, getProjectById, listProjects } from "@
 export const instant = false;
 
 type ProjectsPageProps = {
-  searchParams: Promise<{ error?: string | string[]; edit?: string | string[] }>;
+  searchParams: Promise<{
+    error?: string | string[];
+    field?: string | string[];
+    edit?: string | string[];
+    saved?: string | string[];
+    deleted?: string | string[];
+  }>;
 };
 
+// maxLength/pattern 让高频错误在浏览器里就提交不出去；服务端仍是唯一判据
 function Field({
   label,
   name,
   defaultValue,
   placeholder,
+  required,
+  maxLength,
+  pattern,
+  invalid,
 }: {
   label: string;
   name: string;
   defaultValue?: string;
   placeholder?: string;
+  required?: boolean;
+  maxLength?: number;
+  pattern?: string;
+  invalid?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-2">
@@ -43,6 +60,11 @@ function Field({
         name={name}
         defaultValue={defaultValue}
         placeholder={placeholder}
+        required={required}
+        maxLength={maxLength}
+        pattern={pattern}
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? "form-error" : undefined}
         className="border border-hairline bg-transparent px-3 py-2 text-sm text-ink"
       />
     </label>
@@ -83,19 +105,40 @@ function Select({
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
   const params = await searchParams;
   const errorCode = pickParam(params.error);
+  const errorField = pickParam(params.field);
   const editId = pickParam(params.edit);
+  const saved = pickParam(params.saved);
+  const deleted = pickParam(params.deleted);
 
   const projects = await listProjects();
   const editing = editId ? await getProjectById(editId) : null;
-  const errorText = errorCode ? errorTextOf(errorCode, "project") : null;
+  const errorText = errorCode
+    ? errorTextOf(errorCode, "project", errorField)
+    : null;
+  const bad = (field: string) => errorCode === "VAL_001" && errorField === field;
 
   return (
     <>
       <h1 className="text-3xl font-medium tracking-tight">项目</h1>
 
       {errorText && (
-        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p
+          id="form-error"
+          className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
+        >
           {errorCode} · {errorText}
+        </p>
+      )}
+
+      {saved && (
+        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+          SAVED · 项目已保存
+        </p>
+      )}
+
+      {deleted && (
+        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+          DELETED · 该项目已删除
         </p>
       )}
 
@@ -135,6 +178,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 <SubmitButton
                   label="删除"
                   pendingLabel="删除中…"
+                  confirmLabel="再点一次确认删除"
                   className="border-b border-ink text-ink disabled:text-ink-soft"
                 />
               </form>
@@ -154,8 +198,24 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           className="mt-6 grid gap-6 md:grid-cols-2"
         >
           {editing && <input type="hidden" name="id" value={editing.id} />}
-          <Field label="SLUG" name="slug" defaultValue={editing?.slug} placeholder="earth-mirror" />
-          <Field label="NAME" name="name" defaultValue={editing?.name} placeholder="地球 Mirror" />
+          <Field
+            label="SLUG"
+            name="slug"
+            defaultValue={editing?.slug}
+            placeholder="earth-mirror"
+            required
+            pattern={SLUG_SOURCE}
+            invalid={bad("slug")}
+          />
+          <Field
+            label="NAME"
+            name="name"
+            defaultValue={editing?.name}
+            placeholder="地球 Mirror"
+            required
+            maxLength={LIMITS.projectName}
+            invalid={bad("name")}
+          />
           <Select
             label="KIND"
             name="kind"
@@ -168,8 +228,20 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             options={PROJECT_STATUSES}
             defaultValue={editing?.status ?? PROJECT_STATUSES[0]}
           />
-          <Field label="SUMMARY" name="summary" defaultValue={editing?.summary ?? undefined} />
-          <Field label="REPO URL" name="repoUrl" defaultValue={editing?.repoUrl ?? undefined} />
+          <Field
+            label="SUMMARY"
+            name="summary"
+            defaultValue={editing?.summary ?? undefined}
+            maxLength={LIMITS.projectSummary}
+            invalid={bad("summary")}
+          />
+          <Field
+            label="REPO URL"
+            name="repoUrl"
+            defaultValue={editing?.repoUrl ?? undefined}
+            pattern="https?://\\S+"
+            invalid={bad("repoUrl")}
+          />
 
           <div className="flex items-baseline gap-6 md:col-span-2">
             <SubmitButton
