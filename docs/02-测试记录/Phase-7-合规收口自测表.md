@@ -99,3 +99,44 @@ ALL CI STEPS PASSED
 
 仍未拿到答案的一条：`next build` 到底依不依赖数据库可达——复跑时库是开着的，而"停库构建"的实验被安全策略拦下，
 我没有绕。CI 配了一次性真库，所以这条不确定不影响流水线成立。
+
+## 七、两个部署阻塞项结案（I025 / I026，2026-11-04）
+
+两条都靠一次性容器实测结案，全程不碰本地 `laity-postgres` 与现有生产标签之外的东西。
+
+**I026 的真因是标签错配，不是"compose 构建不刷新"。** 证据链：
+
+```
+compose 默认名镜像 laity-archive-migrate:latest（43 小时前）  → 含 /usr/bin/openssl，prisma 可用
+手工标签镜像     laity-archive-migrate:prod（4 天前）        → NO_OPENSSL
+核对命令看的正是 :prod —— 而 compose 不写它（migrate 服务原先没写 image）
+```
+
+给 `migrate` 钉上 `image: laity-archive-migrate:prod` 后复跑：
+
+```
+构建前 :prod = 4b925be03f65
+docker compose -f docker-compose.prod.yml --env-file tmp/prod-dummy.env build migrate → exit 0
+构建后 :prod = d161c2e131b8，新镜像内 command -v openssl → /usr/bin/openssl
+```
+
+顺带纠正一处旧认知：不带服务名的 `docker compose build` 会**整个跳过** `profiles: ["tools"]` 的 migrate，
+所以手册第二节改成 `build app` 与 `build migrate` 两条点名命令。显式点名时 profile 会自动启用（实测 exit 0 且真构建）。
+
+**I025 的原诊断（migrator 镜像里客户端是桩）不成立，真因是镜像里没有 `src/`。** 容器内实测：
+
+```
+node -e "require('@prisma/client')" → PrismaClient= function      ← 客户端是生成过的
+ls -d prisma/seed.ts                → 存在
+node prisma/seed.ts                 → ERR_MODULE_NOT_FOUND: Cannot find module /app/src/lib/content-hash.ts
+ls -d src                           → No such file or directory   ← deps/migrator 阶段只拷 package.json、锁文件与 prisma/
+```
+
+也就是 seed 失败与 Prisma 无关，是 `prisma/seed.ts` 第 12 行按 AGENTS.md 的哈希单源要求引了
+`../src/lib/content-hash.ts`，而那个文件不在镜像里。处置按原倾向 B 结案：**生产不播种**，
+seed 定位为本地 `prisma migrate dev` 的伴生动作，生产数据由后台录入——把测试种子塞进真库本就不合适。
+迁移路径不受影响：同一镜像在全新 postgres:16 上 `npx prisma migrate deploy` 输出
+`All migrations have been successfully applied`。
+
+编排文件变更后已重出软著材料（5367 行 / 108 页 / 收录 62，窗口自检未拒绝出件），
+`npm test` 50/50、`tsc` 0、`lint` 0。

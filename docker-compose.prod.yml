@@ -10,6 +10,10 @@
 #               web 改为等 app healthy 再起（nginx 自身不加探针，理由见 web 处注释）
 # - 2026-11-03: 修一个上线级漏项：app 从未接收 SITE_ICP 等合规位变量（--env-file 只插值不注入），
 #               补 SITE_ICP / SITE_POLICE_ICP / SITE_CONTACT_EMAIL 三行，用 :- 允许留空
+# - 2026-11-04: I026 结案：给 migrate 服务钉 image: laity-archive-migrate:prod。原先不写 image，
+#               compose 构建到项目默认名 laity-archive-migrate:latest，而部署步骤核对的是 :prod 标签，
+#               于是"连跑两次 ID 不变"量的根本是 compose 不碰的那个标签。实测钉死后 :prod 由
+#               4b925be03f65 刷新为 d161c2e131b8，且新镜像内 /usr/bin/openssl 存在
 #
 # 用前必读：
 #   1. cp .env.production.example .env.production，填真实值，两个口令不要与开发环境复用；
@@ -134,6 +138,10 @@ services:
     build:
       context: .
       target: migrator
+    # 钉死镜像名：不写 image 时 compose 会构建到项目默认名 laity-archive-migrate:latest，
+    # 而部署步骤核对的是 laity-archive-migrate:prod——I026 的"连跑两次 ID 不变"就是量错了标签。
+    # 钉死之后 `docker compose build migrate` 写的正是文档要核对的那个标签，判据才有意义
+    image: laity-archive-migrate:prod
     profiles: ["tools"]
     depends_on:
       db:
