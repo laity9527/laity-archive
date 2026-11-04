@@ -6,13 +6,13 @@
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-11-02: readField / SLUG_PATTERN 改由 src/lib/forms.ts 提供，kind/status 合法值取自 src/lib/projects.ts
+ * - 2026-11-04: 两个动作的会话判定改走 requireAdminSession（带管理员标记的会话），与前置守卫同一口径
  */
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { requireAdminSession } from "@/auth";
 import { SLUG_PATTERN, readField } from "@/lib/forms";
 import {
   PROJECT_KINDS,
@@ -68,7 +68,7 @@ function refreshProjectViews() {
 }
 
 export async function saveProjectAction(formData: FormData) {
-  const session = await getServerSession(authOptions);
+  const session = await requireAdminSession();
 
   if (!session) {
     backToProjects("AUTH_001");
@@ -91,7 +91,7 @@ export async function saveProjectAction(formData: FormData) {
 }
 
 export async function deleteProjectAction(formData: FormData) {
-  const session = await getServerSession(authOptions);
+  const session = await requireAdminSession();
 
   if (!session) {
     backToProjects("AUTH_001");

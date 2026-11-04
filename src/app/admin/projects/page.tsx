@@ -6,9 +6,11 @@
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供，kind/status 选项取自 lib 单源常量
+ * - 2026-11-04: 新建/保存与删除按钮改用 SubmitButton：提交进行中禁用，避免重复创建或重复删除
  */
 import Link from "next/link";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
+import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
 import { pickParam } from "@/lib/forms";
 import { PROJECT_KINDS, PROJECT_STATUSES, getProjectById, listProjects } from "@/lib/projects";
@@ -130,9 +132,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               </Link>
               <form action={deleteProjectAction}>
                 <input type="hidden" name="id" value={project.id} />
-                <button type="submit" className="border-b border-ink text-ink">
-                  删除
-                </button>
+                <SubmitButton
+                  label="删除"
+                  pendingLabel="删除中…"
+                  className="border-b border-ink text-ink disabled:text-ink-soft"
+                />
               </form>
             </span>
           </li>
@@ -168,12 +172,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           <Field label="REPO URL" name="repoUrl" defaultValue={editing?.repoUrl ?? undefined} />
 
           <div className="flex items-baseline gap-6 md:col-span-2">
-            <button
-              type="submit"
-              className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink"
-            >
-              {editing ? "保存修改" : "新建项目"}
-            </button>
+            <SubmitButton
+              label={editing ? "保存修改" : "新建项目"}
+              pendingLabel="提交中…"
+              className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
+            />
             {editing && (
               <Link
                 href="/admin/projects"

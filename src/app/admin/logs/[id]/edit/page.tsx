@@ -8,6 +8,7 @@
  * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
  * - 2026-11-02: 已发布状态下增"下架"动作与 UNPUBLISHED 提示（补 SPEC:117 的 unpublishLog）
  * - 2026-11-03: 发布前展示敏感信息命中清单并要求勾选确认；新增"彻底删除"（回填 slug 确认）
+ * - 2026-11-04: 保存/发布/下架/彻底删除四个按钮改用 SubmitButton，提交中禁用并换文案
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -18,6 +19,7 @@ import {
   unpublishLogAction,
 } from "@/app/admin/log-actions";
 import { Editor } from "@/components/Editor";
+import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
 import { pickParam } from "@/lib/forms";
 import { getAdminLogById } from "@/lib/logs";
@@ -224,12 +226,11 @@ export default async function EditLogPage({
         </label>
 
         <div className="flex flex-wrap items-baseline gap-6 md:col-span-2">
-          <button
-            type="submit"
-            className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink"
-          >
-            保存修改
-          </button>
+          <SubmitButton
+            label="保存修改"
+            pendingLabel="保存中…"
+            className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
+          />
           <span className="font-mono text-[10px] text-ink-soft">
             {log.isPublished
               ? "已发布的日志一保存就退回草稿，需要重新发布"
@@ -269,12 +270,11 @@ export default async function EditLogPage({
               </span>
             </label>
           )}
-          <button
-            type="submit"
-            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink"
-          >
-            发布
-          </button>
+          <SubmitButton
+            label="发布"
+            pendingLabel="发布中…"
+            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
+          />
           <span className="ml-6 font-mono text-[10px] text-ink-soft">
             发布 = 按当前正文算 SHA-256 + 记录服务器时间，两者同时写入
           </span>
@@ -287,12 +287,11 @@ export default async function EditLogPage({
           className="mt-8 border-t border-hairline pt-6"
         >
           <input type="hidden" name="id" value={log.id} />
-          <button
-            type="submit"
-            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink"
-          >
-            下架
-          </button>
+          <SubmitButton
+            label="下架"
+            pendingLabel="下架中…"
+            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
+          />
           <span className="ml-6 font-mono text-[10px] text-ink-soft">
             下架 = 前台立即不可见，保留历史摘要与发布时间，正文不动
           </span>
@@ -311,12 +310,11 @@ export default async function EditLogPage({
             placeholder={`原样输入 ${log.slug}`}
             className="border border-ink bg-transparent px-3 py-2 font-mono text-[11px] text-ink"
           />
-          <button
-            type="submit"
-            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink"
-          >
-            彻底删除
-          </button>
+          <SubmitButton
+            label="彻底删除"
+            pendingLabel="删除中…"
+            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
+          />
         </div>
       </form>
     </>

@@ -254,3 +254,39 @@ GET  /login                          → http=200，正文含"管理员口令"�
 - 入口脚本另有一条无害提示 `can not modify /etc/nginx/conf.d/default.conf (read-only file system?)`——真实部署同样是 `:ro` 挂载，属既有行为，非本次引入。
 
 本轮材料同步：说明书加了"登录限速"一条并在 5.1 内指向它；`ci.yml` 在收录清单里，删三行后重出两份 HTML 并核窗口与幂等。
+
+## 十一、跑起来之后按实测改的五个点（2026-11-04，我点名"运行一下程序，按经验优化页面美观与功能权限，可以暂时突破限制"）
+
+### 先量再改：八条路由的现状（应用内浏览器 + 隐藏 iframe 按 375/1280 两种宽度测）
+
+| 项 | 实测 | 结论 |
+|---|---|---|
+| 横向溢出 | 全部页面 `scrollWidth` 不超过视口，越界元素 `[]` | 响应式没问题，不动 |
+| `h1` 数量 / `main` 地标 / 跳转链接 | 前台各页 `h1=1`、`main#main`、`a[href="#main"]` 齐 | 前台合格 |
+| 日志正文排版 | `18px / 33.3px`（=1.85）、`Noto Serif SC` | 与视觉铁律一致，**不许"优化"掉它** |
+| 标签与时间戳 | `10–11px` `JetBrains Mono`，最差对比 6.45:1 | 小但是既定设计语言，未改数值 |
+| 后台各页 | `/admin`、`/admin/logs/new`、`/admin/projects` 均 `main=false`、无跳转链接 | **缺口 1**：键盘用户要 Tab 过整条导航 |
+| 隐藏文件输入 | `input[type=file].className="hidden"` 无 `id`/`label`/`aria-label` | **缺口 2**：读屏下是个无名控件 |
+| 七个写动作按钮 | `disabled`/`useTransition`/`useFormStatus` 全仓零命中（Editor 的上传按钮除外） | **缺口 3**：连点就是重复写 |
+| 三层判定 | 守卫判 `token.isAdmin`，动作层只判"会话存在"；`/api/auth/session` 实测返回 `{"user":{"name":"管理员"},"expires":…}`，没有 `isAdmin` | **缺口 4**：同一件事两套口径 |
+
+### 五项改动与其判据
+
+1. **判定统一**（`requireAdminSession()` + `session` 回调带出布尔位）。改后同一端点实测：`{"user":{"name":"管理员"},"expires":"…","isAdmin":true}`。三处判定（Proxy / 后台布局 / 各 Server Action）从此共用一个入口。
+2. **后台地标与跳转链接**：`admin/layout.tsx` 内容容器改为 `<main id="main">` 并加"跳到正文"，样式复用前台那条 `sr-only focus:not-sr-only …`。改后实测 `mainId="main"`、`skip=true`。
+3. **文件输入可访问名**：补 `aria-label="选择要插入正文的图片"`。
+4. **提交期间禁用**：新增 `SubmitButton`（`useFormStatus` 从 `react-dom` 取——先在 `node_modules/@types/react-dom/index.d.ts:82` 核实导出，没凭记忆写 `from "react"`）。七个按钮接入。实测点"新建项目"：30ms 后按钮 `{label:"提交中…", disabled:true, busy:"true"}`；重渲染后重新查询得到 `{label:"新建项目", disabled:false}`——中途那次"还是提交中"是我手里攥着**已被替换的旧节点**引用，不是状态卡死（这个区别值得记：SPA 里持有旧 DOM 引用会读出假状态）。
+5. **应用层登录节流**：`admin-password.ts` 加 10 分钟 / 5 次 / 按来源的窗口。curl 实测：连错 5 次全是 401，**第 6 次换成正确口令仍 401 且不发会话 cookie**。写用例时抓到实现把额度记成负数（第 6 次失败后 `attemptsLeft` 返回 `-1`），补 `Math.max(0, …)` 后 60 条用例全绿——是测试抓到实现错，这个顺序是对的。
+
+### 验证
+
+`npm run lint` 0、`npx tsc --noEmit` 0、`npm test` **60/60**（新增 4 条节流用例）、`npm run build` 0（`ƒ /login`、`ƒ /admin`、`ƒ Proxy (Middleware)` 在位）。
+材料：①+② 涨 37 行把 `proxy.ts` 切出前窗口，护栏先报错，让位的是 `tsconfig.json` 与 `eslint.config.mjs` 两枚纯工具样板；终态 5626 行 / 113 页 / 收录 64，产物反推 20 个关键文件整份同窗口、连跑两次 MD5 一致、凭据扫描控制组先行且 6 处命中全是模板值与规则文本本身。
+数据无损：本轮为验证新建的临时项目"UI 探针（临时）"已通过界面删除，列表回到只有"地球 Mirror"；种子日志未被触碰。
+
+### 明确没做与待确认
+
+- 没引入任何依赖，没动视觉铁律的具体数值，没碰 `next.config.ts` / CI / lockfile。"可以暂时突破限制"我按"允许我自己拍板"理解，没有理解成"可以拆锁定"——要拆得单独点名。
+- 节流的进程内计数不跨实例、来源键取 `X-Forwarded-For` 首跳，直接暴露时可伪造（记 I050）。
+- AGENTS.md 的"三处会话判定"仍写 `getServerSession`，与本轮改动不一致（记 I049，等点名）。
+- **服务当前是停的**：验证节流需要连错 5 次，跑完后重启 dev 才能清掉锁；而重启命令会把哑口令写在命令行里，被凭据护栏拦下（我没换写法绕）。恢复方式二选一：你在 `.env` 里填自己的 `ADMIN_PASSWORD` 后 `npm run dev`；或你点名让我用某个值重启。

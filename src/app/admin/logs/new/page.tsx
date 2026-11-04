@@ -6,10 +6,12 @@
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
+ * - 2026-11-04: 保存按钮改用 SubmitButton：提交进行中禁用并显示"保存中…"，防连点重复写
  */
 import Link from "next/link";
 import { saveLogAction } from "@/app/admin/log-actions";
 import { Editor } from "@/components/Editor";
+import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
 import { pickParam } from "@/lib/forms";
 import { listProjects } from "@/lib/projects";
@@ -145,12 +147,11 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
           </label>
 
           <div className="flex items-baseline gap-6 md:col-span-2">
-            <button
-              type="submit"
-              className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink"
-            >
-              保存草稿
-            </button>
+            <SubmitButton
+              label="保存草稿"
+              pendingLabel="保存中…"
+              className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
+            />
             <span className="font-mono text-[10px] text-ink-soft">
               草稿默认不对外可见，回到编辑页再发布
             </span>

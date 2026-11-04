@@ -25,6 +25,11 @@
  *               后窗口则因 ④ 涨到超容量把 globals.css 切掉 20 行，按 assertWindowFit 的处置建议
  *               把 ④ 里行数最少、逻辑最薄的 error.tsx（41 行）移进折走段。两次都是护栏先报错、我再配平，
  *               不是人估出来的：5453 行 / 110 页 / 收录 63
+ * - 2026-11-04: 交互与可达性这一轮（第十三转）：新文件 SubmitButton.tsx 登记进折走段；auth.ts 与
+ *               admin-password.ts 各长了几十行，①+② 冲到 1537 行、`proxy.ts`（1386-1537）被前窗口切开。
+ *               这次让位的是 tsconfig.json 与 eslint.config.mjs——两枚纯工具样板（编译选项与 ignore 列表），
+ *               与 compose/Dockerfile 同类，移进 ③ 后 ①+② 回到 1500 以内，程序实质仍整份在前窗口。
+ *               5626 行 / 113 页 / 收录 64
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -61,9 +66,7 @@ const BANDS = [
       "prisma/schema.prisma",
       "prisma/seed.ts",
       "package.json",
-      "tsconfig.json",
       "next.config.ts",
-      "eslint.config.mjs",
       ".env.example",
     ],
   },
@@ -116,6 +119,10 @@ const BANDS = [
       "src/app/projects/[slug]/page.tsx",
       "src/components/Editor.tsx",
       "src/components/SignInButton.tsx",
+      // 提交按钮与编辑器、登录表单同属后台交互层：这一层整体在折走段是第八轮起定的口径
+      // （它的调用方——各表单页——也都在这一段），本轮它整份落在省略段属于该口径的正常结果，
+      // 不是漏登记：assertComplete() 已经核过它在清单里
+      "src/components/SubmitButton.tsx",
       // 印章组件在这里：它只是把 contentHash 与发布时间排版出来，存证的真逻辑在
       // publish.ts / content-hash.ts（前窗口）与详情页（后窗口，含 <Seal /> 的调用处）
       "src/components/Seal.tsx",
@@ -127,6 +134,11 @@ const BANDS = [
       ".dockerignore",
       ".env.production.example",
       ".github/workflows/ci.yml",
+      // tsconfig 与 eslint 配置是纯工具样板（编译选项与 ignore 列表，没有一行程序逻辑），
+      // 和上面的部署配置同类；本轮 auth.ts 与 admin-password.ts 各长了几十行，①+② 顶到 1537 行
+      // 把 proxy.ts 切开了，先由这两个样板文件让位——程序实质仍在前窗口
+      "tsconfig.json",
+      "eslint.config.mjs",
       // 错误边界只有一句提示与一个重试按钮，渲染真逻辑在 globals.css/布局里；
       // 挪进折走段是为了把 ④ 段整体推后，让 globals.css 的头部回到后窗口内（本轮加进出口令模块后窗口差 20 行）
       "src/app/error.tsx",

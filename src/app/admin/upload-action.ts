@@ -6,11 +6,11 @@
  * 修改记录：
  * - 2026-10-30: Phase 5b 初始创建。与日志/项目动作不同，这里要拿返回值插进编辑器，所以用返回对象而非 redirect 错误码
  * - 2026-11-02: 去掉未使用的 UploadImageResult 导入（Phase 5b 验证时 lint 报的 warn）
+ * - 2026-11-04: 会话判定改走 requireAdminSession，与前置守卫同一口径
  */
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { requireAdminSession } from "@/auth";
 import { uploadImage } from "@/lib/oss";
 
 export type UploadActionResult =
@@ -20,7 +20,7 @@ export type UploadActionResult =
 export async function uploadImageAction(
   formData: FormData,
 ): Promise<UploadActionResult> {
-  const session = await getServerSession(authOptions);
+  const session = await requireAdminSession();
 
   if (!session) {
     return { ok: false, code: "AUTH_001" };

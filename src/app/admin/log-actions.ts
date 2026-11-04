@@ -8,13 +8,14 @@
  * - 2026-11-02: readField 与 SLUG_PATTERN 改由 src/lib/forms.ts 提供
  * - 2026-11-02: 补 unpublishLogAction（SPEC:117 的下架动作，此前无实现）
  * - 2026-11-03: 发布动作透传敏感信息确认标记；补 deleteLogAction（彻底删除）
+ * - 2026-11-04: 四个动作的会话判定改走 requireAdminSession：与前置守卫同一判据（带管理员标记的会话），
+ *               不再接受"任何有效会话"
  */
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { requireAdminSession } from "@/auth";
 import { SLUG_PATTERN, readField } from "@/lib/forms";
 import {
   deleteLog,
@@ -106,7 +107,7 @@ export async function saveLogAction(formData: FormData) {
   const id = readField(formData, "id");
   const backTo = id ? `/admin/logs/${id}/edit` : "/admin/logs/new";
 
-  const session = await getServerSession(authOptions);
+  const session = await requireAdminSession();
 
   if (!session) {
     redirect(`${backTo}?error=AUTH_001`);
@@ -132,7 +133,7 @@ export async function publishLogAction(formData: FormData) {
   const id = readField(formData, "id");
   const backTo = id ? `/admin/logs/${id}/edit` : "/admin/logs/new";
 
-  const session = await getServerSession(authOptions);
+  const session = await requireAdminSession();
 
   if (!session) {
     redirect(`${backTo}?error=AUTH_001`);
@@ -159,7 +160,7 @@ export async function unpublishLogAction(formData: FormData) {
   const id = readField(formData, "id");
   const backTo = id ? `/admin/logs/${id}/edit` : "/admin";
 
-  const session = await getServerSession(authOptions);
+  const session = await requireAdminSession();
 
   if (!session) {
     redirect(`${backTo}?error=AUTH_001`);
@@ -183,7 +184,7 @@ export async function unpublishLogAction(formData: FormData) {
 export async function deleteLogAction(formData: FormData) {
   const id = readField(formData, "id");
 
-  const session = await getServerSession(authOptions);
+  const session = await requireAdminSession();
 
   if (!session) {
     redirect(`/admin?error=AUTH_001`);

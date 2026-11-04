@@ -7,15 +7,16 @@
  * - 2026-10-30: I012-B 创建，替换 NextAuth 默认登录页；callbackUrl 只接受本站相对路径，防开放重定向
  * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
  * - 2026-11-04: 说明文案从"GitHub 授权 + 白名单"改为后台口令，不写出环境变量名
+ * - 2026-11-04: 已登录判定改走 requireAdminSession：只把"带管理员标记的会话"跳进后台，
+ *               非管理员会话不该被自动送进 /admin 再被守卫弹回来
  * - 2026-11-04: 读会话前先 await connection()：预渲染里 NextAuth 会给缺失的 csrf cookie 生成随机值，
  *               Cache Components 判它不稳定，dev 下整条路由反复重渲染
  */
 import Link from "next/link";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { SignInButton } from "@/components/SignInButton";
-import { authOptions } from "@/auth";
+import { requireAdminSession } from "@/auth";
 import { ERROR_TEXT } from "@/lib/error-text";
 import { pickParam } from "@/lib/forms";
 
@@ -45,7 +46,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   // 就用 crypto.randomBytes 现造一个，被 Cache Components 判成不稳定值并触发重渲染循环
   await connection();
 
-  const session = await getServerSession(authOptions);
+  const session = await requireAdminSession();
 
   if (session) {
     redirect(callbackUrl);

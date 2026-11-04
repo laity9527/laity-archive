@@ -7,6 +7,7 @@
  * - 2026-10-30: 初始创建
  * - 2026-10-30: Phase 5b 接入图片上传（Server Action 返回直链，插入到当前页签的光标位置）
  * - 2026-11-02: 上传错误文案改读 src/lib/error-text.ts 的共用表
+ * - 2026-11-04: 隐藏的文件输入补 aria-label——它没有可见文案也没有关联 label，读屏下是个无名控件
  */
 "use client";
 
@@ -144,6 +145,7 @@ export function Editor({ initialBefore, initialAfter }: EditorProps) {
             ref={fileRef}
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
+            aria-label="选择要插入正文的图片"
             onChange={handleFile}
             className="hidden"
           />
