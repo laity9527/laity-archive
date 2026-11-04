@@ -8,6 +8,8 @@
 # - 2026-11-02: preflight 同步补这四条判定，通过行改为附带地域与桶名（脱敏，不打密钥）。实测注意：变量缺失时 compose 的插值检查先失败，preflight 根本不会起跑，这层的作用是门禁清单自证 + 日后放宽 ${VAR:?} 时的兜底
 # - 2026-11-03: I036 落地：app 探针从 /login 换成 /api/health 并校验响应体 db=true，start_period 20s→30s；
 #               web 改为等 app healthy 再起（nginx 自身不加探针，理由见 web 处注释）
+# - 2026-11-03: 修一个上线级漏项：app 从未接收 SITE_ICP 等合规位变量（--env-file 只插值不注入），
+#               补 SITE_ICP / SITE_POLICE_ICP / SITE_CONTACT_EMAIL 三行，用 :- 允许留空
 #
 # 用前必读：
 #   1. cp .env.production.example .env.production，填真实值，两个口令不要与开发环境复用；
@@ -106,6 +108,12 @@ services:
       OSS_BUCKET: ${OSS_BUCKET:?OSS Bucket 名称}
       OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:?生产专用 RAM 子账号 AccessKey ID}
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:?生产专用 RAM 子账号 AccessKey Secret}
+      # 合规位三项必须在这里显式传：compose 的 --env-file 只参与变量插值，不会自动注入容器，
+      # 少了这三行，.env.production 里填了备案号页脚也永远不显示。用 :- 而不是 :? ——
+      # 未备案 / 还没有公开邮箱时留空是合法状态，硬卡会把整个 up 拦死
+      SITE_ICP: ${SITE_ICP:-}
+      SITE_POLICE_ICP: ${SITE_POLICE_ICP:-}
+      SITE_CONTACT_EMAIL: ${SITE_CONTACT_EMAIL:-}
     # 只绑 127.0.0.1：外部流量一律经 nginx，不给应用直接开口
     ports:
       - "127.0.0.1:3000:3000"

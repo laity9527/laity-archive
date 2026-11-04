@@ -151,13 +151,25 @@
 - 未验证：Actions 的实跑结果要等推送之后；生产编排的健康判据变更只做了 `docker compose config` 渲染核对，整套启动仍需服务器上实跑。
 - 连带：`docs/03-截图/` 改名 `docs/03-功能截图/` 与 AGENTS.md、README 对齐（原打算 `git mv`，实际目录为空且从未入库，Git 不跟踪空目录）；`eslint.config.mjs` 的 ignores 加 `tmp/**`（I039），一次性诊断脚本不参与 lint。
 
+### D19：外部合规方案进来后，先裁决定位，再逐条吸收
+- 背景：收到一份《Laity 多用户开发者档案库 合规需求设计方案》（v1.0），要求"据此重构代码和方案"。它假设的产品是多用户平台（邮箱注册、手机号验证码、GitHub Token 加密入库、租户隔离、UGC 避风港、内容审核、Pro 付费）。
+- 决策一（定位不变）：**保持单人档案库，只吸收与定位无关的合规项**。判据是三条实测事实：`prisma/schema.prisma` 只有 `Project`/`Log`，全文没有 `User` 与 `userId`；全仓只有一处 `db.project.delete`，日志连删除能力都没有；`src/auth.ts` 只往 JWT 写 `githubId`，库里不存邮箱、手机与 Token。转多用户意味着至少 4 个新依赖 + 3 个付费外部服务 + 全表加 `userId` + AGENTS/SPEC/DESIGN 重写 + **已登记十轮的软著材料作废**，而方案里约六成条目的前提在本站根本不存在。多用户留作 Phase 9 备选，不在本轮展开。
+- 决策二（措辞按受众分界）：方案 3.3.2 要求"哈希只作技术标记，不做存证/防伪宣传"。**对外访客可见的文案中性化**——站点描述、默认标题、印章标题（"存证印章"→"内容摘要"）、摘要缺失告警（"存证缺失"→"摘要缺失"，并明确"无法核对是否被改动"）；**对内保留原叙事**——代码注释、SPEC/DESIGN、软著材料仍写"证据链/存证"，因为那是研发留痕与登记口径，不是对公众的服务承诺。技术语义（D5 口径）一字未动，改的只是宣传口径。
+- 决策三（删除权与留痕的取舍）：加 `deleteLog` 彻底删除，但要求原样回填该条 slug 作为确认（`LOG_004`），而不是靠一个弹窗按钮；与 D9"下架保留历史摘要"并存，两条路径语义各自清楚。**图片对象不随删除走**：那把 RAM 密钥只有 `PutObject`，为了"删内容即删对象"去扩 `DeleteObject` 是安全性的净损失，改用存储桶生命周期规则兜底。
+- 决策四（把方案里的红线变成可执行断言）：新增 `/licenses` 与 `src/lib/licenses.ts`，18 个直接依赖的许可值逐个从 `node_modules/<包>/package.json` 实测读出后登记；`tests/licenses.test.ts` 做三件事——每个依赖必须在清单里（漏登记即红）、清单里不能有已删除的依赖（漂移即红）、许可不得命中 `GPL/AGPL/LGPL/CC-BY-NC/SSPL` 前缀。AGENTS.md 的"传染性许可禁止"从此不再是口头约定。
+- 决策五（发布前敏感信息门）：`src/lib/sensitive-scan.ts` 纯函数 + `LOG_003` 确认门。这是外部方案里对单人站**最有价值**的一条：日志正文若贴过 AccessKey 或口令，正是 AGENTS.md 凭据红线要防的事故。设计要点两条——① 规则分两种作用域，数字形态类（手机号/身份证/IP/AK）逐词元匹配并整体跳过长度 ≥16 的十六进制摘要，否则 64 位 contentHash 里的数字串会被当成手机号；跨标点的形态（`password=xxx`、私钥块、JWT）必须全文匹配，按词元切会永远命不中。② 邮箱归提示级不拦发布，因为联系方式常常是故意公开的，拿它拦只会逼人关掉整个功能。扫描对象是**库里将要公开的正文**，不是表单声称的值。
+- 顺带抓到一个上线级漏项：`SITE_ICP` 从未出现在 `docker-compose.prod.yml` 的 `app.environment` 里——compose 的 `--env-file` 只参与变量插值、不会注入容器，所以备案号填进 `.env.production` 也永远不显示。补 `SITE_ICP` / `SITE_POLICE_ICP` / `SITE_CONTACT_EMAIL` 三行，用 `${VAR:-}` 而非 `${VAR:?}`：未备案、没有公开邮箱时留空是合法状态，硬卡会把整个 `up` 拦死。判据：`docker compose config` 在缺这两个新键时仍渲染出空值且退出 0。
+- 未复核项（如实标注）：三款字体的许可证按 AGENTS.md 的字体白名单登记（SIL OFL / Apache 2.0），本轮两次联网取上游 LICENSE 均失败（`fonts.google.com` 与 raw.githubusercontent 都取不到），Next 自带的 `font-data.json` 也没有 license 字段，故 `/licenses` 页明写"本次未联网复核上游 LICENSE 原文，若与上游不一致以字体仓库声明为准"，并挂 I040 待复核。
+- 明确不做（避免半成品）：邮箱注册与密码找回（要 SMTP + bcrypt，新依赖需批准）、手机号验证码（阿里云短信资质与费用）、图形验证码、内容安全 API（付费）、Webhook 同步与 Token 加密存储（前提不存在）、管理员分角色与审计日志、数据导出、注销流程。逐条对照与分期写在 `docs/00-开发方法论/合规需求差距分析与分期方案.md`。
+- 一处对来源方案的纠正：它把"仅申请 `public_repo` 和 `read:user`"当作最小权限——`public_repo` 是**可写** scope，而只读公开仓库元数据不需要任何 repo scope。本站现状未声明 scopes，走 NextAuth 默认的 `read:user user:email`（已在浏览器授权 URL 实测到），本身已比方案要求更小。照抄反而扩大权限。
+
 ### D11：后台登录页自建，落点 /login 而不是 /admin/login
 - 决策：`authOptions.pages = { signIn: "/login", error: "/login" }`，登录页与错误提示都在这一个页面里给；Proxy 与 admin 布局的未登录跳转都改成 `/login?callbackUrl=…`；`callbackUrl` 只接受本站相对路径（以 `/` 开头且不以 `//` 开头），否则回落 `/admin`。
 - 理由：NextAuth v4 默认登录页自带主题样式（圆角、浅色卡片），与视觉铁律冲突，而且从 `/admin` 进去要多一次点击。放 `/admin/login` 会死循环——`pages.signIn` 一旦设置，`/api/auth/signin*` 的 GET 一律 307 到它，而该路径同时被 Proxy 的 `/admin/:path*` 与 admin 布局的会话守卫管辖，三者互相弹回；放到 `/login` 既不在 matcher 里也不吃 admin 布局。callbackUrl 两层兜底：我这层挡住协议相对与绝对外链，v4 的 `default-callbacks.js#redirect` 再挡一次非本站 origin。
 - 代价：登录入口的 URL 与后台不同源命名（`/login` 而非 `/admin/login`）；多一个客户端组件（见 D3 的 CSRF 原因）；`/admin/:path*` 的守卫覆盖面因此少一条路径，但它本来就不该拦登录页。
 - 连带：Phase 3 的"未登录访问 /admin → 跳转 GitHub 授权页"改为两跳语义——`/admin` → `/login` →（点一次按钮）→ GitHub 授权页；非白名单账号回到 `/login?error=AccessDenied` 并显示中文提示。
 
-## 二、分阶段路线图（6 个 Phase，每个都是可运行最小闭环）
+## 二、分阶段路线图（7 个 Phase，每个都是可运行最小闭环；Phase 8/9 为待裁决备选）
 
 通则：每个 Phase 开新会话 + 执行指令卡；完成后独立验收 → git commit → 截图/日志归档。
 文件清单为核心受控文件（脚手架自动生成的配套文件以实际为准）；清单外一律不动。
@@ -333,6 +345,37 @@ next.config.ts（output: "standalone"，经 D6 批准）、docs/04-软著材料/
 3. 线上重跑 Phase 2 验收第 1 条（草稿隔离）与 Phase 4 第 3 条（哈希复核）均 PASS（6a 已在容器化的同一镜像内复现，6b 需线上再跑一次）；
 4. docs/04 含源代码文档（按软著要求前 30 页 + 后 30 页排版）与操作说明书（已生成，结构/行宽/分页实测通过；打印成 PDF 的最终观感待我本人核对）；
 5. docs/03 存线上带地址栏截图（6b）。
+
+---
+
+### Phase 7：合规收口（单人站可做的部分）
+交付物：发布前敏感信息确认门、日志彻底删除、对外文案口径边界、`/licenses` 开源致谢、页脚三项合规位与容器注入修复、泄露应急预案。
+
+背景与裁决：收到一份按"多用户平台"写的合规方案，逐条对照后确认约六成条目的前提在本站不存在。
+本轮只吸收与定位无关且零新依赖的部分；多用户整块留作 Phase 9 备选。
+对照表与分期见 `docs/00-开发方法论/合规需求差距分析与分期方案.md`，决策理由见 D19。
+
+允许触碰的文件：
+`src/lib/{sensitive-scan,publish,licenses,error-text,site}.ts`、`src/app/admin/log-actions.ts`、`src/app/admin/page.tsx`、
+`src/app/admin/logs/[id]/edit/page.tsx`、`src/app/{layout,licenses/page,privacy/page,logs/page,logs/[slug]/page}.tsx`、
+`src/components/{Seal,SiteFooter}.tsx`、`src/lib/sitemap-data.ts`、`docker-compose.prod.yml`、两份 env 模板、
+`tests/{sensitive-scan,licenses}.test.ts`、`docs/00-开发方法论/`、`docs/02-测试记录/`、`docs/04-软著材料/`、SPEC、DESIGN、ISSUES
+
+新依赖：0。schema 与迁移：0——不因为一份外部文档就动数据模型。
+
+验收标准：
+1. 扫描器九类形态命中，且 64 位摘要、40 位提交号、版本号与耗时三类反例零命中（`npm test`）；
+2. 阻截级命中时服务端拒绝发布（`LOG_003`），删除需回填 slug（`LOG_004`）；端到端点击需本人登录，未验则如实标注；
+3. 许可清单与 package.json 对拍通过且无传染性许可；许可值来自 `node_modules` 实测；
+4. 访客可见页面不再出现"存证/防伪"，对内注释与软著材料保留原叙事（curl 计数为 0）；
+5. `/licenses` 静态预渲染并进 sitemap；三项合规位未配置时对应行不渲染；
+6. 合规位变量确实进入容器（`docker compose config` 渲染核对）；
+7. 四道门禁全 0，软著材料 `assertWindowFit()` 通过且独立脚本复核关键文件整份同窗口。
+
+### Phase 8 / 9（未开工，等裁决与信息）
+- Phase 8 法律文本：用户协议、侵权投诉指引、社区规范——**前提是有多用户与 UGC**，否则写了就是虚假陈述。
+- Phase 9 多用户平台：账号体系、租户隔离、Token 存储、Webhook 同步、审核与举报、导出与注销。
+  需逐项批准新依赖（口令哈希库）、外部服务与费用（SMTP、短信、内容安全），并重出软著材料、改写事实基座。
 
 ## 三、风险清单
 

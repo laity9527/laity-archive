@@ -7,6 +7,7 @@
  * - 2026-10-30: 初始创建
  * - 2026-11-02: readField 与 SLUG_PATTERN 改由 src/lib/forms.ts 提供
  * - 2026-11-02: 补 unpublishLogAction（SPEC:117 的下架动作，此前无实现）
+ * - 2026-11-03: 发布动作透传敏感信息确认标记；补 deleteLogAction（彻底删除）
  */
 "use server";
 
@@ -16,6 +17,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { SLUG_PATTERN, readField } from "@/lib/forms";
 import {
+  deleteLog,
   publishLog,
   saveLog,
   unpublishLog,
@@ -140,7 +142,10 @@ export async function publishLogAction(formData: FormData) {
     redirect(`${backTo}?error=VAL_001`);
   }
 
-  const result = await publishLog(id);
+  const result = await publishLog(id, {
+    // 确认标记只影响"要不要放行"，扫描本身在服务端读库里的正文，客户端伪造不了内容
+    sensitiveConfirmed: readField(formData, "sensitiveConfirmed") === "on",
+  });
 
   if (!result.ok) {
     redirect(`${backTo}?error=${result.code}`);
@@ -172,4 +177,28 @@ export async function unpublishLogAction(formData: FormData) {
 
   refreshLogViews(result.slug);
   redirect(`${backTo}?unpublished=1`);
+}
+
+// 彻底删除：行连同摘要一起消失，与"下架"不同，因此回跳的是后台首页而不是编辑页
+export async function deleteLogAction(formData: FormData) {
+  const id = readField(formData, "id");
+
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect(`/admin?error=AUTH_001`);
+  }
+
+  if (!id) {
+    redirect(`/admin?error=VAL_001`);
+  }
+
+  const result = await deleteLog(id, readField(formData, "confirmSlug"));
+
+  if (!result.ok) {
+    redirect(`/admin/logs/${id}/edit?error=${result.code}`);
+  }
+
+  refreshLogViews(result.slug);
+  redirect(`/admin?deleted=1`);
 }

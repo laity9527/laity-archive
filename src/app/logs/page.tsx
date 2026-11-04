@@ -8,6 +8,7 @@
  * - 2026-10-30: Phase 2 完整版，补齐双层筛选与时间轴
  * - 2026-11-02: pickParam 改由 src/lib/forms.ts 提供
  * - 2026-11-03: 补页面标题与描述；正文容器加 id 供导航的"跳到正文"使用
+ * - 2026-11-03: 描述改为"附 SHA-256 摘要与发布时间，可核对是否被改动"，去掉"存证"口吻
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -19,7 +20,7 @@ import { getSafeLogs } from "@/lib/logs";
 export const metadata: Metadata = {
   title: "开发日志",
   description:
-    "按项目与标签筛选的开发复盘：每条都分成 BEFORE 判断与 AFTER 验证两段，并带内容摘要存证。",
+    "按项目与标签筛选的开发复盘：每条都分成 BEFORE 判断与 AFTER 验证两段，页尾附正文 SHA-256 摘要与发布时间，可核对是否被改动。",
 };
 
 type LogsPageProps = {

@@ -5,6 +5,7 @@
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建。备案号由根布局读环境变量后以 prop 传入，未配置时整行不渲染
+ * - 2026-11-03: 补开源许可入口、侵权投诉邮箱位、公安备案号位与版权行；三个新位同样是"未设置就不渲染"
  */
 "use client";
 
@@ -14,9 +15,11 @@ import { isPublicRoute } from "@/lib/routes";
 
 type SiteFooterProps = {
   icp: string | null;
+  policeIcp: string | null;
+  contactEmail: string | null;
 };
 
-export function SiteFooter({ icp }: SiteFooterProps) {
+export function SiteFooter({ icp, policeIcp, contactEmail }: SiteFooterProps) {
   const pathname = usePathname();
 
   if (!isPublicRoute(pathname)) {
@@ -33,16 +36,43 @@ export function SiteFooter({ icp }: SiteFooterProps) {
         >
           隐私与数据说明
         </Link>
-        {icp && (
+        <Link
+          href="/licenses"
+          className="border-b border-transparent hover:border-ink hover:text-ink"
+        >
+          开源许可
+        </Link>
+        {contactEmail && (
           <a
-            href="https://beian.miit.gov.cn/"
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="ml-auto hover:text-ink"
+            href={`mailto:${contactEmail}?subject=${encodeURIComponent("侵权投诉/联系")}`}
+            className="border-b border-transparent hover:border-ink hover:text-ink"
           >
-            {icp}
+            侵权投诉与联系
           </a>
         )}
+        <span className="ml-auto flex flex-wrap items-baseline gap-x-8 gap-y-3">
+          {policeIcp && (
+            <a
+              href="https://beian.mps.gov.cn/"
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="hover:text-ink"
+            >
+              {policeIcp}
+            </a>
+          )}
+          {icp && (
+            <a
+              href="https://beian.miit.gov.cn/"
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="hover:text-ink"
+            >
+              {icp}
+            </a>
+          )}
+          <span>© 2026 LAITY</span>
+        </span>
       </div>
     </footer>
   );

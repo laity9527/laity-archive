@@ -7,15 +7,25 @@
  * - 2026-10-30: 初始创建
  * - 2026-10-30: 最近动态加编辑链接、底部加新建日志入口（Phase 4，经批准改本清单外文件）
  * - 2026-11-02: 补 instant 注释说明（false 是退出即时导航校验，不改变渲染方式）
+ * - 2026-11-03: 接收 ?deleted=1，删除后回概览时给出结果提示
  */
 import Link from "next/link";
+import { pickParam } from "@/lib/forms";
 import { getAdminOverview } from "@/lib/projects";
 
 // 概览统计走未缓存查询，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
 
-export default async function AdminHomePage() {
+type AdminHomePageProps = {
+  searchParams: Promise<{ deleted?: string | string[] }>;
+};
+
+export default async function AdminHomePage({
+  searchParams,
+}: AdminHomePageProps) {
+  const query = await searchParams;
+  const deleted = pickParam(query.deleted);
   const { projectCount, publishedCount, draftCount, recentLogs } =
     await getAdminOverview();
 
@@ -28,6 +38,12 @@ export default async function AdminHomePage() {
   return (
     <>
       <h1 className="text-3xl font-medium tracking-tight">概览</h1>
+
+      {deleted && (
+        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+          DELETED · 该条日志已彻底删除，正文与摘要都不再保留
+        </p>
+      )}
 
       <ul className="mt-10 border-t border-ink">
         {stats.map((item) => (

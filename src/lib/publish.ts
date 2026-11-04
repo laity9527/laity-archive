@@ -6,10 +6,12 @@
  * 修改记录：
  * - 2026-10-30: 初始创建
  * - 2026-11-02: 哈希口径改从 src/lib/content-hash.ts 引入，本文件不再自带一份
+ * - 2026-11-03: 发布前加敏感信息扫描门（LOG_003，未确认不放行）；补 deleteLog 彻底删除
  */
 import { Prisma } from "@prisma/client";
 import { computeContentHash } from "@/lib/content-hash";
 import { db } from "@/lib/db";
+import { hasBlockingHit, scanSensitive } from "@/lib/sensitive-scan";
 
 export type LogInput = {
   id?: string;
@@ -30,7 +32,7 @@ export type SaveLogResult =
 
 export type PublishLogResult =
   | { ok: true; contentHash: string; slug: string }
-  | { ok: false; code: "LOG_002" };
+  | { ok: false; code: "LOG_002" | "LOG_003" };
 
 export type UnpublishLogResult =
   | { ok: true; slug: string }
@@ -98,14 +100,37 @@ export async function saveLog(input: LogInput): Promise<SaveLogResult> {
   }
 }
 
-export async function publishLog(id: string): Promise<PublishLogResult> {
+export async function publishLog(
+  id: string,
+  opts: { sensitiveConfirmed?: boolean } = {},
+): Promise<PublishLogResult> {
   const log = await db.log.findUnique({
     where: { id },
-    select: { title: true, beforeContent: true, afterContent: true, slug: true },
+    select: {
+      title: true,
+      beforeContent: true,
+      afterContent: true,
+      lessonLearned: true,
+      slug: true,
+    },
   });
 
   if (!log) {
     return { ok: false, code: "LOG_002" };
+  }
+
+  // 扫的是库里将要公开的正文，不是表单声称的内容；未带确认标记就不放行（LOG_003）
+  if (
+    !opts.sensitiveConfirmed &&
+    hasBlockingHit(
+      scanSensitive(
+        [log.title, log.beforeContent, log.afterContent, log.lessonLearned]
+          .filter(Boolean)
+          .join("\n"),
+      ),
+    )
+  ) {
+    return { ok: false, code: "LOG_003" };
   }
 
   const contentHash = computeContentHash(
@@ -136,4 +161,31 @@ export async function unpublishLog(id: string): Promise<UnpublishLogResult> {
   const log = await db.log.findUnique({ where: { id }, select: { slug: true } });
 
   return { ok: true, slug: log?.slug ?? "" };
+}
+
+export type DeleteLogResult =
+  | { ok: true; slug: string }
+  | { ok: false; code: "LOG_002" | "LOG_004" };
+
+// 彻底删除与"下架"是两件事：下架保留历史摘要与发布时间，删除连行一起消失。
+// 不可逆，所以要求把该条的 slug 原样输一遍作为确认，而不是靠一个弹窗按钮。
+// 正文里引用过的图片对象不在此列——那把 RAM 密钥只有 PutObject，没有 DeleteObject，
+// 刻意不扩权限，遗留对象交给存储桶的生命周期规则清理。
+export async function deleteLog(
+  id: string,
+  confirmSlug: string,
+): Promise<DeleteLogResult> {
+  const log = await db.log.findUnique({ where: { id }, select: { slug: true } });
+
+  if (!log) {
+    return { ok: false, code: "LOG_002" };
+  }
+
+  if (confirmSlug !== log.slug) {
+    return { ok: false, code: "LOG_004" };
+  }
+
+  await db.log.delete({ where: { id } });
+
+  return { ok: true, slug: log.slug };
 }

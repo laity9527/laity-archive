@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-10-30: 创建
  * - 2026-11-02: formatUtc 改由 src/lib/time.ts 提供
+ * - 2026-11-03: 对外标题从"存证印章"改为"内容摘要"——哈希只是可核对的技术标记，不写成服务承诺
  */
 import { formatUtc } from "@/lib/time";
 
@@ -17,7 +18,7 @@ type SealProps = {
 export function Seal({ contentHash, publishedAt }: SealProps) {
   return (
     <div className="mt-16 border border-ink p-5 font-mono text-[11px] leading-relaxed text-ink-soft">
-      <p className="tracking-[0.2em] text-ink">存证印章</p>
+      <p className="tracking-[0.2em] text-ink">内容摘要</p>
       <p className="mt-3 break-all">CONTENT HASH · {contentHash}</p>
       <p className="mt-1">PUBLISHED AT · {formatUtc(publishedAt)}</p>
       <p className="mt-3 text-ink-soft">

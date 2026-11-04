@@ -7,10 +7,12 @@
  * - 2026-10-30: 初始创建
  * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
  * - 2026-11-02: 已发布状态下增"下架"动作与 UNPUBLISHED 提示（补 SPEC:117 的 unpublishLog）
+ * - 2026-11-03: 发布前展示敏感信息命中清单并要求勾选确认；新增"彻底删除"（回填 slug 确认）
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  deleteLogAction,
   publishLogAction,
   saveLogAction,
   unpublishLogAction,
@@ -21,6 +23,7 @@ import { pickParam } from "@/lib/forms";
 import { getAdminLogById } from "@/lib/logs";
 import { listProjects } from "@/lib/projects";
 import { toDateTimeLocal } from "@/lib/publish";
+import { scanSensitive } from "@/lib/sensitive-scan";
 
 // 本页读会话与单条日志，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
@@ -54,6 +57,14 @@ export default async function EditLogPage({
   const saved = pickParam(query.saved);
   const published = pickParam(query.published);
   const unpublished = pickParam(query.unpublished);
+
+  // 扫的是库里的正文（与发布动作同一口径），所以这里显示的就是发布时会被拦的内容
+  const hits = scanSensitive(
+    [log.title, log.beforeContent, log.afterContent, log.lessonLearned]
+      .filter(Boolean)
+      .join("\n"),
+  );
+  const blocking = hits.filter((hit) => !hit.advisory);
 
   return (
     <>
@@ -227,9 +238,37 @@ export default async function EditLogPage({
         </div>
       </form>
 
+      {hits.length > 0 && (
+        <div className="mt-8 border border-ink px-4 py-3">
+          <p className="font-mono text-[10px] tracking-[0.2em] text-ink">
+            发布前核对 · 命中 {hits.length} 类形态
+          </p>
+          <ul className="mt-3 grid gap-1 font-mono text-[11px] leading-relaxed text-ink-soft">
+            {hits.map((hit) => (
+              <li key={hit.code}>
+                {hit.advisory ? "提示" : "阻截"} · {hit.label} ×{hit.count} ·{" "}
+                {hit.samples.join(" / ")}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[11px] leading-relaxed text-ink-soft">
+            这只是形态判断，会误报（示例数据、占位串都算）。阻截类请先删改；
+            确认没有可撤回的公开内容时，勾选下面的确认再发布。
+          </p>
+        </div>
+      )}
+
       {!log.isPublished && (
         <form action={publishLogAction} className="mt-8 border-t border-hairline pt-6">
           <input type="hidden" name="id" value={log.id} />
+          {blocking.length > 0 && (
+            <label className="mb-4 flex items-baseline gap-3">
+              <input type="checkbox" name="sensitiveConfirmed" className="border border-ink" />
+              <span className="font-mono text-[11px] text-ink">
+                已核对上述 {blocking.length} 类命中，仍要发布
+              </span>
+            </label>
+          )}
           <button
             type="submit"
             className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink"
@@ -259,6 +298,27 @@ export default async function EditLogPage({
           </span>
         </form>
       )}
+
+      <form action={deleteLogAction} className="mt-6 border-t border-hairline pt-6">
+        <input type="hidden" name="id" value={log.id} />
+        <p className="font-mono text-[10px] leading-relaxed text-ink-soft">
+          彻底删除 = 正文、摘要与发布时间一起从库里消失，不可恢复；只是想暂时不公开请用上面的「下架」。
+          正文里引用过的图片对象不会被删（那把密钥只有写入权限），由存储桶生命周期规则清理。
+        </p>
+        <div className="mt-3 flex flex-wrap items-baseline gap-4">
+          <input
+            name="confirmSlug"
+            placeholder={`原样输入 ${log.slug}`}
+            className="border border-ink bg-transparent px-3 py-2 font-mono text-[11px] text-ink"
+          />
+          <button
+            type="submit"
+            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink"
+          >
+            彻底删除
+          </button>
+        </div>
+      </form>
     </>
   );
 }

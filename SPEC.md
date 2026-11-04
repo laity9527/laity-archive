@@ -38,6 +38,9 @@
 | F13 | 作为搜索引擎/分享方，我能拿到规范的站点信息，以便收录与预览卡片正常 | 每页 `title`/`description`（详情页标题跟内容、描述取"经验总结"）、`metadataBase` + Open Graph + Twitter card、`/robots.txt`（屏蔽 /admin 与 /login）、`/sitemap.xml`（只含已发布内容，请求期取数）、键盘焦点可见 `:focus-visible` |
 | F14 | 作为站长，我需要一个不依赖登录的健康检查端点和一个诚实的错误页，以便上线后能判断"是站点挂了还是数据库挂了" | `/api/health` 返回 `{status, db}`，数据库不可达时 503 且不泄露任何异常细节；未匹配路由走品牌化 404；渲染异常走错误边界并可重试 |
 | F15 | 作为访客，我想知道这个站拿了我什么、存了什么、怎么删，以便本站满足上线合规要求 | `/privacy` 隐私与数据说明页（按当前实现逐条写，不承诺做不到的事）；页脚提供入口与 ICP 备案号位（备案号走 `SITE_ICP` 环境变量，未配置则不渲染该行） |
+| F16 | 作为管理员，发布前我想知道正文里有没有不便公开的东西（手机号、密钥、内网地址等），以便避免误发布 | `src/lib/sensitive-scan.ts` 纯函数扫描；命中阻截级且未勾选确认时发布返回 `LOG_003`。扫描对象是库里将要公开的正文，不是表单声称的值 |
+| F17 | 作为作者，我要能把一条日志彻底删掉，以便行使对自己数据的删除权 | `deleteLog` 动作 + 编辑页"彻底删除"表单，要求原样回填该条 slug 作为确认（不符返回 `LOG_004`）；与"下架"（D9 保留历史摘要）并存 |
+| F18 | 作为访客，我要能看到本站用了哪些开源组件及其许可证，以便完成第三方致谢与商标声明 | `/licenses` 页 + `src/lib/licenses.ts` 清单；许可值取自 `node_modules` 实测，`tests/licenses.test.ts` 与 package.json 对拍并拦住传染性许可 |
 
 ### P2 / 非目标（本期坚决不做）
 
@@ -114,6 +117,7 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | /robots.txt | P1 | 静态生成 | 放行公开路径，屏蔽 /admin、/login 与 /api，指向 sitemap |
 | /sitemap.xml | P1 | getSafeLogs + 项目表（请求期取数） | 只含公开路由（含 /privacy）与已发布内容，草稿与 /admin 不出现 |
 | /privacy | P1 | 静态 | 隐私与数据说明（F15），进 sitemap 与页脚 |
+| /licenses | P1 | 静态 | 开源许可与致谢 + 商标声明（F18），进 sitemap 与页脚 |
 | /api/health | P1 | 一次性 `SELECT 1` | 运维探针，需登录无关；no-store + noindex |
 
 ### Server Actions
@@ -121,8 +125,9 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | Action | 入参 | 出参 | 错误码 |
 |---|---|---|---|
 | saveLogDraft | {id?, title, slug, projectId, tags[], beforeContent, afterContent?, beforeDate, afterDate?, lessonLearned?} | {id} | AUTH_001 未登录；VAL_001 参数校验失败；LOG_001 slug 重复 |
-| publishLog | {id} | {contentHash, publishedAt} | AUTH_001；LOG_002 日志不存在 |
+| publishLog | {id, sensitiveConfirmed?} | {contentHash, publishedAt} | AUTH_001；LOG_002 日志不存在；LOG_003 正文含疑似敏感信息且未确认 |
 | unpublishLog | {id} | {ok} | AUTH_001；LOG_002 |
+| deleteLog | {id, confirmSlug} | {ok} | AUTH_001；LOG_002；LOG_004 确认 slug 与库中不一致，删除未执行 |
 | saveProject | {id?, slug, name, kind, status, summary?, repoUrl?} | {id} | AUTH_001；VAL_001；PRJ_002 slug 重复 |
 | deleteProject | {id} | {ok} | AUTH_001；PRJ_001 项目下仍有日志，禁止删除 |
 | uploadImage（P1） | FormData(file) | {url} | AUTH_001；IMG_001 类型/大小不合法（仅 jpg/png/webp/gif，≤5MB） |
@@ -144,11 +149,15 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 
 | 项 | 要求 | 现状 |
 |---|---|---|
-| 回归测试 | 纯逻辑必须有可重复运行的测试：D5 摘要口径、图片内容签名、slug 与表单取值、错误码文案完整性、时间展示、路由归属判定 | `npm test`（Node 自带 test runner，零新依赖），30 条断言全绿；DB 层与需登录的动作层不在覆盖内，仍靠自测表与人工联调 |
+| 回归测试 | 纯逻辑必须有可重复运行的测试：D5 摘要口径、图片内容签名、slug 与表单取值、错误码文案完整性、时间展示、路由归属判定、发布前敏感信息形态、开源许可清单与红线 | `npm test`（Node 自带 test runner，零测试依赖），48 条断言全绿；DB 层与需登录的动作层不在覆盖内，仍靠自测表与人工联调 |
 | 构建门禁 | `npm run lint`、`npx tsc --noEmit`、`npm run build` 必须全 0 才算可发版 | 全 0 |
 | 健康检查 | 提供与登录无关的 `/api/health`，能区分"进程活着"与"数据库连得上"，异常不外泄细节 | 已实现，实测库停止时 503 `{"status":"degraded","db":false}`、恢复后 200；生产编排的 app 探针已改打这一条并校验响应体 `db === true`（I036），`web` 等 `app` healthy 再起 |
 | 持续集成 | 四条门禁不能只靠人记得跑（I037） | `.github/workflows/ci.yml`：`npm ci` → `prisma generate` → lint → tsc → test → `prisma migrate deploy` → build → 软著材料两步自检（漏登记新文件、HTML 与说明书不同步都会红）。配一次性 `postgres:16` 服务，因为"构建期是否查库"本机未能实测；工作流 env 全为占位值。Actions 实跑待推送后确认 |
 | 错误处理 | 未匹配路由有品牌化 404；渲染异常有可重试的错误边界且不显示内部信息 | `src/app/not-found.tsx`、`src/app/error.tsx` |
-| 合规位 | 隐私与数据说明页按真实行为撰写；ICP 备案号走 `SITE_ICP` 环境变量，未备案不硬凑文案 | `/privacy` 已上线；备案号待我本人在备案通过后填入 |
+| 合规位 | 隐私与数据说明页按真实行为撰写；ICP 备案号、公安备案号、对外联系邮箱三项走环境变量，未配置就不渲染该行，不硬凑文案 | `/privacy`、`/licenses` 已上线；`SITE_ICP` / `SITE_POLICE_ICP` / `SITE_CONTACT_EMAIL` 待我本人填入。**注意**：这三项必须在 `docker-compose.prod.yml` 的 `app.environment` 里显式传——`--env-file` 只参与插值、不注入容器，此前就漏了导致填了也不显示 |
+| 发布前把关 | 正文里若出现手机号、身份证号、云厂商/GitHub 凭据形态、私钥块、JWT、明文口令赋值、内网地址，发布需显式确认（`LOG_003`） | `src/lib/sensitive-scan.ts` 纯函数 + 编辑页命中清单 + 确认勾选；邮箱只提示不拦发布。误报可确认放行，判定本身可单测 |
+| 删除权 | 作者能彻底删除某条日志，且不可逆操作要有实质量确认 | `deleteLog` + 回填 slug（`LOG_004`）。图片对象不随之删除：那把 RAM 密钥只有 `PutObject`，刻意不扩权限，遗留对象交给存储桶生命周期规则 |
+| 对外口径 | 哈希只是可核对的技术标记，对外文案不暗示法律效力或"存证服务"；对内注释、SPEC 与软著材料保留"证据链"叙事 | 已按此边界改完 `site.ts`、`layout.tsx`、`Seal.tsx`、`logs/page.tsx`、`logs/[slug]/page.tsx` 的访客可见文案 |
+| 应急预案 | 有一份写清"本站到底有什么可泄露"、止血顺序与入侵时不原地清理的预案 | `docs/00-开发方法论/个人信息与凭据泄露应急预案.md`。单人站无第三方用户，不照抄平台型预案的 72 小时通知承诺 |
 | 部署与回滚 | 有一份可照着做的上线/回滚手册，含迁移镜像标签必须刷新这一条（I026） | `docs/00-开发方法论/上线与回滚手册.md` |
 | 安全头与传输 | TLS 1.2/1.3、HSTS、`nosniff`、`X-Frame-Options`、后台与 404 禁止索引 | nginx + Proxy 已配，本机预跑实测响应头齐 |

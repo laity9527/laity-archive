@@ -8,6 +8,7 @@
  * - 2026-10-30: 更正注释：pPR 下页面级 notFound 只能返回 200，真 404 由 src/proxy.ts 前置判定
  * - 2026-11-02: 更正 instant 注释：false 是退出即时导航校验，不是把路由改成动态
  * - 2026-11-03: 按日志标题生成页面标题、以经验总结作描述；已发布但缺摘要时改为显式告警而不是静默不画印章
+ * - 2026-11-03: 告警文案中性化（"存证缺失"→"摘要缺失"），只说"无法核对是否被改动"，不自称存证或权属凭证
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -115,12 +116,12 @@ export default async function LogDetailPage({
       {log.contentHash && log.publishedAt ? (
         <Seal contentHash={log.contentHash} publishedAt={log.publishedAt} />
       ) : (
-        // 前台只渲染已发布日志，走到这里说明存证缺字段——宁可显式告警，也不能"安静地没有印章"
+        // 前台只渲染已发布日志，走到这里说明摘要字段缺失——宁可显式告警，也不能"安静地没有印章"
         <div className="mt-16 border border-ink p-5 font-mono text-[11px] leading-relaxed text-ink">
-          <p className="tracking-[0.2em]">存证缺失</p>
+          <p className="tracking-[0.2em]">摘要缺失</p>
           <p className="mt-3 text-ink-soft">
-            这条日志已发布，但库中缺少正文摘要或发布时间记录。请在后台重新发布一次以补齐存证；
-            在补齐之前，本页不能作为权属凭证。
+            这条日志已发布，但库中缺少正文摘要或发布时间记录，因此无法核对内容是否被改动。
+            请在后台重新发布一次补齐；缺失期间，本页不构成内容未被篡改的证明。
           </p>
         </div>
       )}

@@ -17,6 +17,8 @@
  * - 2026-11-03: 收录清单由 ORDER 改为 BANDS（分四段、③ 标 foldable），新增 assertWindowFit()：
  *               非折走段文件被窗口切断或整份掉进折走段即拒绝生成。起因是 eslint 配置加了一行注释，
  *               就把 ①+② 从 1486 顶到 1501 行、proxy.ts 又被切掉一行——这种事不该靠人事后对拍
+ * - 2026-11-03: 登记合规这一轮的三个新文件：sensitive-scan 进核心逻辑段（②），
+ *               licenses 静态表进折走段（③），/licenses 页进后窗口（④）
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -56,8 +58,6 @@ const BANDS = [
       "tsconfig.json",
       "next.config.ts",
       "eslint.config.mjs",
-      "docker-compose.prod.yml",
-      "Dockerfile",
       ".env.example",
     ],
   },
@@ -71,6 +71,7 @@ const BANDS = [
       "src/lib/logs.ts",
       "src/lib/projects.ts",
       "src/lib/forms.ts",
+      "src/lib/sensitive-scan.ts",
       "src/lib/routes.ts",
       "src/lib/site.ts",
       "src/lib/image-signature.ts",
@@ -87,6 +88,8 @@ const BANDS = [
     files: [
       "src/lib/error-text.ts",
       "src/lib/time.ts",
+      // 许可清单是一张静态表（值来自 node_modules 实测），逻辑在 tests/licenses.test.ts 的对拍里
+      "src/lib/licenses.ts",
       "src/app/api/auth/[...nextauth]/route.ts",
       "src/app/api/health/route.ts",
       "src/lib/sitemap-data.ts",
@@ -100,13 +103,17 @@ const BANDS = [
       "src/app/admin/projects/page.tsx",
       "src/app/admin/logs/new/page.tsx",
       "src/app/admin/logs/[id]/edit/page.tsx",
+      // 项目详情页让位给后窗口的站点外壳：项目列表页仍在 ④ 段，功能面不缺
+      "src/app/projects/[slug]/page.tsx",
       "src/components/Editor.tsx",
       "src/components/SignInButton.tsx",
       // 印章组件在这里：它只是把 contentHash 与发布时间排版出来，存证的真逻辑在
       // publish.ts / content-hash.ts（前窗口）与详情页（后窗口，含 <Seal /> 的调用处）
       "src/components/Seal.tsx",
-      // 本地开发库编排、构建上下文排除规则、生产环境变量模板、CI 工作流：都是纯配置，
-      // 生产编排 docker-compose.prod.yml 与 Dockerfile 已在前窗口呈现部署形态
+      // 部署产物集中放这里：生产编排与多阶段构建文件都是配置而非程序逻辑，
+      // 而 ② 段新增的 sensitive-scan 必须留在前窗口——它是这一轮的程序实质
+      "docker-compose.prod.yml",
+      "Dockerfile",
       "docker-compose.yml",
       ".dockerignore",
       ".env.production.example",
@@ -127,8 +134,8 @@ const BANDS = [
       "src/app/logs/page.tsx",
       "src/app/logs/[slug]/page.tsx",
       "src/app/projects/page.tsx",
-      "src/app/projects/[slug]/page.tsx",
       "src/app/privacy/page.tsx",
+      "src/app/licenses/page.tsx",
       "src/app/login/page.tsx",
       "src/app/not-found.tsx",
       "src/app/error.tsx",
