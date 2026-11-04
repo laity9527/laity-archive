@@ -152,7 +152,7 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | 回归测试 | 纯逻辑必须有可重复运行的测试：D5 摘要口径、图片内容签名、slug 与表单取值、错误码文案完整性、时间展示、路由归属判定、发布前敏感信息形态、开源许可清单与红线 | `npm test`（Node 自带 test runner，零测试依赖），48 条断言全绿；DB 层与需登录的动作层不在覆盖内，仍靠自测表与人工联调 |
 | 构建门禁 | `npm run lint`、`npx tsc --noEmit`、`npm run build` 必须全 0 才算可发版 | 全 0 |
 | 健康检查 | 提供与登录无关的 `/api/health`，能区分"进程活着"与"数据库连得上"，异常不外泄细节 | 已实现，实测库停止时 503 `{"status":"degraded","db":false}`、恢复后 200；生产编排的 app 探针已改打这一条并校验响应体 `db === true`（I036），`web` 等 `app` healthy 再起 |
-| 持续集成 | 四条门禁不能只靠人记得跑（I037） | `.github/workflows/ci.yml`：`npm ci` → `prisma generate` → lint → tsc → test → `prisma migrate deploy` → build → 软著材料两步自检（漏登记新文件、HTML 与说明书不同步都会红）。配一次性 `postgres:16` 服务，因为"构建期是否查库"本机未能实测；工作流 env 全为占位值。Actions 实跑待推送后确认 |
+| 持续集成 | 四条门禁不能只靠人记得跑（I037） | `.github/workflows/ci.yml`：`npm ci` → `prisma generate` → lint → tsc → test → `prisma migrate deploy` → build → 软著材料两步自检（漏登记新文件、HTML 与说明书不同步都会红）。配一次性 `postgres:16` 服务，因为"构建期是否查库"本机未能实测；工作流 env 全为占位值。Actions 首跑已确认（run 41752295295 @ d8ced9c，completed/success，14 步全绿，耗时 2m07s） |
 | 错误处理 | 未匹配路由有品牌化 404；渲染异常有可重试的错误边界且不显示内部信息 | `src/app/not-found.tsx`、`src/app/error.tsx` |
 | 合规位 | 隐私与数据说明页按真实行为撰写；ICP 备案号、公安备案号、对外联系邮箱三项走环境变量，未配置就不渲染该行，不硬凑文案 | `/privacy`、`/licenses` 已上线；`SITE_ICP` / `SITE_POLICE_ICP` / `SITE_CONTACT_EMAIL` 待我本人填入。**注意**：这三项必须在 `docker-compose.prod.yml` 的 `app.environment` 里显式传——`--env-file` 只参与插值、不注入容器，此前就漏了导致填了也不显示 |
 | 发布前把关 | 正文里若出现手机号、身份证号、云厂商/GitHub 凭据形态、私钥块、JWT、明文口令赋值、内网地址，发布需显式确认（`LOG_003`） | `src/lib/sensitive-scan.ts` 纯函数 + 编辑页命中清单 + 确认勾选；邮箱只提示不拦发布。误报可确认放行，判定本身可单测 |

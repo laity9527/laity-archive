@@ -140,3 +140,36 @@ seed 定位为本地 `prisma migrate dev` 的伴生动作，生产数据由后�
 
 编排文件变更后已重出软著材料（5367 行 / 108 页 / 收录 62，窗口自检未拒绝出件），
 `npm test` 50/50、`tsc` 0、`lint` 0。
+
+## 八、GitHub Actions 真首跑结果（2026-11-04，run 41752295295）
+
+推送后 GitHub 上真跑了一轮，用匿名 REST API 取回结果（`gh` 未安装，装它属新增系统依赖，未自行下手）：
+
+```
+workflow : 发版门禁（push 触发，attempt 1）
+提交     : main @ d8ced9c
+状态     : completed / success      耗时 2m07s
+```
+
+逐步结果（14 个业务步骤全 success，前后置步骤亦 success）：
+
+| 步 | 名称 | 结论 |
+|---|---|---|
+| 5 | 安装依赖（npm ci，锁文件原样生效） | success |
+| 6 | 生成 Prisma 客户端 | success |
+| 7 | **生成路由类型**（`next typegen`，第六节补的那步） | success |
+| 8 | 代码检查 | success |
+| 9 | **类型检查**（预演时在这里报 6 处 TS2304） | success |
+| 10 | 单元测试（Node 内置测试器） | success |
+| 11 | **在全新库上应用迁移** | success |
+| 12 | 构建 | success |
+| 13 | 软著材料收录完整性自检 | success |
+| 14 | 材料与说明书是否同步 | success |
+
+三条值得记的结论：
+
+1. 第六节的容器预演**预测准确**——真跑绿了，且预演唯一没能覆盖的两件事（GitHub runner 的 npm 版本、Actions 缓存行为）也没出问题。
+2. 第 14 步这道门在真 runner 上也判定"逐字节一致"，说明 Windows 生成的材料与 linux 重新生成确实同字节，跨平台不会误报。
+3. 第 11 步在全新 `postgres:16` 服务上应用迁移通过，与第七节本机容器实测的 `All migrations have been successfully applied` 相互独立地成立——两条证据来自不同环境，结论一致。
+
+CI 至此从"写了但没跑过"变成常驻防线（I037 结案）。仍未验的只剩服务器上的整套启动（`up -d` 后探针、nginx 反代与 TLS），那需要服务器侧执行。
