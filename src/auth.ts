@@ -59,8 +59,9 @@ function adviseConfiguration() {
 }
 
 export const authOptions: NextAuthOptions = {
-  // 登录页与错误页都指向自建页：默认页带圆角与浅色主题，与视觉铁律不符（I012-B）
-  pages: { signIn: "/login", error: "/login" },
+  // 登录页、错误页与退出页都指向自建页：默认页带圆角与浅色主题且是英文，与视觉铁律不符（I012-B / D23）
+  // pages.signOut 管的是"直接访问 /api/auth/signout"这条 UI 之外的路径——按钮本身已改走 signOut()
+  pages: { signIn: "/login", signOut: "/login", error: "/login" },
   providers: [
     CredentialsProvider({
       id: "admin",

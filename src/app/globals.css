@@ -123,3 +123,27 @@ body {
   outline: 2px solid #131313;
   outline-offset: 2px;
 }
+
+/* 交互态换色：本站的 hover 是整块反色（墨底白字），0ms 切换在纸白上像在闪。
+   120ms 只换颜色，不做位移/缩放，也不引入圆角、阴影、渐变——视觉铁律的三条禁令仍然成立 */
+a,
+button,
+input,
+textarea,
+select {
+  transition:
+    color 120ms linear,
+    background-color 120ms linear,
+    border-color 120ms linear;
+}
+
+/* 系统开了"减弱动效"就把过渡关掉：这点动效对前庭敏感的人是负担，不是装饰 */
+@media (prefers-reduced-motion: reduce) {
+  a,
+  button,
+  input,
+  textarea,
+  select {
+    transition: none;
+  }
+}

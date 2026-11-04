@@ -8,10 +8,12 @@
  * - 2026-10-30: Phase 5b 接入图片上传（Server Action 返回直链，插入到当前页签的光标位置）
  * - 2026-11-02: 上传错误文案改读 src/lib/error-text.ts 的共用表
  * - 2026-11-04: 隐藏的文件输入补 aria-label——它没有可见文案也没有关联 label，读屏下是个无名控件
+ * - 2026-11-04: 正文与初始值不一致时挂 beforeunload 拦截；任一表单提交即清除标记，
+ *               避免"刚点保存就被浏览器问要不要离开"
  */
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { uploadImageAction } from "@/app/admin/upload-action";
 import { errorTextOf } from "@/lib/error-text";
 import { Markdown } from "@/lib/markdown";
@@ -43,6 +45,37 @@ export function Editor({ initialBefore, initialAfter }: EditorProps) {
   const afterRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const active = tab === "before" ? before : after;
+  const dirty = before !== initialBefore || after !== initialAfter;
+  const dirtyRef = useRef(false);
+
+  // 用 ref 而不是把 dirty 放进监听依赖：监听只挂一次，值每次渲染同步进去
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
+
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) {
+        return;
+      }
+
+      // 长文写到一半被误关标签页是这个工具最贵的事故；浏览器会用自己的文案提示，这里不代替它说话
+      event.preventDefault();
+    };
+
+    // 任何一次表单提交（保存/发布/下架/删除）都不算"丢弃"：先清标记，免得刚点保存就被问要不要离开
+    const onSubmit = () => {
+      dirtyRef.current = false;
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("submit", onSubmit, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("submit", onSubmit, true);
+    };
+  }, []);
 
   const tabClass = (value: Tab) =>
     `border-b pb-1 font-mono text-[10px] tracking-[0.2em] ${

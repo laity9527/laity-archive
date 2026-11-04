@@ -321,3 +321,23 @@ GET  /login                          → http=200，正文含"管理员口令"�
 ### 验证与未验
 
 `lint` 0、`tsc` 0、`npm test` 60/60、`npm run build` 0；材料 5723 行 / 115 页 / 收录 65、必须整份可见 30 个文件、产物反推关键文件整份同窗口、连跑两次 MD5 一致。凭据扫描先用注入的伪凭据证明扫描器有效（控制组全命中），再逐条看命中：共 7 处，5 处是规则文本自身与变量名（`password=xxx`、`isHexLike(token: string)`、`accessKeySecret: requireEnv(...)`），2 处是本轮新增的配置体检代码 `const password = (process.env.ADMIN_PASSWORD ?? "").trim()` 与 `NEXTAUTH_SECRET` 同形——**读的是环境变量，等号右侧是空串，不含任何值**。另有一条变化要说明：`.env.example` 移进折走段后，先前那行 `postgresql://root:root@localhost`（AGENTS.md 明示仅限本地的模板值）不再出现在提交页里。**真人点"退出"这一条未实测**：需要 dev 服务在跑，而重启要把哑口令写进命令行、被凭据护栏拦下（未换写法绕）——缺陷有源码为证，交互回收等服务起来后补点一次。
+
+## 十四、第二轮"跑起来再优化"：动效、丢稿保护、最后一张框架页（2026-11-04，我点名可暂时突破 md 文件的限制）
+
+服务重新起起来了（这次只注入 `NEXTAUTH_URL`，不注入任何口令值）。启动后第一件事是量，不是改：八条路由横向溢出 0、`h1` 唯一、正文 18px/1.85 Noto Serif SC、最小字号 10px 对比 6.45:1、`/logs` 两个筛选维度互不丢弃、六处列表都有空状态。**"页面美观"没有可修的缺陷**——那句"可以暂时突破限制"这轮实际没用上（见 D24）。
+
+| 改动 | 实测判据 | 未实测 |
+|---|---|---|
+| `globals.css`：交互元素 120ms 换色过渡 + `prefers-reduced-motion` 整体关闭 | 计算样式 `transition-property: color, background-color, border-color`、`duration: 0.12s`（按钮/输入框/链接三类都是）；同一元素 `border-radius: 0px`、`box-shadow: none` 未变；CSSOM 中查得到那条媒体查询 | — |
+| `Editor.tsx`：正文偏离初始值时挂 `beforeunload`，任一表单提交先清标记 | 三段行为在真页面实测：不改内容派发 `beforeunload` → `defaultPrevented=false`；给 BEFORE 追加一个字（原生 input 事件）→ `true`；再派发一次任意表单 submit → 又回到 `false`。全程 `preventDefault` 挡掉真实提交，没写出任何草稿 | 浏览器原生对话框的外观（脚本逼不出弹窗，只能真人关标签页时看到） |
+| `pages.signOut: "/login"` | `GET /api/auth/signout` → `302 location: /login`；跟随后正文只含"后台登录 / 管理员口令"，搜不到 `Signout` 与 `Are you sure` → I052 结案 | — |
+
+顺带修一处文档陈旧：说明书 5.4 写"页面提供两个动作按钮"，实际已是四个（保存/发布/下架/彻底删除）。
+
+运行时事实：本机 `.env` 起初**没有** `ADMIN_PASSWORD`——上一轮加的配置体检第一次在真实进程打出 `[admin] 配置体检：ADMIN_PASSWORD 未配置，登录一律拒绝（本条不含任何值）`。口令由我本人加上后重启（派生核对只报长度：口令 12、密钥 44，未复述值），再在应用内浏览器登一次，把需要会话的三条补完：
+
+- **退出**：点右上角"退出"落到 `/`，`/api/auth/session` 变回 `{}`（会话真清了，不只是跳转），`/admin` 恢复 307、登出端点恢复 302 到 `/login`。"退出中…"这一禁用态在 120ms 采样时已看不见（跳转快过渲染），**这条视觉态仍未证**。
+- **后台键盘动线**：文档序第一个可聚焦元素是 `a[href="#main"]`（"跳到正文"），目标为 `<main id="main">`，共 19 个可聚焦元素；CSSOM 里 `:focus-visible` 只有一条规则（2px 实线 + 2px 外边距），无组件自定第二套。
+- **一次读数错在自己**：程序化 `focus()` 量到轮廓是 `none`，我差点记成缺陷——`:focus-visible` 本就不该响应脚本聚焦。改核 CSSOM 与键盘序之后才算证据。
+
+门禁与材料：`lint` 0、`tsc` 0、`npm test` 60/60、`npm run build` 0；材料 5785 行 / 116 页，窗口护栏未报错、必须整份可见 30 个文件，重出后与幂等复跑一致。
