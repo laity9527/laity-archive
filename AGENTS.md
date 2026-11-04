@@ -6,7 +6,9 @@
 修订留痕：2026-11-03 由 AI 按我点名"根据你的经验补充 AGENTS.md"补写环境实况、上传与合规事实、
 四道门禁与软著材料生成铁律；2026-11-04 由 AI 按我点名"1044 可改"更新三处过期事实——
 登录行（GitHub OAuth + 白名单 → 管理员口令，理由与代价见 DESIGN.md 的 D20）、环境实况里"真实上传联调"的前置、
-preflight 门禁清单的最后一项；除此之外 AI 仍不得自改本文件。
+preflight 门禁清单的最后一项；同日再按我点名"I049、I050 可以改，根据你的经验改"更新登录行末尾的
+"三处会话判定"（统一到 `requireAdminSession()`）并新增"登录限速两层"一条（见 DESIGN D21/D22）；
+除此之外 AI 仍不得自改本文件。
 
 ---
 
@@ -21,9 +23,15 @@ preflight 门禁清单的最后一项；除此之外 AI 仍不得自改本文件
   未配置或输入为空一律拒绝（配置缺失不等于存在空口令），失败回 `/login?error=CredentialsSignin`；
   登录页自建在 `/login`（I012-B）。2026-11-04 我点名"先取消 github 登录"，GitHub OAuth 与
   `ALLOWED_GITHUB_IDS` 白名单同时退出，决策、代价与未做项见 DESIGN.md 的 D20（勿再按 OAuth 口径写代码）。
-  会话判定共三处：`src/proxy.ts` 前置守卫（matcher 覆盖 `/admin/:path*`，判 `token.isAdmin === true`）、
-  `src/app/admin/layout.tsx`、各 Server Action 内部的 `getServerSession`（不依赖前端隐藏按钮）。
+  会话判定共三处且**共用同一个入口** `requireAdminSession()`（定义在 `src/auth.ts`）：`src/proxy.ts` 前置守卫
+  （matcher 覆盖 `/admin/:path*`，判 `token.isAdmin === true`）、`src/app/admin/layout.tsx`、各 Server Action
+  （不依赖前端隐藏按钮）。布局与动作判的是 `session` 回调带出的 `isAdmin`——"存在会话"本身不构成放行理由。
   `src/proxy.ts` 不得 import `src/auth.ts`：口令比较要用 `node:crypto`，不该被拉进前置守卫
+- 登录限速有两层，写登录相关代码不要绕开它们再造第三套：生产 `deploy/nginx.conf` 对
+  `/api/auth/callback/admin` 的 `limit_req`（rate=5r/m、burst=5，超限由代理直接 429、请求不进应用），
+  以及 `src/lib/admin-password.ts` 的进程内节流（10 分钟窗口内同来源 5 次失败即不再建立会话，
+  表现与"口令不正确"完全一致）。应用层计数的来源键取 `X-Forwarded-For` 首跳，
+  这一跳可信是因为 nginx 在边缘**用 `$remote_addr` 覆写**该头（不是 append），直连时该头不存在、落 `local`
 - 包管理：npm（禁止 pnpm/yarn/bun）
 
 ### 版本事实（最高优先级）

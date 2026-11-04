@@ -290,3 +290,34 @@ GET  /login                          → http=200，正文含"管理员口令"�
 - 节流的进程内计数不跨实例、来源键取 `X-Forwarded-For` 首跳，直接暴露时可伪造（记 I050）。
 - AGENTS.md 的"三处会话判定"仍写 `getServerSession`，与本轮改动不一致（记 I049，等点名）。
 - **服务当前是停的**：验证节流需要连错 5 次，跑完后重启 dev 才能清掉锁；而重启命令会把哑口令写在命令行里，被凭据护栏拦下（我没换写法绕）。恢复方式二选一：你在 `.env` 里填自己的 `ADMIN_PASSWORD` 后 `npm run dev`；或你点名让我用某个值重启。
+
+## 十二、I049 / I050 按我的经验落地（2026-11-04，我点名"I049，I050 可以改，需要根据你的经验改"）
+
+| 条 | 落地 | 判据 |
+|---|---|---|
+| I049 | AGENTS.md 登录行的"三处会话判定"改为**共用 `requireAdminSession()`**，并说明布局与动作判的是 `session` 回调带出的 `isAdmin`；新增一条"登录限速有两层"；文件头 修订留痕 记这次点名 | 与代码一一对得上：`src/auth.ts` 的 `requireAdminSession()`、`session` 回调 `Object.assign(session, { isAdmin: … })`、`deploy/nginx.conf` 的 `limit_req`、`src/lib/admin-password.ts` 的窗口 |
+| I050 · 真问题 | `deploy/nginx.conf` 的 `X-Forwarded-For` 从 `$proxy_add_x_forwarded_for`（追加）改为 `$remote_addr`（**覆写**） | 一次性容器实测：客户端发 `X-Forwarded-For: 1.2.3.4, 5.6.7.8`，应用实际收到 `{"xff":"172.20.0.1","realip":"172.20.0.1","proto":"https"}`——伪造的第一跳没能穿过边缘。追加写法下节流的来源键可任意伪造，这一条改完它才有意义 |
+| I050 · 可诊断性 | `ADMIN_PASSWORD` 未配置时，`authorize` 往服务器日志写一条不含值的提示 | 本轮我自己就是踩在这上面：漏配只有一个笼统 401，人会先去怀疑口令抄错。提示只进日志、不进响应，公开页面仍不暴露"这里没配口令" |
+| I050 · 不做的部分 | 不引入共享存储让节流跨实例；不加"管理员解锁"入口 | 单容器部署下"进程内"就等于"全局"；解锁入口等于在口令旁边再开一条门。三条边界写进 DESIGN D22 与 I050 处置列，按已接受记录 |
+
+验证：`npm run lint` 0、`npx tsc --noEmit` 0、`npm test` 60/60、`npm run build` 0；同一份 nginx 配置 `nginx -t` 通过；一次性容器与哑证书测完即拆（`docker ps -a --filter name=laityxff` 为空）。材料随 `src/auth.ts` 增行重出一次：5638 行 / 113 页 / 收录 64，窗口与整份可见复核通过，护栏未报错。
+
+## 十三、继续优化：退出页、配置体检，以及第三次挤破窗口后的结构性配平（2026-11-04，我点名"根据你的经验继续处理优化"）
+
+### 发现一：全站唯一一处英文界面是框架的退出确认页
+
+后台右上角一直是 `<a href="/api/auth/signout">`，点下去落 `next-auth/core/pages/signout.js` 服务端渲染的确认页：`<h1>Signout</h1>` / `Are you sure you want to sign out?` / `Sign out`，装在框架默认 `.card` 样式里。I012-B 当年替换登录默认页的理由（"默认页带圆角与浅色主题，与视觉铁律不符"）对这张页同样成立，只是当时漏了。
+
+处理：新增 `SignOutButton`（`signOut({ callbackUrl: "/", redirect: true })`，自带 CSRF 的 POST），去掉二次确认——退出没有可丢的现场（草稿在库里不在表单里），代价却是整站唯一英文页。直接敲 `/api/auth/signout` 仍能看到那张页，UI 已无入口，是否彻底禁掉记 I052（选项① `pages.signOut` 已核 v4 支持，见 `node_modules/next-auth/core/types.d.ts:65`）。
+
+### 发现二：本机漏配只有一个笼统 401，人会把矛头指向自己
+
+`ADMIN_PASSWORD` 没填时登录一律拒绝是对的，但排查方向全靠猜。处理：`authorize` 第一次被调用时做一次配置体检，往**服务器日志**写一条不含任何值的提示，覆盖四种情形——口令缺失 / 短于 12 位、`NEXTAUTH_SECRET` 缺失 / 短于 32 位（这四条 preflight 只在生产编排里卡）。公开页面不透露任何配置状态。
+
+### 发现三：窗口第三次被挤破，说明该做结构配平而不是再让一个文件
+
+`src/auth.ts` 加了体检后 `proxy.ts`（1369-1520）第三次被前窗口切开。前两轮都是"临时挑一个文件挪进折走段"，这轮改成把三类**无算法**内容一次性移出必可见段：`db.ts`（一行 Prisma 单例样板）、`routes.ts`（路径前缀常量表，判定由 `tests/site.test.ts` 对拍锁定）、`.env.example`（与已在折走段的 `.env.production.example` 同类）。合计给 ①+② 换回约 75 行余量（前窗口现在止于 `time.ts`），而不是再赌下一次会不会破。
+
+### 验证与未验
+
+`lint` 0、`tsc` 0、`npm test` 60/60、`npm run build` 0；材料 5723 行 / 115 页 / 收录 65、必须整份可见 30 个文件、产物反推关键文件整份同窗口、连跑两次 MD5 一致。凭据扫描先用注入的伪凭据证明扫描器有效（控制组全命中），再逐条看命中：共 7 处，5 处是规则文本自身与变量名（`password=xxx`、`isHexLike(token: string)`、`accessKeySecret: requireEnv(...)`），2 处是本轮新增的配置体检代码 `const password = (process.env.ADMIN_PASSWORD ?? "").trim()` 与 `NEXTAUTH_SECRET` 同形——**读的是环境变量，等号右侧是空串，不含任何值**。另有一条变化要说明：`.env.example` 移进折走段后，先前那行 `postgresql://root:root@localhost`（AGENTS.md 明示仅限本地的模板值）不再出现在提交页里。**真人点"退出"这一条未实测**：需要 dev 服务在跑，而重启要把哑口令写进命令行、被凭据护栏拦下（未换写法绕）——缺陷有源码为证，交互回收等服务起来后补点一次。

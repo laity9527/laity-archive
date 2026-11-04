@@ -25,11 +25,15 @@
  *               后窗口则因 ④ 涨到超容量把 globals.css 切掉 20 行，按 assertWindowFit 的处置建议
  *               把 ④ 里行数最少、逻辑最薄的 error.tsx（41 行）移进折走段。两次都是护栏先报错、我再配平，
  *               不是人估出来的：5453 行 / 110 页 / 收录 63
- * - 2026-11-04: 交互与可达性这一轮（第十三转）：新文件 SubmitButton.tsx 登记进折走段；auth.ts 与
+ * - 2026-11-04: 交互与可达性这一轮（第十三次窗口配平）：新文件 SubmitButton.tsx 登记进折走段；auth.ts 与
  *               admin-password.ts 各长了几十行，①+② 冲到 1537 行、`proxy.ts`（1386-1537）被前窗口切开。
  *               这次让位的是 tsconfig.json 与 eslint.config.mjs——两枚纯工具样板（编译选项与 ignore 列表），
  *               与 compose/Dockerfile 同类，移进 ③ 后 ①+② 回到 1500 以内，程序实质仍整份在前窗口。
  *               5626 行 / 113 页 / 收录 64
+ * - 2026-11-04: 退出页与配置体检这一轮（第十四次）：SignOutButton.tsx 登记进折走段（与后台交互层同组）；
+ *               auth.ts 再加配置体检后 proxy.ts 第三次被切开（1369-1520）——不再逐个文件临时让位，
+ *               改为一次性把 db.ts、routes.ts、.env.example 三类无算法内容移出必可见段，
+ *               给 ①+② 换回约 75 行余量（前窗口现止于 time.ts）。5723 行 / 115 页 / 收录 65
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -67,21 +71,18 @@ const BANDS = [
       "prisma/seed.ts",
       "package.json",
       "next.config.ts",
-      ".env.example",
     ],
   },
   {
     mark: "②",
     name: "核心逻辑：存证口径 → 数据访问 → 输入校验 → 类型嗅探与上传 → 渲染消毒 → 鉴权与前置守卫",
     files: [
-      "src/lib/db.ts",
       "src/lib/content-hash.ts",
       "src/lib/publish.ts",
       "src/lib/logs.ts",
       "src/lib/projects.ts",
       "src/lib/forms.ts",
       "src/lib/sensitive-scan.ts",
-      "src/lib/routes.ts",
       "src/lib/image-signature.ts",
       "src/lib/oss.ts",
       "src/lib/markdown.tsx",
@@ -99,9 +100,16 @@ const BANDS = [
       "src/lib/time.ts",
       // 许可清单是一张静态表（值来自 node_modules 实测），逻辑在 tests/licenses.test.ts 的对拍里
       "src/lib/licenses.ts",
-      // 站点标识同样是"一串常量 + 读环境变量"，没有算法；让出 ② 的位置给本轮新增的口令模块，
-      // 顺带把前窗口从"止于 proxy.ts 最后一行"的零余量让出 52 行（②→③ 平移不改 ④ 的起点，后窗口不受影响）
+      // 站点标识同样是"一串常量 + 读环境变量"，没有算法；第十二轮（取消 GitHub 登录）为让出口令模块的位置移进 ③，
+      // ②→③ 平移不改 ④ 的起点，后窗口不受影响
       "src/lib/site.ts",
+      // 第四轮结构配平（2026-11-04）：前窗口已经第三次被同一段挤破（auth.ts 每加一次配置体检，
+      // proxy.ts 就被切一次），不再逐个文件临时让位，而是一次性把三类"无算法"的内容移进折走段——
+      // db.ts 是一行 Prisma 单例样板，routes.ts 是路径前缀常量表（判定由 tests/site.test.ts 对拍锁定），
+      // .env.example 与已在 ③ 的 .env.production.example 同属环境变量模板。合计给 ①+② 换回约 64 行余量
+      "src/lib/db.ts",
+      "src/lib/routes.ts",
+      ".env.example",
       "src/app/api/auth/[...nextauth]/route.ts",
       "src/app/api/health/route.ts",
       "src/lib/sitemap-data.ts",
@@ -119,6 +127,7 @@ const BANDS = [
       "src/app/projects/[slug]/page.tsx",
       "src/components/Editor.tsx",
       "src/components/SignInButton.tsx",
+      "src/components/SignOutButton.tsx",
       // 提交按钮与编辑器、登录表单同属后台交互层：这一层整体在折走段是第八轮起定的口径
       // （它的调用方——各表单页——也都在这一段），本轮它整份落在省略段属于该口径的正常结果，
       // 不是漏登记：assertComplete() 已经核过它在清单里
