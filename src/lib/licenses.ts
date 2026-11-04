@@ -6,6 +6,7 @@
  * 修改记录：
  *  - 2026-11-03: 初始创建（合规方案 7.1 开源致谢落地）。18 个直接依赖的 license 字段逐个从 node_modules 读出后登记，
  *                不凭记忆填写；tests/licenses.test.ts 会核对"每个依赖都在表里"与"许可不落在禁用集合内"
+ * - 2026-11-04: next-auth 的用途与商标声明随 D20 改为口令登录口径
  */
 
 export type DependencyLicense = {
@@ -20,7 +21,7 @@ export const DEPENDENCY_LICENSES: DependencyLicense[] = [
   { name: "next", license: "MIT", purpose: "应用框架与路由（App Router）" },
   { name: "react", license: "MIT", purpose: "视图层" },
   { name: "react-dom", license: "MIT", purpose: "React 的 DOM 渲染器" },
-  { name: "next-auth", license: "ISC", purpose: "后台登录（GitHub OAuth 会话）" },
+  { name: "next-auth", license: "ISC", purpose: "后台登录（管理员口令与会话）" },
   { name: "@prisma/client", license: "Apache-2.0", purpose: "数据库访问层" },
   { name: "prisma", license: "Apache-2.0", purpose: "schema 与迁移工具（开发期）" },
   { name: "tailwindcss", license: "MIT", purpose: "样式工具类" },
@@ -45,7 +46,7 @@ export const FONT_LICENSES: DependencyLicense[] = [
 ];
 
 export const TRADEMARK_NOTE =
-  "GitHub 是 GitHub, Inc. 的注册商标。本项目仅在说明登录方式时合理使用该名称，与 GitHub, Inc. 不存在赞助、背书或隶属关系。页面中出现的其他产品名称、商标与品牌均为其各自所有者的财产，本项目不主张任何相关权利。";
+  "GitHub 是 GitHub, Inc. 的注册商标。本项目不接入 GitHub 登录，提到这个名称只用于说明代码仓库所在位置与发布前扫描的凭据形态，与 GitHub, Inc. 不存在赞助、背书或隶属关系。页面中出现的其他产品名称、商标与品牌均为其各自所有者的财产，本项目不主张任何相关权利。";
 
 // AGENTS.md 的依赖许可红线：GPL / AGPL 等传染性许可一律禁止。清单里出现下列前缀即判不合格
 export const FORBIDDEN_LICENSE_PREFIXES = ["GPL", "AGPL", "LGPL", "CC-BY-NC", "SSPL"];

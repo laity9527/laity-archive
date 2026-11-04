@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-11-02: 合并原先散在 5 处的文案表；AUTH_001 统一成"会话已失效，请重新登录后再试。"
  * - 2026-11-03: 补 LOG_003（发布前敏感信息确认门）与 LOG_004（删除需回填 slug 确认）
+ * - 2026-11-04: 登录改本地口令：删 AccessDenied（GitHub 白名单专用），补 CredentialsSignin，Configuration 不再指 OAuth
  */
 
 export const ERROR_TEXT: Record<string, string> = {
@@ -18,9 +19,9 @@ export const ERROR_TEXT: Record<string, string> = {
   PRJ_001: "该项目下还有日志，禁止删除。",
   PRJ_002: "slug 已被占用，换一个。",
   IMG_001: "图片不合格：仅支持 jpg / png / webp / gif，且不超过 5MB。",
-  AccessDenied: "这个 GitHub 账号不在白名单里，登录被拒绝。",
+  CredentialsSignin: "口令不正确。",
   Verification: "登录链接已过期，请重新发起登录。",
-  Configuration: "登录配置有误：检查 GITHUB_ID / GITHUB_SECRET / NEXTAUTH_URL 与 OAuth 回调地址。",
+  Configuration: "登录配置有误：检查 NEXTAUTH_SECRET 与 NEXTAUTH_URL。",
   Default: "登录没有完成，可以再试一次。",
 };
 

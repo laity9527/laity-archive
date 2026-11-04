@@ -20,6 +20,7 @@
 - 决策：signIn 回调里校验 GitHub 账号 ID 是否在环境变量白名单（ALLOWED_GITHUB_IDS）内，不在即拒绝；/admin 全路由由 proxy 保护（Next 16 已将 middleware 更名 Proxy，见 D7）。
 - 理由：不存密码、不做注册找回；白名单用不可变的账号 ID 而非用户名（用户名可改）；被否备选 Credentials——自己管哈希与防爆破，纯增风险。
 - 代价：依赖 GitHub 可用性；GitHub 挂了我也进不了后台，但访客不受影响，接受。
+- **已被 D20 取代（2026-11-04）**：GitHub Provider 与 `ALLOWED_GITHUB_IDS` 白名单退出，准入改为一把 `ADMIN_PASSWORD` 口令；`/admin` 仍由 proxy 保护，三层会话判定点不变。
 
 ### D3：渲染以 RSC 为主，不引入客户端状态库
 - 决策：页面服务端直读数据库；客户端组件只用在两处——编辑器（Editor）与登录按钮（SignInButton）。筛选器不走客户端，靠 URL 参数 + 服务端重渲染。
@@ -52,6 +53,7 @@
 - 理由：风险清单里"弱口令遗留上线"要求的是**硬卡**，而 compose 的 `${VAR:?}` 只能拦空值——实测 `root/root` 能被照常放行（`config` 退出 0）。把判定放进容器启动链，比写在 README 里靠人自觉可靠。
 - 代价：多一个一次性容器；检查项是字符串规则，换更强的口令策略要回来改这一处。
 - 连带：通过时打印脱敏行（用户名 + 口令长度 + 域名，不打印值），正好充当验收第 2 条要的"脱敏检查记录"。
+- 修订（2026-11-04，随 D20）：最后一条判定由"`ALLOWED_GITHUB_IDS` 非空"换成"`ADMIN_PASSWORD` 非空且不短于 12 位"，通过行加印后台口令长度（仍只印长度）。
 
 ### D13：首页看板与精选改走专用取数口，精选规则先不依赖数据库字段
 - 背景：SPEC F01 要"精选项目"、SPEC:102 要首页用项目表，而实现是拿 `getSafeLogs` 的结果反推，零日志项目根本不上榜（I029）。
@@ -126,6 +128,7 @@
 
 ### D8：Phase 3 先用 JWT 会话，数据库会话留作后续可拓展项
 - 决策：NextAuth v4 默认 JWT 会话，不建 Session/Account/User 表；会话里只放 `githubId` 与展示名，授权判定唯一依据仍是 `ALLOWED_GITHUB_IDS`。
+- 修订（2026-11-04，随 D20）：会话载荷由 `githubId` 换成布尔位 `isAdmin`，准入依据换成 `ADMIN_PASSWORD`；"不建表、用 JWT、Proxy 每请求重判"这三条骨架不变。
 - 理由：单人后台，白名单本身就是唯一的准入事实；JWT 免去每次请求查会话表，也不必为一个用户引入四张表的迁移。被否备选：v4 的 database session——adapter 与迁移的复杂度买到的是"服务端可即时吊销"，而本项目的吊销手段是改白名单（Proxy 每次请求都重新比对 env，收紧立即生效），这一条收益并不成立。
 - 代价：JWT 在 `NEXTAUTH_SECRET` 泄露时可被伪造，因此该 secret 只允许放环境变量；单条已签发会话在过期前无法服务端撤销（改白名单只能阻止其访问 /admin，不能作废那枚 cookie）。
 - 后续可拓展成数据库会话的路径（明确写出，未来照此执行）：① 依赖加 `@next-auth/prisma-adapter`（v4 配套版，MIT），停点报批；② schema 增 `User / Account / Session / VerificationToken` 四模型并 `migrate dev`；③ `authOptions` 追加 `adapter` 与 `session: { strategy: "database" }`；④ Proxy 里的 `getToken()` 只认 JWT，database 模式下必须改为按 cookie 查 Session 表（新增 `src/lib/session.ts`，这是改动量最大的一处）；⑤ 页面侧 `getServerSession(authOptions)` 与 `signIn` 回调逻辑不变。
@@ -164,6 +167,15 @@
 - 未复核项（如实标注）：三款字体的许可证按 AGENTS.md 的字体白名单登记（SIL OFL / Apache 2.0），本轮两次联网取上游 LICENSE 均失败（`fonts.google.com` 与 raw.githubusercontent 都取不到），Next 自带的 `font-data.json` 也没有 license 字段，故 `/licenses` 页明写"本次未联网复核上游 LICENSE 原文，若与上游不一致以字体仓库声明为准"，并挂 I040 待复核。
 - 明确不做（避免半成品）：邮箱注册与密码找回（要 SMTP + bcrypt，新依赖需批准）、手机号验证码（阿里云短信资质与费用）、图形验证码、内容安全 API（付费）、Webhook 同步与 Token 加密存储（前提不存在）、管理员分角色与审计日志、数据导出、注销流程。逐条对照与分期写在 `docs/00-开发方法论/合规需求差距分析与分期方案.md`。
 - 一处对来源方案的纠正：它把"仅申请 `public_repo` 和 `read:user`"当作最小权限——`public_repo` 是**可写** scope，而只读公开仓库元数据不需要任何 repo scope。本站现状未声明 scopes，走 NextAuth 默认的 `read:user user:email`（已在浏览器授权 URL 实测到），本身已比方案要求更小。照抄反而扩大权限。
+
+### D20：取消 GitHub 登录，后台准入改为一把管理员口令
+- 背景：我点名"先取消 github 登录"。直接起因是本地 `GITHUB_ID` 始终对不上 OAuth App（20 位且含大写，GitHub 的 client ID 全小写），而真实凭据只在服务器与我的账号里——凭据不修好，`/admin` 的写路径一条都验不了。
+- 决策：NextAuth v4 与 JWT 会话**都不动**，只把提供方从 `providers/github` 换成内置的 `providers/credentials`（id 为 `admin`），口令读 `ADMIN_PASSWORD`；准入判定收敛到 `src/lib/admin-password.ts` 的 `passwordMatches()`——两侧各取 SHA-256 后用 `timingSafeEqual` 比较，口令未配置或输入为空一律拒绝。会话里原来写 `githubId`，现在只写一个布尔位 `isAdmin`，`src/proxy.ts` 判 `token?.isAdmin !== true`。
+- 与 D2 的关系：D2 当年"被否备选 Credentials——自己管哈希与防爆破，纯增风险"。这次是**在明确的现实阻塞下重新选它**，代价换的是不引入任何新依赖（v4 自带该 provider）、不建 `User`/`Session` 表、不改 D5 摘要口径。哈希这一项也不再是"自己管"：库里不存口令，口令只在各环境的 `.env` 里，比较用摘要 + 常量时间。
+- 连带改动（六处，缺一处就是不一致）：登录页文案与表单（`SignInButton.tsx` 由按钮改口令输入）；`error-text.ts` 删 `AccessDenied`、补 `CredentialsSignin`、`Configuration` 不再指 OAuth 回调；`.env.example` / `.env.production.example` 的三个 GitHub 键换成 `ADMIN_PASSWORD`；`docker-compose.prod.yml` 的 `app.environment` 与 preflight 门禁（原"白名单非空"→"口令非空且不短于 12 位"，通过行只报长度）；`README.md`/`SPEC.md` 的栈描述与 F04、`/api/auth/*` 行；软著材料与操作说明书的登录章节。
+- 未做与已补（2026-11-04 同日按我点名"1044 可改，1045/1046 根据你的经验改"收口）：① 失败次数限制——**已落地**，`deploy/nginx.conf` 对登录端点单加 `limit_req`（`rate=5r/m` + `burst=5 nodelay`，超限由代理直接 429，请求不进应用）；应用侧仍没有计数器与锁定，这一层是外部约束而不是替代。② 退出与过期沿用 v4 默认（30 天 JWT），没有服务端即时吊销——**没做**，换 `NEXTAUTH_SECRET` 是唯一手段，已写进 `/privacy` 与应急预案。③ CI 里三枚 `GITHUB_*` 占位变量——**已删除**，且没有换成新的死占位（留一个没人读的变量正是那条台账要治的病）；实跑确认要等我推送。④ AGENTS.md 的登录行、环境实况与 preflight 清单三处过期事实已按授权改正，文件头留痕追加一行。
+- 顺带修掉一处 dev 期的渲染缺陷：`/login` 在 Cache Components 下被预渲染，而 `getServerSession()` 走到 NextAuth 的 CSRF 生成（`core/lib/csrf-token.js:25` 的 `randomBytes(32)`）——无 csrf cookie 时才触发，与提供方无关，GitHub 时代同样存在，只是本轮第一次用浏览器停在 `/login` 才暴露。按框架自己的建议在读会话前加 `await connection()`，实测 `blocking-prerender-random` 由 602 条降到 0 条。
+- 判据（本机实测，非推断）：正确口令 → 签发会话 cookie 且 `/admin` 返回 200 并渲染"管理员"；错误口令 → `401` + `/api/auth/error?error=CredentialsSignin`，不落 cookie；无会话访问 `/admin` → `307 → /login?callbackUrl=%2Fadmin`；浏览器真人路径登录后 `LOG_003`（未勾选拒发）与 `LOG_004`（错填 slug 拒删）各跑通拒/放两条分支，临时日志删除后概览回到 1 项目 / 1 已发布 / 0 草稿。
 
 ### D11：后台登录页自建，落点 /login 而不是 /admin/login
 - 决策：`authOptions.pages = { signIn: "/login", error: "/login" }`，登录页与错误提示都在这一个页面里给；Proxy 与 admin 布局的未登录跳转都改成 `/login?callbackUrl=…`；`callbackUrl` 只接受本站相对路径（以 `/` 开头且不以 `//` 开头），否则回落 `/admin`。
@@ -226,6 +238,8 @@ src/app/admin/project-actions.ts、src/lib/projects.ts、.env.example
 回改 src/auth.ts（pages）、src/proxy.ts 与 src/app/admin/layout.tsx（跳转目标），验收证据并入 Phase-3 自测表第九节。
 
 前置动作（人工）：在 GitHub 创建 OAuth App（回调 http://localhost:3000/api/auth/callback/github），把 Client ID/Secret 填入本地 .env——外部账号操作由我本人执行。
+
+> 2026-11-04 随 D20 作废：本条前置动作与下面验收 1–3 的 GitHub 语义都不再成立。等价判据是"未登录访问 /admin → 跳自建 /login"、"口令正确 → 进 /admin"、"口令错误 → 回 `/login?error=CredentialsSignin` 且不发会话 cookie"，三条均已本机实跑，记录在 Phase-7 自测表第九节。历史文本按留痕原则不改。
 
 验收标准：
 1. 未登录访问 /admin → 跳到自建 /login，点一次"用 GITHUB 登录"即进 GitHub 授权页（D11 改的两跳语义）；
@@ -384,7 +398,7 @@ next.config.ts（output: "standalone"，经 D6 批准）、docs/04-软著材料/
 | 风险 | 触发条件 | 降级/应对 |
 |---|---|---|
 | Next.js 实际版本 API 与记忆不符 | 写码时报废弃/不存在 API | 停下读 node_modules/next/dist/docs/ 对应指南；禁止凭记忆修补 |
-| GitHub OAuth 回调域名限制 | 生产域名与本地回调不一致 | 开发与生产各建一个 OAuth App，环境变量隔离 |
+| 口令是后台唯一准入因素 | 公网对 `/api/auth/callback/admin` 暴力猜测 | 2026-11-04 落地两层：preflight 硬卡 ≥12 位（D12/D20）+ `deploy/nginx.conf` 对该端点单加 `limit_req zone=laity_auth burst=5 nodelay`（`rate=5r/m`，超限由代理直接 429，请求不进应用）。应用侧仍无失败计数与锁定——限速是外部约束，不等于"已防爆破"。本机一次性容器实测：连打 12 次 `200×6 → 429×6`，连打 12 次 `/` 全 200，`nginx -t` 通过（原"GitHub OAuth 回调域名限制"一行随登录方式作废） |
 | OSS 开通/计费受阻 | Phase 5 前置动作卡住 | Phase 5 顺延，不阻塞 Phase 6 之外的任何已验收产物；正文暂用免版权图库外链 |
 | 小内存服务器构建 OOM | 服务器上直接 build 失败 | 本地/CI 构建镜像后推送，服务器只 pull + run（D6 已按此设计） |
 | 弱口令遗留上线 | Phase 6 环境检查发现 root 口令 | 已落地为 D12：编排里的 preflight 一次性容器硬卡，口令/域名/密钥不合格则整个 `up` 失败，不放行 |

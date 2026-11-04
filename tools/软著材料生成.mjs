@@ -19,6 +19,12 @@
  *               就把 ①+② 从 1486 顶到 1501 行、proxy.ts 又被切掉一行——这种事不该靠人事后对拍
  * - 2026-11-03: 登记合规这一轮的三个新文件：sensitive-scan 进核心逻辑段（②），
  *               licenses 静态表进折走段（③），/licenses 页进后窗口（④）
+ * - 2026-11-04: 取消 GitHub 登录（D20）这一轮的第十次出件：新文件 admin-password.ts 进 ②；
+ *               ①+② 因此顶到 1500 行的窗口边缘（proxy.ts 恰好止于第 1500 行，零余量），
+ *               把同为"常量 + 读环境变量"的 site.ts 平移到 ③ 让出 52 行——②→③ 平移不改 ④ 起点，后窗口不受影响；
+ *               后窗口则因 ④ 涨到超容量把 globals.css 切掉 20 行，按 assertWindowFit 的处置建议
+ *               把 ④ 里行数最少、逻辑最薄的 error.tsx（41 行）移进折走段。两次都是护栏先报错、我再配平，
+ *               不是人估出来的：5453 行 / 110 页 / 收录 63
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -73,10 +79,10 @@ const BANDS = [
       "src/lib/forms.ts",
       "src/lib/sensitive-scan.ts",
       "src/lib/routes.ts",
-      "src/lib/site.ts",
       "src/lib/image-signature.ts",
       "src/lib/oss.ts",
       "src/lib/markdown.tsx",
+      "src/lib/admin-password.ts",
       "src/auth.ts",
       "src/proxy.ts",
     ],
@@ -90,6 +96,9 @@ const BANDS = [
       "src/lib/time.ts",
       // 许可清单是一张静态表（值来自 node_modules 实测），逻辑在 tests/licenses.test.ts 的对拍里
       "src/lib/licenses.ts",
+      // 站点标识同样是"一串常量 + 读环境变量"，没有算法；让出 ② 的位置给本轮新增的口令模块，
+      // 顺带把前窗口从"止于 proxy.ts 最后一行"的零余量让出 52 行（②→③ 平移不改 ④ 的起点，后窗口不受影响）
+      "src/lib/site.ts",
       "src/app/api/auth/[...nextauth]/route.ts",
       "src/app/api/health/route.ts",
       "src/lib/sitemap-data.ts",
@@ -118,11 +127,14 @@ const BANDS = [
       ".dockerignore",
       ".env.production.example",
       ".github/workflows/ci.yml",
+      // 错误边界只有一句提示与一个重试按钮，渲染真逻辑在 globals.css/布局里；
+      // 挪进折走段是为了把 ④ 段整体推后，让 globals.css 的头部回到后窗口内（本轮加进出口令模块后窗口差 20 行）
+      "src/app/error.tsx",
     ],
   },
   {
     mark: "④",
-    name: "站点外壳（样式令牌 + 根布局 + 导航页脚）与访客可见界面，末段为合规页（隐私 / 404 / 错误边界）",
+    name: "站点外壳（样式令牌 + 根布局 + 导航页脚）与访客可见界面，末段为合规页（隐私 / 开源致谢 / 404）",
     files: [
       "src/app/globals.css",
       "src/app/layout.tsx",
@@ -138,7 +150,6 @@ const BANDS = [
       "src/app/licenses/page.tsx",
       "src/app/login/page.tsx",
       "src/app/not-found.tsx",
-      "src/app/error.tsx",
     ],
   },
 ];

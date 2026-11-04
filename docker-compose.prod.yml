@@ -17,6 +17,9 @@
 # - 2026-11-04: 本机整套预演时发现并修掉一个真实事故：compose 项目名默认取目录名，生产与开发编排同目录
 #               即同项目，`-f docker-compose.prod.yml down` 连带删掉了开发容器 laity-postgres（数据卷幸存）。
 #               加 name: laity-prod 把两套编排隔开；本机实测生产项目名为 laity-prod、开发仍为 laity-archive
+# - 2026-11-04: 按我点名"先取消 github 登录"：GITHUB_ID / GITHUB_SECRET / ALLOWED_GITHUB_IDS 三行换成
+#               ADMIN_PASSWORD；preflight 的门禁从"白名单非空"改为"口令非空且不短于 12 位"，
+#               通过行只报长度不报值
 #
 # 用前必读：
 #   1. cp .env.production.example .env.production，填真实值，两个口令不要与开发环境复用；
@@ -56,18 +59,19 @@ services:
           *localhost*|*127.0.0.1*) fail "NEXTAUTH_URL 还指向开发环境" ;;
         esac
         [ "$${#NEXTAUTH_SECRET}" -lt 32 ] && fail "NEXTAUTH_SECRET 短于 32 位"
-        [ -z "$${ALLOWED_GITHUB_IDS:-}" ] && fail "ALLOWED_GITHUB_IDS 为空，登录后也进不去"
+        [ -z "$${ADMIN_PASSWORD:-}" ] && fail "ADMIN_PASSWORD 为空，后台进不去"
+        [ "$${#ADMIN_PASSWORD}" -lt 12 ] && fail "ADMIN_PASSWORD 短于 12 位（后台只认这一把口令，短了等于没设）"
         [ -z "$${OSS_REGION:-}" ] && fail "OSS_REGION 为空，正文插图无法上传"
         [ -z "$${OSS_BUCKET:-}" ] && fail "OSS_BUCKET 为空，正文插图无法上传"
         [ -z "$${OSS_ACCESS_KEY_ID:-}" ] && fail "OSS_ACCESS_KEY_ID 为空，正文插图无法上传"
         [ -z "$${OSS_ACCESS_KEY_SECRET:-}" ] && fail "OSS_ACCESS_KEY_SECRET 为空，正文插图无法上传"
-        echo "上线门禁通过：数据库用户 $${POSTGRES_USER}、口令长度 $${#POSTGRES_PASSWORD}、$${NEXTAUTH_URL}、OSS $${OSS_REGION}/$${OSS_BUCKET}（前缀 logs/）"
+        echo "上线门禁通过：数据库用户 $${POSTGRES_USER}、口令长度 $${#POSTGRES_PASSWORD}、后台口令长度 $${#ADMIN_PASSWORD}、$${NEXTAUTH_URL}、OSS $${OSS_REGION}/$${OSS_BUCKET}（前缀 logs/）"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?必须在 .env.production 里指定非 root 用户}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?必须在 .env.production 里指定强口令}
       NEXTAUTH_URL: ${NEXTAUTH_URL:?必须填正式域名，例如 https://laity.example}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?生产密钥，不得与开发环境复用}
-      ALLOWED_GITHUB_IDS: ${ALLOWED_GITHUB_IDS:?允许登录的 GitHub 账号 ID}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?后台登录口令，非空且不短于 12 位}
       # OSS 四项与 app 服务同源；写在这里是为了让 preflight 的门禁清单自身是完整的一份
       OSS_REGION: ${OSS_REGION:?OSS Bucket 所在地域，例如 oss-cn-beijing}
       OSS_BUCKET: ${OSS_BUCKET:?OSS Bucket 名称}
@@ -112,9 +116,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-laity}?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL:?必须填正式域名，例如 https://laity.example}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?生产密钥，不得与开发环境复用}
-      GITHUB_ID: ${GITHUB_ID:?生产 OAuth App 的 Client ID}
-      GITHUB_SECRET: ${GITHUB_SECRET:?生产 OAuth App 的 Secret}
-      ALLOWED_GITHUB_IDS: ${ALLOWED_GITHUB_IDS:?允许登录的 GitHub 账号 ID}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?后台登录口令，非空且不短于 12 位}
       # I024：Phase 5b 的 OSS 传图。这四个键缺失时 src/lib/oss.ts 的 requireEnv 会在上传那一刻才抛错，
       # 用 ${VAR:?} 提前到部署阶段失败；值一律来自 .env.production，不落仓库
       OSS_REGION: ${OSS_REGION:?OSS Bucket 所在地域，例如 oss-cn-beijing}

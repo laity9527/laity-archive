@@ -7,6 +7,10 @@
 #               因为第九轮实测发现"新文件没登记就生成"只能靠人对拍，机器完全能拦
 # - 2026-11-04: 本机按 CI 顺序在 linux 容器里复跑，tsc 步骤报 TS2304 找不到 PageProps/LayoutProps
 #               （干净工作区没有 .next/types）。补 `npx next typegen` 一步，放在 lint 与 tsc 之前
+# - 2026-11-04: I045 结案（我批准按经验改）：删掉 GITHUB_ID / GITHUB_SECRET / ALLOWED_GITHUB_IDS 三行。
+#               登录已改管理员口令（D20），这三枚占位值没有任何读取点；也**不**新增 ADMIN_PASSWORD 占位——
+#               口令只在 authorize 被调用时读，CI 的 lint/tsc/test/build 全程不触发登录，
+#               tests/admin-password.test.ts 自己设自己的哑值。留一个没人读的变量就是下一个 I045
 #
 # 说明：
 #   1. 这里的环境变量全是一次性占位值，不对应任何真实环境，也不含任何凭据——CI 用的一次性 Postgres
@@ -49,9 +53,6 @@ jobs:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ci-placeholder-not-a-real-secret
-      GITHUB_ID: ci-placeholder
-      GITHUB_SECRET: ci-placeholder
-      ALLOWED_GITHUB_IDS: "0"
       OSS_REGION: oss-cn-beijing
       OSS_BUCKET: ci-no-upload
       OSS_ACCESS_KEY_ID: ci-placeholder

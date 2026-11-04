@@ -7,6 +7,8 @@
 
 已确认的三项决策（2026-10-30）：
 1. 后台登录：NextAuth + GitHub OAuth，仅允许我本人的 GitHub 账号；
+   修订（2026-11-04，我点名"先取消 github 登录"）：改为 NextAuth Credentials 单一管理员口令（`ADMIN_PASSWORD`），
+   理由与代价见 DESIGN.md 的 D20；F04 与 `/api/auth/*` 两行按此改。
 2. 生产部署：自有服务器 Docker + Nginx + SSL；
 3. 本地环境近期安装，Phase 1 即为可运行的最小真闭环，不走降级骨架。
 
@@ -21,7 +23,7 @@
 | F01 | 作为访客，我能浏览首页，以便快速了解厂牌定位与当前状态 | 大标语、状态看板（项目名/类型/状态/日期）、精选项目、最新日志 |
 | F02 | 作为访客，我能浏览日志大厅，以便按项目和标签筛选复盘记录 | 双层筛选（项目、标签）；左侧 200px BEFORE/AFTER 时间轴 |
 | F03 | 作为访客，我能阅读日志详情，以便看到完整的判断与验证过程 | 限宽 720px 宋体正文；底部防伪印章（SHA-256 + 发布时间） |
-| F04 | 作为管理员，我能用 GitHub 账号登录后台，以便安全地管理内容 | 仅白名单账号可进；非白名单一律拒绝 |
+| F04 | 作为管理员，我能用后台口令登录，以便安全地管理内容 | 口令只存服务器环境变量；不匹配一律拒绝并回到 `/login?error=CredentialsSignin` |
 | F05 | 作为管理员，我能新建/编辑日志，以便记录 BEFORE 判断与 AFTER 验证 | 双栏 Markdown 编辑器；可存草稿（isPublished=false） |
 | F06 | 作为管理员，我能发布日志，以便内容带着存证公开 | 发布时自动算 SHA-256 写 contentHash、记服务器时间 publishedAt |
 | F07 | 作为管理员，我能管理项目（增改删），以便日志有所归属 | 删除仍有日志挂靠的项目必须被拒绝 |
@@ -113,7 +115,7 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | /admin | P0 | 需登录 | 后台入口/概览 |
 | /admin/projects | P0 | 需登录 | 项目管理 |
 | /admin/logs/new、/admin/logs/[id]/edit | P0 | 需登录 | 双栏编辑器；已发布日志的编辑页提供「下架」动作 |
-| /api/auth/* | P0 | NextAuth | GitHub OAuth 回调 |
+| /api/auth/* | P0 | NextAuth | 管理员口令登录的 CSRF/回调/退出端点 |
 | /robots.txt | P1 | 静态生成 | 放行公开路径，屏蔽 /admin、/login 与 /api，指向 sitemap |
 | /sitemap.xml | P1 | getSafeLogs + 项目表（请求期取数） | 只含公开路由（含 /privacy）与已发布内容，草稿与 /admin 不出现 |
 | /privacy | P1 | 静态 | 隐私与数据说明（F15），进 sitemap 与页脚 |

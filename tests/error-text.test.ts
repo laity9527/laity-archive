@@ -5,6 +5,7 @@
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建
+ * - 2026-11-04: 登录侧码表随口令登录调整：AccessDenied → CredentialsSignin
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -19,9 +20,13 @@ test("SPEC 里的每个错误码都有文案（除按表单分支的 VAL_001）"
 });
 
 test("登录侧四个码也在同一张表里", () => {
-  for (const code of ["AccessDenied", "Verification", "Configuration", "Default"]) {
+  for (const code of ["CredentialsSignin", "Verification", "Configuration", "Default"]) {
     assert.ok(ERROR_TEXT[code]?.length, `${code} 缺文案`);
   }
+});
+
+test("GitHub 白名单时代的码已经不再出现", () => {
+  assert.equal(ERROR_TEXT.AccessDenied, undefined);
 });
 
 test("VAL_001 按来源表单给不同细则", () => {

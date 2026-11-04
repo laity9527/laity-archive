@@ -1,6 +1,6 @@
 /**
  * 文件：src/proxy.ts
- * 描述：请求前置校验：/logs/:slug 与 /projects/:slug 未命中记录直接返回 404；/admin 全路由校验登录与白名单
+ * 描述：请求前置校验：/logs/:slug 与 /projects/:slug 未命中记录直接返回 404；/admin 全路由校验登录态
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
@@ -8,11 +8,11 @@
  * - 2026-10-30: matcher 扩展 /admin/:path*，加登录态与白名单校验（Phase 3）
  * - 2026-10-30: matcher 扩展 /projects/:slug，404 页文案按路由类型分别给出（Phase 5a，经我批准）
  * - 2026-10-30: 未登录改跳自建 /login?callbackUrl=…，不再经 /api/auth/signin 多绕一次 307（I012-B）
+ * - 2026-11-04: 白名单校验改为会话里的管理员标记，不再 import src/auth（口令比较用 node:crypto，不该被拉进前置守卫）
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { isAllowedGithubId } from "@/auth";
 import { isPublishedLogSlug } from "@/lib/logs";
 import { isProjectSlug } from "@/lib/projects";
 
@@ -104,9 +104,8 @@ function readSegment(pathname: string, prefix: string) {
 
 async function guardAdmin(request: NextRequest) {
   const token = await getToken({ req: request });
-  const allowed = isAllowedGithubId(token?.githubId as string | undefined);
 
-  if (!allowed) {
+  if (token?.isAdmin !== true) {
     // 直接去自建登录页；再走 /api/auth/signin 会因为 pages.signIn 多一次 307
     const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
     return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));

@@ -173,3 +173,84 @@ workflow : 发版门禁（push 触发，attempt 1）
 3. 第 11 步在全新 `postgres:16` 服务上应用迁移通过，与第七节本机容器实测的 `All migrations have been successfully applied` 相互独立地成立——两条证据来自不同环境，结论一致。
 
 CI 至此从"写了但没跑过"变成常驻防线（I037 结案）。仍未验的只剩服务器上的整套启动（`up -d` 后探针、nginx 反代与 TLS），那需要服务器侧执行。
+
+## 九、取消 GitHub 登录（口令化）与三条此前被登录卡住的判据（2026-11-04）
+
+背景：我点名"先取消 github 登录"。本地 `GITHUB_ID` 一直对不上 OAuth App（派生判定：长 20 且含大写，GitHub 的 client ID 全小写），而登录进不去 → 后台的写路径一条都验不了。改法见 DESIGN D20：NextAuth v4 与 JWT 会话都不动，只把提供方换成内置的 Credentials（id `admin`），准入判定收敛到 `src/lib/admin-password.ts`。
+
+本机 `.env` 我没有读、也没有改：这一轮 dev 服务的 `ADMIN_PASSWORD` 与 `NEXTAUTH_SECRET` 都由命令行注入**哑值**（`dev-dummy-*`），Next 的 `.env` 加载不覆盖已存在的 `process.env`，所以不需要动我的文件。
+
+### 四道门禁（改动后重跑）
+
+| 命令 | 退出码 | 关键输出 |
+|---|---|---|
+| `npm run lint` | 0 | 无告警输出 |
+| `npx tsc --noEmit` | 0 | 无输出 |
+| `npm test` | 0 | `tests 56 / pass 56 / fail 0`（新增 `tests/admin-password.test.ts` 5 条、`error-text` 增"GitHub 白名单时代的码已经不再出现"1 条） |
+| `npm run build` | 0 | 路由表 `/login` 为 `ƒ`、`/api/auth/[...nextauth]` 为 `ƒ`，`ƒ Proxy (Middleware)` 在位 |
+
+### 口令判定（纯逻辑，已在 `npm test` 内锁定）
+
+未配置口令 → 任何输入都拒绝（含空串，配置缺失不等于存在万能空口令）；口令正确 → 通过；改一个字符 / 全大写 → 失败；输入为 `null`、`undefined`、空串 → 失败；只裁配置值首尾空白，不裁输入；比较走"两侧各取 SHA-256 后 `timingSafeEqual`"。
+
+### 端到端（curl，逐条判据）
+
+```
+GET  /api/health                     → {"status":"ok","db":true}
+GET  /api/auth/csrf                  → {"csrfToken":"…"}
+POST /api/auth/callback/admin        → http=200  body={"url":"http://localhost:3000/admin"}
+                                        cookie jar 里 next-auth.session-token 行数 = 1
+GET  /admin   （带该 cookie）         → http=200，正文含"后台"，不含"管理员口令"（即真进了后台）
+POST /api/auth/callback/admin        （新 jar，口令写错）
+                                     → http=401  body={"url":"…/api/auth/error?error=CredentialsSignin&provider=admin"}
+                                        该 jar 里会话 cookie 数 = 0
+GET  /admin   （无 cookie）           → http=307 → /login?callbackUrl=%2Fadmin
+GET  /login                          → http=200，正文含"管理员口令"，全文搜不到 github/GITHUB 字样
+```
+
+### 端到端（应用内浏览器，真人路径）
+
+1. `/login` 输口令 → 落到 `/admin`，标题"后台 · Laity 项目档案库"，右上角显示身份名"管理员"与"退出"。概览计数 `PROJECTS 1 / PUBLISHED 1 / DRAFTS 0`（种子数据未被触碰）。
+2. 新建临时日志 `log003-selftest-tmp`，正文写 `客户反馈 13800138000 这个号码能收到通知` → 保存成功，编辑页出现"发布前核对 · 命中 1 类形态 · **阻截** · 手机号 ×1 · `1380…8000`"（脱敏显示）。
+3. **`LOG_003`（拒）**：不勾选确认直接点发布 → 回到 `…/edit?error=LOG_003`，横幅文案为"正文里有疑似敏感信息…请先核对并删改；确认无误再勾选「已核对，仍要发布」。"，页内仍是 `○ DRAFT`。
+4. **`LOG_004`（拒）**：删除框里故意填 `wrong-slug-on-purpose` → 回到 `…/edit?error=LOG_004`，日志仍在。
+5. **`LOG_003`（放）**：勾选确认后再发布 → `…/edit?published=1`；前台 `/logs/log003-selftest-tmp` 打开，详情页显示 `内容摘要 CONTENT HASH · 4f49af0d…` 与发布时间 `2026-11-04 03:15 UTC`（本机 11:15，UTC+8，与"存 UTC、展示层转换"一致）——摘要与时间同一次写入这条判据第一次拿到真界面证据。注：当场抓取只取了页面前 80 个字符，摘要尾部被截，**没有逐位核对那串值本身**；"64 位小写十六进制"这个形态由 `tests/content-hash.test.ts` 的 `/^[0-9a-f]{64}$/` 断言锁定，属另一条独立证据。
+6. **`LOG_004`（放）**：删除框原样填 `log003-selftest-tmp` → 回到 `/admin?deleted=1`，横幅"DELETED · 该条日志已彻底删除，正文与摘要都不再保留"；随后 `fetch('/logs/log003-selftest-tmp')` 返回 **404**，概览回到 `1 / 1 / 0`。临时数据清理干净，种子日志未受影响。
+7. 附加（I017 的两条分支，不需要伪造任何凭据）：带会话访问 `/login?callbackUrl=%2Fadmin%2Fprojects` → 直接落到 `/admin/projects`；口令错 → `?error=CredentialsSignin`。
+
+### 顺带查出的两个 dev 期问题（都已结案）
+
+- `I047`：`/login` 在 Cache Components 下被预渲染，而 `getServerSession()` 会走到 NextAuth 的 csrf 生成（无 csrf cookie 时 `randomBytes(32)`，`core/lib/csrf-token.js:25`），框架判为不稳定值 → 一轮里 `blocking-prerender-random` 报 602 次。按报错给的第一条建议在读会话前加 `await connection()`，复测该错误计数 **602 → 0**。机制与提供方无关，GitHub 时代同样存在，本轮才因"浏览器长时间停在 `/login`"暴露（此句为源码判读，未做 A/B 复跑）。
+- `I048`：我起初把 dev 输出重定向到仓库内的 `tmp/dev.log`。Turbopack 监听整个项目目录，日志写入 → 触发重编译 → Fast Refresh 让浏览器整页重载 → 又写日志，实测约 **7.5 次/秒**（浏览器已切到别页仍在涨，证明是服务端自激而非页面脚本）。输出改写到仓库外之后，同一页 `GET /login` 增速由 45 行/8 秒降为 **0**。教训：`tmp/` 的规矩管的是脚本产物与快照文件，**长跑进程的标准输出不能落在被监听的目录里**。
+
+### 仍未验（不拿上面的绿冒充）
+
+- 真上传（`IMG_001` 的成功分支）：会往 OSS Bucket 写一个对象，而那把密钥只有 `PutObject`、删不掉，属外部副作用，须我本人点。拒绝分支（伪造 MIME / 超 5MB）由 `tests/image-signature.test.ts` 覆盖，页面入口未复测。
+- 服务器上 `up -d` 后 `ADMIN_PASSWORD` 的实际生效（第八节的整套启动仍待服务器侧执行）。
+- `ADMIN_PASSWORD` 不合格时 preflight 是否拦住：**本机已实跑两条分支**（哑值，容器内不落任何真实凭据）——
+  `docker compose --env-file tmp/prod-dummy-shortpw.env -f docker-compose.prod.yml run --rm preflight` 退出码 1，
+  末行 `上线门禁未通过：ADMIN_PASSWORD 短于 12 位（后台只认这一把口令，短了等于没设）`；
+  换成 ≥12 位的哑值后退出码 0，通过行只印长度不印值（`数据库用户 laity_app、口令长度 23、后台口令长度 26、…`），
+  且输出里 `FAKE_` 出现次数为 0。另核 `config` 渲染：`ADMIN_PASSWORD` 同时出现在 preflight 与 app 两处 environment，
+  `GITHUB_ID` / `ALLOWED_GITHUB_IDS` 在渲染结果里已彻底消失（计数 0）。
+
+## 十、1044 / 1045 / 1046 同日落地（2026-11-04，我点名"1044 可改，1045、1046 根据你的经验改"）
+
+| 条 | 改了什么 | 判据与实测 |
+|---|---|---|
+| I044 | AGENTS.md 三处过期事实：技术栈锁定的登录行、环境实况里"真实上传联调"的前置、合规红线段的 preflight 清单最后一项；文件头 修订留痕 追加一行 | 登录行现写"内置 Credentials（id `admin`）+ `ADMIN_PASSWORD` + `token.isAdmin`"，并新增一条约束"`src/proxy.ts` 不得 import `src/auth.ts`"（口令比较用 `node:crypto`，不该进前置守卫）——这条不是风格偏好，是本轮真实踩过的耦合点 |
+| I045 | ci.yml 删除 `GITHUB_ID` / `GITHUB_SECRET` / `ALLOWED_GITHUB_IDS` 三行 | **没有**替换成 `ADMIN_PASSWORD` 占位：CI 全程不调 `authorize`，`tests/admin-password.test.ts` 自带哑值，新增一个没人读的变量正是本条要治的病。改后 `npm run lint/tsc/test/build` 全 0；Actions 实跑要等我推送，本条不预先宣布收口 |
+| I046 | `deploy/nginx.conf` 加登录端点限速 | 见下 |
+
+限速的落法与验证：`limit_req_zone $binary_remote_addr zone=laity_auth:10m rate=5r/m` 必须写在 server 块之外（conf.d 被 include 进 `http{}`，放进 server 会 `[emerg]`）；新的 `location = /api/auth/callback/admin` 挂 `limit_req zone=laity_auth burst=5 nodelay` 与 `limit_req_status 429`；`proxy_set_header` 等公共参数从 `location /` 提到 server 层，两条 location 共用一份，避免"改了通用头部漏改登录那条"的漂移。
+
+本机一次性验证（自建网络 + 占位 `app` 容器 + 哑自签证书，跑完全部拆除）：
+
+- `nginx -t` → `syntax is ok` / `test is successful`，退出 0。
+- 同一 IP 连打 12 次 `POST /api/auth/callback/admin` → `200 200 200 200 200 200 429 429 429 429 429 429`，与"1 + burst 5"完全一致；429 的页面由 nginx 自己回（`Server: nginx`，`server_tokens off` 没带版本号）。
+- 同一 IP 连打 12 次 `GET /` → 全 200，证明限速只挂在登录端点，不影响正常浏览。
+- 头部继承：把占位 `app` 换成回显请求头的服务，经该 location 收到 `x-forwarded-host` / `x-real-ip` / `x-forwarded-for` / `x-forwarded-proto=https` 四项齐全（Server Action 同源比对与 NextAuth 的 Secure cookie 判定都依赖它们）。
+- 拆除核对：`docker ps -a --filter name=laitycheck` 与 `docker network ls --filter name=laitycheck` 均为空，`tmp/certs/` 已删；开发容器 `laity-postgres` 全程未受影响（`Up 3 hours`）。
+- 入口脚本另有一条无害提示 `can not modify /etc/nginx/conf.d/default.conf (read-only file system?)`——真实部署同样是 `:ro` 挂载，属既有行为，非本次引入。
+
+本轮材料同步：说明书加了"登录限速"一条并在 5.1 内指向它；`ci.yml` 在收录清单里，删三行后重出两份 HTML 并核窗口与幂等。

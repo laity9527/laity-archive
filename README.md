@@ -6,7 +6,7 @@
 
 ## 技术栈
 
-Next.js（App Router）· TypeScript · Tailwind CSS · Prisma · PostgreSQL 16 · NextAuth（GitHub OAuth）
+Next.js（App Router）· TypeScript · Tailwind CSS · Prisma · PostgreSQL 16 · NextAuth（管理员口令登录）
 
 ## 快速开始（本地环境就绪后）
 

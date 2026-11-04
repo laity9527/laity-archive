@@ -4,7 +4,9 @@
 负责人：张磊
 本文件维护人：张磊（AI 不得自行修改本文件；发现事实过期，停下来向我报告）
 修订留痕：2026-11-03 由 AI 按我点名"根据你的经验补充 AGENTS.md"补写环境实况、上传与合规事实、
-四道门禁与软著材料生成铁律；除此之外 AI 仍不得自改本文件。
+四道门禁与软著材料生成铁律；2026-11-04 由 AI 按我点名"1044 可改"更新三处过期事实——
+登录行（GitHub OAuth + 白名单 → 管理员口令，理由与代价见 DESIGN.md 的 D20）、环境实况里"真实上传联调"的前置、
+preflight 门禁清单的最后一项；除此之外 AI 仍不得自改本文件。
 
 ---
 
@@ -14,10 +16,14 @@
 - 样式：Tailwind CSS（禁止引入其他 UI 组件库、CSS 框架、图标库）
 - ORM：Prisma（provider 固定为 postgresql）
 - 数据库：PostgreSQL 16（Docker 容器，库名 laity）
-- 登录：NextAuth.js v4.24.15（后台 /admin 用，仅此一处），提供方固定 GitHub OAuth，
-  放行按 `ALLOWED_GITHUB_IDS` 数字 ID 白名单（非白名单在回调处拒绝，AccessDenied），登录页自建在 `/login`（I012-B）。
-  会话判定共三处：`src/proxy.ts` 前置守卫（matcher 覆盖 `/admin/:path*`）、`src/app/admin/layout.tsx`、
-  各 Server Action 内部的 `getServerSession`（不依赖前端隐藏按钮）
+- 登录：NextAuth.js v4.24.15（后台 /admin 用，仅此一处），提供方为框架内置的 Credentials（id 固定 `admin`），
+  准入只认环境变量 `ADMIN_PASSWORD` 这一把口令——比对方式为两侧各取 SHA-256 后 `timingSafeEqual`，
+  未配置或输入为空一律拒绝（配置缺失不等于存在空口令），失败回 `/login?error=CredentialsSignin`；
+  登录页自建在 `/login`（I012-B）。2026-11-04 我点名"先取消 github 登录"，GitHub OAuth 与
+  `ALLOWED_GITHUB_IDS` 白名单同时退出，决策、代价与未做项见 DESIGN.md 的 D20（勿再按 OAuth 口径写代码）。
+  会话判定共三处：`src/proxy.ts` 前置守卫（matcher 覆盖 `/admin/:path*`，判 `token.isAdmin === true`）、
+  `src/app/admin/layout.tsx`、各 Server Action 内部的 `getServerSession`（不依赖前端隐藏按钮）。
+  `src/proxy.ts` 不得 import `src/auth.ts`：口令比较要用 `node:crypto`，不该被拉进前置守卫
 - 包管理：npm（禁止 pnpm/yarn/bun）
 
 ### 版本事实（最高优先级）
@@ -39,7 +45,8 @@
 
 - 本机现状（2026-11-03）：Node/npm 已装，`node_modules` 就绪，Docker Desktop + 本地
   PostgreSQL 16 容器（`laity-postgres`，库名 laity，口令为仅限本地的 root/root，见 I001）。
-- 仍缺的：服务器上的生产编排实跑、真实上传联调（需我本人在浏览器走 GitHub 授权）、
+- 仍缺的：服务器上的生产编排实跑、真实上传联调（需我本人登录后台后亲自点一次上传；2026-11-04 起不再依赖 GitHub 授权，
+  口令是我自己配的，AI 已能在应用内浏览器里走到"需我本人决定"的那一步）、
   `docs/03-功能截图` 的运行截图。这几项 AI 一律标注"未验证"，不得用推断补全。
 - GitHub 仓库：https://github.com/laity9527/laity-archive
 - 提交与推送由我本人执行。AI 可以提交，但只有我明确说"提交"才算授权，说提交不等于说 push。
@@ -135,7 +142,7 @@ laity-archive/
   禁止硬凑文案。站点对外标识（域名、站名、描述）唯一来源是 `src/lib/site.ts`，别处不再写死域名。
 - 数据库口令：本地开发容器的弱口令仅限本地；生产一律 `${VAR:?}` 从环境变量注入，禁止写进仓库。
   生产编排另有一次性 preflight 容器硬卡：用户名/口令非 root、口令≠用户名、长度 ≥12、
-  域名是 https 正式域名、会话密钥 ≥32 位、白名单非空、OSS 四键非空。
+  域名是 https 正式域名、会话密钥 ≥32 位、后台口令非空且 ≥12 位、OSS 四键非空。
 - 凭据留痕与验证口径：外部动作（AK 轮换、口令重置）只在文档里记状态
   （"已于 x 月 x 日轮换、旧密钥已删除"），**不记任何值**。AI 需要核实密钥时，
   只报键名与派生判定（是否存在、值长度、是否等于模板值），不回显值本身，也不写进任何产物；

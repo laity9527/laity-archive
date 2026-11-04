@@ -346,3 +346,22 @@
 - 四道门禁：`npm test` 48/48（新增 sensitive-scan 14 条、licenses 4 条）、`tsc` 0、`lint` 0、`build` 0，
   路由表新增 `○ /licenses`（静态预渲染）。
 - I021 仍未验；本轮总页数 96 → 107、省略段 36 → 47 页，"前后各 30 页"的排版更需要在打印后核对一次。
+
+## 十八、2026-11-04 取消 GitHub 登录（D20）后的第十二轮出件
+
+触发：登录方式换成 `ADMIN_PASSWORD` 口令，新增 `src/lib/admin-password.ts`，同时 `auth.ts` / `proxy.ts` / `login/page.tsx` / `SignInButton.tsx` / `error-text.ts` / `licenses.ts` / `privacy/page.tsx` / 两份 env 模板 / `docker-compose.prod.yml` 都有行数增减。收录文件 62 → 63。
+
+这一轮是**护栏替我发现了两次窗口破口**，不是我算出来的：
+
+1. 第一次生成直接拒绝出件：`src/app/globals.css：头部被后窗口切口切掉（后窗口起于第 4001 行，本文件 3981-4108）`——④ 段涨到超出后窗口的整页折算容量（1453 行）。按报错给的处置把 ④ 里行数最少、逻辑最薄的 `src/app/error.tsx`（41 行，只有一句提示加重试按钮）移进折走段。
+2. 移完后前窗口又顶到边缘：`前窗口止于第 1500 行（该行属于 src/proxy.ts）`——①+② 恰好塞满，零余量，下一个人加一行注释就会把 `proxy.ts` 的头部切掉。把同为"一串常量 + 读环境变量"的 `src/lib/site.ts` 从 ② 平移到 ③，让出 52 行；**②→③ 平移不改变 ④ 的起点，所以后窗口不受影响**（这条是移之前先推演过的，移完由 `assertWindowFit()` 复核）。
+
+最终参数：总行数 5453、每页 50 行、总页数 110、提交 60 页、省略 50 页；必须整份可见的文件 36 → 35（`site.ts` 与 `error.tsx` 按设计转为可折走）。
+
+产物侧复核（不看生成器自报，只从 HTML 与磁盘原文反推，`tmp/whole-check.mjs`）：20 个关键文件全部"分隔行与最后一行落在同一个窗口内"，含本轮新进的 `src/lib/admin-password.ts` 与仍在前窗口的 `src/auth.ts`、`src/proxy.ts`。
+
+说明书同步了 9 处登录口径：概述、运行环境、本地与生产两处环境变量清单、上线前置门禁（"账号白名单不得为空"→"后台口令不得为空且不少于 12 位"，并补"通过时打印两类口令的长度"）、`/privacy` 段、5.1 登录与登出两整段（含"不区分口令错与没配口令""不通过响应快慢泄露长度"）、安全面的越权控制/凭据管理/凭据边界三条，错误码表 `AccessDenied` 一行换成 `CredentialsSignin`。说明书 443 行 / 15 页，未超 60 页故全量提交。
+
+凭据自检按铁律先证扫描器有效再采信：控制组注入的 4 组伪凭据全部命中；再扫两份产物——`ADMIN_PASSWORD` 在材料里只有 1 处赋值形态，可见值长度 0（`""`）；`GITHUB_ID` / `GITHUB_SECRET` / `ALLOWED_GITHUB_IDS` 在材料中已完全不出现。余下 6 处命中逐条看过，全是模板值与规则文本自身：`.env.example` 的 `postgresql://root:root@localhost`（AGENTS.md 明示仅限本地的模板值）、`password=xxx` 这类说明文字、`accessKeySecret: requireEnv("OSS_ACCESS_KEY_SECRET")` 的变量名。
+
+幂等：连跑两次生成，`git diff --exit-code -- docs/04-软著材料` 无差异。I021（浏览器打印成 PDF 的真实分页）仍未验；本轮总页数 107 → 110、省略段 47 → 50 页，打印后核对更需要做一次。
