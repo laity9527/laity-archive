@@ -12,6 +12,7 @@
  * - 2026-11-04: 加配置体检（I050）：ADMIN_PASSWORD 缺失/短于 12 位、NEXTAUTH_SECRET 缺失/短于 32 位时，
  *               每进程往服务器日志写一条不含值的提示——否则本机漏配只有一个笼统的 401，
  *               排查的人会先去怀疑自己的口令抄错了
+ * - 2026-11-04: 会话寿命显式设为 12 小时（v4 默认 30 天），D25：单口令后台的唯一吊销手段
  */
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
@@ -94,7 +95,9 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  session: { strategy: "jwt" },
+  // 会话寿命从 v4 默认的 30 天收到 12 小时：后台只有一把口令，笔记本被拿到就等于一个月的管理员权限；
+  // 代价是要更常输一次口令，而登录只有这一个门，收短是这里唯一能动的吊销手段
+  session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
   callbacks: {
     // 会话里只留一个布尔位：它只在 authorize 通过后写入，没有 NEXTAUTH_SECRET 签不出带它的 token
     jwt({ token, account }) {

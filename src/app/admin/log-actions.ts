@@ -10,6 +10,8 @@
  * - 2026-11-03: 发布动作透传敏感信息确认标记；补 deleteLogAction（彻底删除）
  * - 2026-11-04: 四个动作的会话判定改走 requireAdminSession：与前置守卫同一判据（带管理员标记的会话），
  *               不再接受"任何有效会话"
+ * - 2026-11-04: publishLogAction 改为"先存再发"（D25）：原先发布表单只带 id，改了正文不点保存直接发布
+ *               会把库里的旧内容发出去，而页面写的是"按当前正文算摘要"
  */
 "use server";
 
@@ -143,8 +145,23 @@ export async function publishLogAction(formData: FormData) {
     redirect(`${backTo}?error=VAL_001`);
   }
 
-  const result = await publishLog(id, {
-    // 确认标记只影响"要不要放行"，扫描本身在服务端读库里的正文，客户端伪造不了内容
+  // 先存再发：发布按钮与表单字段同在一张表单（per-button formAction），
+  // 原先它只带一个 id，改了正文不点"保存"直接发布会把库里的旧内容发出去，
+  // 而页面上写的是"按当前正文算 SHA-256"——所见必须等于所发
+  const input = parseInput(formData);
+
+  if (!input) {
+    redirect(`${backTo}?error=VAL_001`);
+  }
+
+  const saved = await saveLog({ ...input, id });
+
+  if (!saved.ok) {
+    redirect(`${backTo}?error=${saved.code}`);
+  }
+
+  const result = await publishLog(saved.id, {
+    // 确认标记只影响"要不要放行"，扫描本身在服务端读刚存进库的正文，客户端伪造不了内容
     sensitiveConfirmed: readField(formData, "sensitiveConfirmed") === "on",
   });
 

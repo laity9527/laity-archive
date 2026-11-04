@@ -23,9 +23,9 @@
 | F01 | 作为访客，我能浏览首页，以便快速了解厂牌定位与当前状态 | 大标语、状态看板（项目名/类型/状态/日期）、精选项目、最新日志 |
 | F02 | 作为访客，我能浏览日志大厅，以便按项目和标签筛选复盘记录 | 双层筛选（项目、标签）；左侧 200px BEFORE/AFTER 时间轴 |
 | F03 | 作为访客，我能阅读日志详情，以便看到完整的判断与验证过程 | 限宽 720px 宋体正文；底部防伪印章（SHA-256 + 发布时间） |
-| F04 | 作为管理员，我能用后台口令登录，以便安全地管理内容 | 口令只存服务器环境变量；不匹配一律拒绝并回到 `/login?error=CredentialsSignin` |
+| F04 | 作为管理员，我能用后台口令登录，以便安全地管理内容 | 口令只存服务器环境变量；不匹配一律拒绝并回到 `/login?error=CredentialsSignin`；会话为签名 JWT，有效期显式设为 12 小时（D25） |
 | F05 | 作为管理员，我能新建/编辑日志，以便记录 BEFORE 判断与 AFTER 验证 | 双栏 Markdown 编辑器；可存草稿（isPublished=false） |
-| F06 | 作为管理员，我能发布日志，以便内容带着存证公开 | 发布时自动算 SHA-256 写 contentHash、记服务器时间 publishedAt |
+| F06 | 作为管理员，我能发布日志，以便内容带着存证公开 | 「保存并发布」先把这张表单里的正文写入库，再按**刚存进去的内容**算 SHA-256 写 contentHash、记服务器时间 publishedAt（D25：所见即所发） |
 | F07 | 作为管理员，我能管理项目（增改删），以便日志有所归属 | 删除仍有日志挂靠的项目必须被拒绝 |
 | F08 | 作为访客，我绝看不到未发布内容，以便草稿与公开严格隔离 | 前台一切查询强制走 getSafeLogs 类封装 |
 | F09 | 作为管理员，我发布的 Markdown 不会引入 XSS，以便站点安全 | 渲染必过 rehype-sanitize |
@@ -97,7 +97,7 @@ model Log {
 }
 ```
 
-约定（继承 AGENTS.md）：时间一律 UTC 存储；contentHash 只在发布动作时写入；
+约定（继承 AGENTS.md）：时间一律 UTC 存储；contentHash 只在发布动作时写入，且按同一次动作里刚保存进库的正文计算（先存再发，D25）；
 kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层校验。
 
 ## 三、接口契约
@@ -114,7 +114,7 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | /projects、/projects/[slug] | P1 | 项目表 + getSafeLogs | 作品维度 |
 | /admin | P0 | 需登录 | 后台入口/概览 |
 | /admin/projects | P0 | 需登录 | 项目管理 |
-| /admin/logs/new、/admin/logs/[id]/edit | P0 | 需登录 | 双栏编辑器；已发布日志的编辑页提供「下架」动作 |
+| /admin/logs/new、/admin/logs/[id]/edit | P0 | 需登录 | 双栏编辑器；草稿页在同一张表单里给「保存修改」与「保存并发布」两个动作，已发布日志的编辑页提供「下架」动作 |
 | /api/auth/* | P0 | NextAuth | 管理员口令登录的 CSRF/回调/退出端点 |
 | /robots.txt | P1 | 静态生成 | 放行公开路径，屏蔽 /admin、/login 与 /api，指向 sitemap |
 | /sitemap.xml | P1 | getSafeLogs + 项目表（请求期取数） | 只含公开路由（含 /privacy）与已发布内容，草稿与 /admin 不出现 |
@@ -127,7 +127,7 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | Action | 入参 | 出参 | 错误码 |
 |---|---|---|---|
 | saveLogDraft | {id?, title, slug, projectId, tags[], beforeContent, afterContent?, beforeDate, afterDate?, lessonLearned?} | {id} | AUTH_001 未登录；VAL_001 参数校验失败；LOG_001 slug 重复 |
-| publishLog | {id, sensitiveConfirmed?} | {contentHash, publishedAt} | AUTH_001；LOG_002 日志不存在；LOG_003 正文含疑似敏感信息且未确认 |
+| publishLog（页面动作 `publishLogAction`，D25） | 整张表单字段 + {id, sensitiveConfirmed?}：先按表单字段执行一次保存，lib 层 `publishLog(id)` 再按**库里刚存下的正文**计算摘要 | {contentHash, publishedAt} | AUTH_001；VAL_001 表单校验失败（此时既不写也不发）；LOG_001 slug 重复；LOG_002 日志不存在；LOG_003 正文含疑似敏感信息且未确认（正文已存、未发布） |
 | unpublishLog | {id} | {ok} | AUTH_001；LOG_002 |
 | deleteLog | {id, confirmSlug} | {ok} | AUTH_001；LOG_002；LOG_004 确认 slug 与库中不一致，删除未执行 |
 | saveProject | {id?, slug, name, kind, status, summary?, repoUrl?} | {id} | AUTH_001；VAL_001；PRJ_002 slug 重复 |

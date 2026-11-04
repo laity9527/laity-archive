@@ -9,6 +9,8 @@
  * - 2026-11-02: 已发布状态下增"下架"动作与 UNPUBLISHED 提示（补 SPEC:117 的 unpublishLog）
  * - 2026-11-03: 发布前展示敏感信息命中清单并要求勾选确认；新增"彻底删除"（回填 slug 确认）
  * - 2026-11-04: 保存/发布/下架/彻底删除四个按钮改用 SubmitButton，提交中禁用并换文案
+ * - 2026-11-04: 发布不再是独立小表单（D25）：改成"保存并发布"按钮挂在同一张表单上（per-button formAction），
+ *               发布前核对面板也移进表单、排在按钮之前——原先改了正文不点保存直接发布，发出去的是库里旧内容
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -225,61 +227,61 @@ export default async function EditLogPage({
           />
         </label>
 
+        {hits.length > 0 && (
+          <div className="md:col-span-2 border border-ink px-4 py-3">
+            <p className="font-mono text-[10px] tracking-[0.2em] text-ink">
+              发布前核对 · 命中 {hits.length} 类形态
+            </p>
+            <ul className="mt-3 grid gap-1 font-mono text-[11px] leading-relaxed text-ink-soft">
+              {hits.map((hit) => (
+                <li key={hit.code}>
+                  {hit.advisory ? "提示" : "阻截"} · {hit.label} ×{hit.count} ·{" "}
+                  {hit.samples.join(" / ")}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[11px] leading-relaxed text-ink-soft">
+              这只是形态判断，会误报（示例数据、占位串都算）。阻截类请先删改；
+              确认没有可撤回的公开内容时，勾选下面的确认再发布。
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-baseline gap-6 md:col-span-2">
           <SubmitButton
             label="保存修改"
             pendingLabel="保存中…"
             className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
           />
+          {!log.isPublished && (
+            <>
+              {blocking.length > 0 && (
+                <label className="flex items-baseline gap-3">
+                  <input
+                    type="checkbox"
+                    name="sensitiveConfirmed"
+                    className="border border-ink"
+                  />
+                  <span className="font-mono text-[11px] text-ink">
+                    已核对上述 {blocking.length} 类命中，仍要发布
+                  </span>
+                </label>
+              )}
+              <SubmitButton
+                label="保存并发布"
+                pendingLabel="发布中…"
+                formAction={publishLogAction}
+                className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
+              />
+            </>
+          )}
           <span className="font-mono text-[10px] text-ink-soft">
             {log.isPublished
               ? "已发布的日志一保存就退回草稿，需要重新发布"
-              : "草稿对外不可见"}
+              : "发布 = 先保存这张表单里的内容，再按它算 SHA-256 并记服务器时间；草稿对外不可见"}
           </span>
         </div>
       </form>
-
-      {hits.length > 0 && (
-        <div className="mt-8 border border-ink px-4 py-3">
-          <p className="font-mono text-[10px] tracking-[0.2em] text-ink">
-            发布前核对 · 命中 {hits.length} 类形态
-          </p>
-          <ul className="mt-3 grid gap-1 font-mono text-[11px] leading-relaxed text-ink-soft">
-            {hits.map((hit) => (
-              <li key={hit.code}>
-                {hit.advisory ? "提示" : "阻截"} · {hit.label} ×{hit.count} ·{" "}
-                {hit.samples.join(" / ")}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-[11px] leading-relaxed text-ink-soft">
-            这只是形态判断，会误报（示例数据、占位串都算）。阻截类请先删改；
-            确认没有可撤回的公开内容时，勾选下面的确认再发布。
-          </p>
-        </div>
-      )}
-
-      {!log.isPublished && (
-        <form action={publishLogAction} className="mt-8 border-t border-hairline pt-6">
-          <input type="hidden" name="id" value={log.id} />
-          {blocking.length > 0 && (
-            <label className="mb-4 flex items-baseline gap-3">
-              <input type="checkbox" name="sensitiveConfirmed" className="border border-ink" />
-              <span className="font-mono text-[11px] text-ink">
-                已核对上述 {blocking.length} 类命中，仍要发布
-              </span>
-            </label>
-          )}
-          <SubmitButton
-            label="发布"
-            pendingLabel="发布中…"
-            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
-          />
-          <span className="ml-6 font-mono text-[10px] text-ink-soft">
-            发布 = 按当前正文算 SHA-256 + 记录服务器时间，两者同时写入
-          </span>
-        </form>
-      )}
 
       {log.isPublished && (
         <form
