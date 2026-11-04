@@ -12,14 +12,17 @@
 // NEXTAUTH_URL 在开发（http://localhost:3000）与生产（https://<正式域名>）两套环境里
 // 都必须是本站对外地址，GitHub 回调也依赖它，所以这里复用它而不是新增环境变量：
 // 多一个 SITE_URL 就多一处"改了 A 忘了 B"的漂移点
-const configured = process.env.NEXTAUTH_URL?.trim();
-
 export const siteName = "Laity 项目档案库";
 export const siteDescription =
   "厂牌官网与开发复盘档案：每条日志都记发布时间与正文 SHA-256 摘要，可核对内容是否被改动。";
 
+// 刻意在调用时读环境变量，不在模块加载时捕获：一是让回归测试能确定性地覆盖
+// "已配置"与"未配置"两个分支（CI 的作业级 env 会设这个变量，模块级捕获会让用例随环境飘红），
+// 二是本模块只在服务端求值，每次读的成本可以忽略
 export function siteUrl(): string {
-  return (configured ?? "http://localhost:3000").replace(/\/+$/, "");
+  const configured = process.env.NEXTAUTH_URL?.trim();
+
+  return configured ? configured.replace(/\/+$/, "") : "http://localhost:3000";
 }
 
 // 备案号只在服务端读取，作为 prop 传给页脚组件——页脚是客户端组件，

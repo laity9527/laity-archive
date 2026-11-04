@@ -56,3 +56,46 @@
 3. 三项合规位的真实值：`SITE_ICP`（备案）、`SITE_POLICE_ICP`（公安备案）、`SITE_CONTACT_EMAIL`（对外邮箱）由我本人填；未填之前页脚相应行不显示。
 4. 生产编排整体实跑与 `/api/health` 探针在服务器上的表现仍未验（本轮只做了 `config` 渲染核对）。
 5. I021（浏览器打印成 PDF 的真实分页）仍未验；本轮材料页数从 96 涨到 107，这条为什么必须验的理由更硬了。
+
+## 六、按 CI 顺序在 linux 容器里复跑（首跑预演，2026-11-04）
+
+真 Actions 这次跑不了：`git ls-remote` 报 `Recv failure: Connection was reset`，GitHub 与 Docker Hub 都不通，
+且本地 `main` 领先 `origin/main` 三个提交未推送（推送是我本人的动作）。
+所以改成**把 `.github/workflows/ci.yml` 的九步原样在容器里复跑**：仓库只读挂载、工作副本建在容器自己的
+文件系统里（排除 `node_modules/.next/tmp/.git`），配一次性 `postgres:16` 服务，作业级 env 与工作流逐键一致。
+临时编排放在 `tmp/ci-rehearsal.yml`，用完 `down -v`，本地 `laity-postgres` 未受影响。
+
+**首跑预演抓到的两个真缺陷（都会让 GitHub 上直接红）：**
+
+1. **`tsc` 步骤 `TS2304: Cannot find name 'PageProps' / 'LayoutProps'`（6 处）**。
+   这些是 Next 生成的路由类型，落在 `.next/types/**/*.ts`，而 `tsconfig.json` 的 `include` 正指着它。
+   本机跑过 `dev`/`build` 所以目录一直在，CI 的干净工作区里没有——**这道门禁在我机器上从来没真正验证过自己的前提**。
+   修法：CI 在 `prisma generate` 之后、`lint`/`tsc` 之前加 `npx next typegen`（已确认该命令存在于 Next 16.4.3 的 CLI）。
+2. **`tests/site.test.ts` 用例假设环境变量未设置**：它断言 `process.env.NEXTAUTH_URL === undefined`，
+   而 CI 的作业级 env 恰恰设了 `NEXTAUTH_URL=http://localhost:3000`，于是 `actual: 'http://localhost:3000', expected: undefined` 直接红。
+   根因不止在测试：`src/lib/site.ts` 把 `configured` 读在**模块加载期**，所以"已配置"分支与尾斜杠归一化分支此前根本无法测、也确实没测。
+   修法：`siteUrl()` 改为调用时读环境变量（本模块只在服务端求值，成本可忽略），测试改为自行设定并复原 env，
+   覆盖已配置/未配置/空串/纯空白/带尾斜杠五种输入。本机在**设了**和**没设**两种环境下各跑一遍，均 50/50 通过。
+
+修完再跑第 9 步"材料与成品逐字节一致"又红了一次——**这次是它该红**：我改了 `site.ts` 却没重出材料。
+重出（5358 行 / 108 页 / 收录 62）后完整复跑，退出码 0：
+
+```
+== 1. npm ci ==        通过（锁文件在 linux 上原样生效，I018 的常驻防线成立）
+== 2. prisma generate ==
+== 2b. next typegen == 通过
+== 3. lint ==          通过
+== 4. tsc ==           通过
+== 5. test ==          tests 50 pass 50 fail 0
+== 6. migrate deploy == 通过（那条 init 迁移能在全新的 postgres:16 上从零应用）
+== 7. build ==         通过（占位 env、无 .env 文件；18 个静态页生成完成）
+== 8. 材料自检 ==       通过（assertComplete + assertWindowFit）
+== 9. 材料同步 ==       一致 源程序文档.html / 一致 软件操作说明书.html
+ALL CI STEPS PASSED
+```
+
+第 9 步还顺带证明了一件我原本担心的事：**Windows 生成的材料与 linux 重新生成的材料逐字节相同**，
+所以那道 `git diff --exit-code` 门不会因为换行符或平台差异误报。
+
+仍未拿到答案的一条：`next build` 到底依不依赖数据库可达——复跑时库是开着的，而"停库构建"的实验被安全策略拦下，
+我没有绕。CI 配了一次性真库，所以这条不确定不影响流水线成立。

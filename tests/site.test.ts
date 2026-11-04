@@ -5,20 +5,58 @@
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建
+ * - 2026-11-04: 站点 URL 与备案号用例改为自行设定并复原环境变量——原先假设"未配置"，
+ *               CI 的作业级 env 设了 NEXTAUTH_URL 就直接红；同时补上已配置分支与尾斜杠归一化的覆盖
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { siteIcp, siteName, siteUrl } from "../src/lib/site.ts";
 import { isPublicRoute } from "../src/lib/routes.ts";
 
-// node --test 不会加载 .env（那是 Next 启动时做的事），所以这里断言的就是"未配置"分支
-test("未配置 NEXTAUTH_URL 时回落到本地开发地址，且不带尾斜杠", () => {
-  assert.equal(process.env.NEXTAUTH_URL, undefined);
-  assert.equal(siteUrl(), "http://localhost:3000");
+// 用例外层保存原值、结束后复原：被测函数读的是 process.env，
+// 不让用例之间、也不让本机与 CI 之间的环境差异影响结论
+function withEnv<T>(name: string, value: string | undefined, run: () => T): T {
+  const before = process.env[name];
+
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+
+  try {
+    return run();
+  } finally {
+    if (before === undefined) {
+      delete process.env[name];
+    } else {
+      process.env[name] = before;
+    }
+  }
+}
+
+test("未配置 NEXTAUTH_URL 时回落到本地开发地址", () => {
+  const result = withEnv("NEXTAUTH_URL", undefined, siteUrl);
+
+  assert.equal(result, "http://localhost:3000");
 });
 
-test("未配置 SITE_ICP 时页脚拿不到备案号（而不是渲染空串或 undefined）", () => {
-  assert.equal(siteIcp(), null);
+test("已配置时按配置值返回，并去掉结尾多余斜杠", () => {
+  assert.equal(withEnv("NEXTAUTH_URL", "https://laity.cn", siteUrl), "https://laity.cn");
+  assert.equal(withEnv("NEXTAUTH_URL", "https://laity.cn/", siteUrl), "https://laity.cn");
+  assert.equal(withEnv("NEXTAUTH_URL", "  https://laity.cn///  ", siteUrl), "https://laity.cn");
+});
+
+test("空串或纯空白的 NEXTAUTH_URL 视同未配置", () => {
+  assert.equal(withEnv("NEXTAUTH_URL", "", siteUrl), "http://localhost:3000");
+  assert.equal(withEnv("NEXTAUTH_URL", "   ", siteUrl), "http://localhost:3000");
+});
+
+test("备案号未配置时返回 null（页脚据此不渲染该行）", () => {
+  assert.equal(withEnv("SITE_ICP", undefined, siteIcp), null);
+  assert.equal(withEnv("SITE_ICP", "", siteIcp), null);
+  assert.equal(withEnv("SITE_ICP", "   ", siteIcp), null);
+  assert.equal(withEnv("SITE_ICP", " 京ICP备12345678号-1 ", siteIcp), "京ICP备12345678号-1");
 });
 
 test("站点名非空", () => {

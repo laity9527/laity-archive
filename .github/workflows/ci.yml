@@ -5,6 +5,8 @@
 # 修改记录：
 # - 2026-11-03: 初始创建（I037）。四道门禁此前全靠人在本机敲，忘跑就直接发版；材料收录完整性自检也放进来，
 #               因为第九轮实测发现"新文件没登记就生成"只能靠人对拍，机器完全能拦
+# - 2026-11-04: 本机按 CI 顺序在 linux 容器里复跑，tsc 步骤报 TS2304 找不到 PageProps/LayoutProps
+#               （干净工作区没有 .next/types）。补 `npx next typegen` 一步，放在 lint 与 tsc 之前
 #
 # 说明：
 #   1. 这里的环境变量全是一次性占位值，不对应任何真实环境，也不含任何凭据——CI 用的一次性 Postgres
@@ -69,6 +71,12 @@ jobs:
 
       - name: 生成 Prisma 客户端
         run: npx prisma generate
+
+      # 干净工作区里没有 .next/types，而 tsconfig 的 include 指着它：
+      # PageProps / LayoutProps 这些路由类型由 Next 生成，缺了 tsc 会直接报 TS2304。
+      # 本机跑过 dev/build 所以从来没暴露，CI 首跑必然红——这一步就是补这个缺口。
+      - name: 生成路由类型
+        run: npx next typegen
 
       - name: 代码检查
         run: npm run lint
