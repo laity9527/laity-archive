@@ -470,3 +470,20 @@ GET  /login                          → http=200，正文含"管理员口令"�
 `npm run lint` 0、`npx tsc --noEmit` 0、`npm test` **73/73**、`npm run build` 0。窗口护栏**第六次**拦下出件（`src/proxy.ts` 被 1500 行前窗口切开），按处置把 `markdown.tsx` 平移进折走段；出件 6392 行 / 128 页 / 收录 66，两次生成 MD5 相同，`whole-check` 的 MUST 清单第三次同步，凭据扫描产物 7 处命中仍全是键名与规则描述。
 
 **补跑记录（同日登录后完成，应用内浏览器 + 顶层导航）**：① `/admin/projects?error=BOGUS` 横幅读出 `未收录的错误码 · BOGUS`（chip 中性、errorText 按既有口径回落原串）；② `/admin/logs/<bogus>/edit` 与 `/admin/logs/logbogusid9z/edit` 两种形状都落在后台外壳内（`main#main` 在、标题"编辑日志"、`LOG_002` 面板、合法形状时 id 原样回显、出口含概览与新建）；③ `nav[aria-label="后台导航"]` 真 DOM 可读，三个链接与 `#main` 跳转齐全；④ `PRJ_003` 服务端分支：先自建临时项目 `prj003-selftest-tmp`，对其删除表单直接 `requestSubmit()`（不经按钮 click，armed 保持 false），服务端回 `?error=PRJ_003` 且项目未被删——随后真实两步点击删掉，`?deleted=1`、列表无残留；⑤ 首页顶层导航后正文读出唯一一条真实日志 `archive-itself-as-first-entry`（库里恰好只有这一条已发布），`take: 3` 链路正常。环境限制照旧：应用内浏览器无视口，宽度类判据本机量不出。
+
+## 十九、第七轮：上线合规面（2026-11-05，决策与背景见 DESIGN D29）
+
+这轮按"每轮换一个量测面"换了上线合规面：HTTP 安全头、SEO 完整性、元数据、依赖健康、生产编排。我给的新授权是"可以增加依赖、文档材料可改、可以使用上线"。
+
+**先记两处"量了但不是缺陷"**：sitemap/robots 在 dev 落 `localhost:3000` 是有意的——`siteUrl()` 复用 `NEXTAUTH_URL`，生产 preflight 硬卡它必须 https 正式域名，线上必然是真域名；manifest 不做，本站不是 PWA。
+
+本轮落地两项，都在 `next.config.ts`（红线文件，授权来自本轮"可暂时突破"）：
+
+1. **CSP（I066）**：先读官方指南（版本红线要求的动作），nonce 方案与 `cacheComponents` 的 PPR **不兼容**（文档原话 "Partial Prerendering is incompatible with nonce-based CSP"），不能为 CSP 推翻既成架构，取官方"Without Nonces"路径发静态头。诚实记录边界：script/style 仍需 `'unsafe-inline'`，这一档挡不住注入的内联脚本，挡住的是外联脚本、object/embed、被嵌套、表单外提与协议降级；`img-src` 放行 `https:` 是因为正文图片走 OSS 直链、域名随桶走。dev 加 `'unsafe-eval'` 且不含 `upgrade-insecure-requests`（http 直连会自断）。
+2. **指纹（I067）**：`poweredByHeader: false`，`X-Powered-By: Next.js` 不再透出。
+
+**实测判据（真实执行）**：`curl -I` 读到完整 CSP 头、`X-Powered-By` 消失；浏览器全程（首页/后台/建草稿/两步删除）控制台 **0 条 CSP violation**，HMR websocket 正常；空表单 `requestSubmit` 被原生约束拦下（`:invalid` 落 title/slug）；临时草稿 `csp-selftest-tmp` 在 CSP 下创建（`?saved=1`）与删除（LOG_004 拒空确认分支顺带验到，回填 slug 后 `?deleted=1`）全部照常，删除后前台 404；未登录访问 `/admin` 仍 307。控制台仅两条无害警告（导航后旧表单节点断连，程序化提交所致，非 CSP）。
+
+**上线面**：镜像 `laity-archive:round7` 构建冒烟 exit 0（1.95GB，standalone 含新配置）；生产编排与 preflight 无需改动；真正的 `up -d` 在服务器上、仍由我本人执行。
+
+**依赖健康（I068）**：`npm outdated` 实跑——全部落后 major（Prisma 6→7、TS 5.9→7、Next 16.4.3→16.4.5 patch）。技术栈锁定原则下不升级；`npm audit` 本机从未跑成（npmmirror security 端点未实现），一次性 `--registry=https://registry.npmjs.org` 审计记 I068 OPEN 等我批。

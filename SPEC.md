@@ -162,4 +162,4 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | 对外口径 | 哈希只是可核对的技术标记，对外文案不暗示法律效力或"存证服务"；对内注释、SPEC 与软著材料保留"证据链"叙事 | 已按此边界改完 `site.ts`、`layout.tsx`、`Seal.tsx`、`logs/page.tsx`、`logs/[slug]/page.tsx` 的访客可见文案 |
 | 应急预案 | 有一份写清"本站到底有什么可泄露"、止血顺序与入侵时不原地清理的预案 | `docs/00-开发方法论/个人信息与凭据泄露应急预案.md`。单人站无第三方用户，不照抄平台型预案的 72 小时通知承诺 |
 | 部署与回滚 | 有一份可照着做的上线/回滚手册，含迁移镜像标签必须刷新这一条（I026） | `docs/00-开发方法论/上线与回滚手册.md` |
-| 安全头与传输 | TLS 1.2/1.3、HSTS、`nosniff`、`X-Frame-Options`、后台与 404 禁止索引 | nginx + Proxy 已配，本机预跑实测响应头齐 |
+| 安全头与传输 | TLS 1.2/1.3、HSTS、`nosniff`、`X-Frame-Options`、CSP、后台与 404 禁止索引 | nginx（前四项）+ `next.config.ts`（CSP 静态头与 `poweredByHeader: false`，D29：nonce 方案与 PPR 不兼容，走官方"Without Nonces"路径）。本机实测：CSP 头就位、浏览器全程 0 条 violation、`X-Powered-By` 不再透出 |

@@ -69,7 +69,8 @@ const BANDS = [
     files: [
       "prisma/schema.prisma",
       "prisma/seed.ts",
-      "package.json",
+      // package.json 是依赖清单与脚本表（配置而非程序逻辑，与折走段里的 tsconfig/docker 同类）；
+      // 本轮 next.config.ts 加 CSP 涨行，把 proxy.ts 尾部推过 1500 切口，按 assertWindowFit 的处置由它让位
       "next.config.ts",
     ],
   },
@@ -96,6 +97,9 @@ const BANDS = [
     files: [
       "src/lib/error-text.ts",
       "src/lib/time.ts",
+      // package.json 从 ① 让位进折走段（2026-11-05 第七轮）：next.config.ts 加 CSP 与 poweredByHeader
+      // 涨行，proxy.ts（1358–1509）被 1500 切口打断；package.json 是依赖清单与脚本表，无程序逻辑
+      "package.json",
       // 对象键生成与断言是从 oss.ts 拆出的纯计算（I061），与嗅探函数同类，放折走段；
       // 它的调用方 oss.ts 与 upload-action.ts 都已在窗口内可见
       "src/lib/object-key.ts",

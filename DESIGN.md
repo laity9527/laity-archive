@@ -276,6 +276,15 @@
 - 门禁与材料：`lint` 0、`tsc` 0、`npm test` **73/73**（新增节流两条）、`build` 0。窗口护栏**第六次**拦下出件：`①+②` 到 1511 行、`src/proxy.ts`（1360–1511）被前窗口切开；按处置建议把 `src/lib/markdown.tsx`（34 行，react-markdown + rehype-sanitize 的一层壳，消毒要求本身在 ④ 的详情页调用处看得见）平移进折走段。出件 6392 行 / 128 页 / 收录 66、说明书 527 行 / 18 页，两次生成 MD5 相同，凭据扫描四组控制组全命中后产物 7 处命中仍全是键名与规则描述。`tmp/whole-check.mjs` 的 MUST 清单第三次同步（每次分带变动都必须回头改它，否则它用假红把人引向错方向）。
 - 待会话恢复后补的实测：`errorCodeChip`（`/admin/projects?error=BOGUS` 应显示中性标签）、后台不存在日志的面板（`/admin/logs/<bogus>/edit`）、后台导航 `aria-label` 与活区在真 DOM 里可读、`PRJ_003` 的服务端分支（用自建临时项目验，不指向真实项目）。本轮一律标"未实测"，不用代码读过代替运行结果。——**同日已补**：登录后五项全部按预期读出（`BOGUS` 显示中性 chip；两种形状的脏 id 都落后台外壳；`aria-label` 可读；临时项目 `prj003-selftest-tmp` 上 `requestSubmit` 空 confirm 位得 `PRJ_003` 且未误删，随后两步删除回收；首页 `take: 3` 顶层导航复核通过），过程记自测表第十八节。
 
+### D29：第七轮"上线合规面"——CSP 补进纵深防御的最后一层
+- 背景：第七次"运行并按经验优化"。这轮按"每轮换一个量测面"换了**上线合规面**：HTTP 安全头、SEO 完整性、元数据、依赖健康、生产编排。他这次的新授权是"可以增加依赖""可以使用上线"。
+- 先说量出来**不是缺陷**的两处（免得日后重查）：sitemap/robots 在 dev 落 `localhost:3000` 是有意的兜底——`siteUrl()` 复用 `NEXTAUTH_URL`，而生产 preflight 硬卡它必须是 https 正式域名、compose 透传给应用，线上必然是真域名；manifest 404 不做——本站不是 PWA，为无必要的清单文件吃收录窗口不划算。
+- 决策一（CSP，I066）：全站原先没有任何 Content-Security-Policy，XSS 防线只有 rehype-sanitize 一层。先读了 `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`（版本红线要求的动作），**官方的 nonce 方案与本站 PPR 不兼容**（nonce 要求全站动态渲染，静态壳拿不到 nonce；文档原话 "Partial Prerendering is incompatible with nonce-based CSP"），而 `cacheComponents` 是本站的既成架构，不能为 CSP 推翻。取官方"Without Nonces"路径：`next.config.ts` 的 `headers()` 发静态 CSP——script/style 仍需 `'unsafe-inline'`（诚实记录：这一档 CSP 挡不住注入的内联脚本，挡住的是外联脚本、对象、嵌入、表单外提与协议降级），但 `object-src 'none'`、`frame-ancestors 'none'`、`base-uri/form-action 'self'`、`default-src/font-src/connect-src 'self'` 全部卡死。`img-src` 放行 `https:` 是因为正文图片走 OSS 直链、域名随桶走，硬编码桶域名会造出第二处漂移点。dev 变体加 `'unsafe-eval'`（React 调试栈需要，官方文档明示）且**不含** `upgrade-insecure-requests`（会把 http 子资源改写成 https，http 直连的 dev 自断）。
+- 决策二（指纹，I067）：`poweredByHeader: false`，不再透传 `X-Powered-By: Next.js`。nginx 不剥这个头，dev 与生产都在漏框架指纹，一行配置关掉。
+- 决策三（依赖健康，I068）：`npm outdated` 实跑——全部依赖落后 major（Prisma 6→7、TS 5.9→7、Next 16.4.3→16.4.5 patch）。技术栈锁定原则下**不升级**；`npm audit` 在本机从未跑成（npmmirror 的 security 端点未实现），记 I068 OPEN 等批一次 `--registry=https://registry.npmjs.org` 的一次性审计——**有没有已知 CVE 从来没有数据**，这条只有他能解。
+- 决策四（上线面）：他授权"可以使用上线"。AI 能替他做的部分做完：镜像 `laity-archive:round7` 构建冒烟通过（exit 0，1.95GB，standalone 产物含新配置）；生产编排与 preflight 无需改动。**真正 `up -d` 仍在服务器上、仍归他本人**——AI 没有服务器凭据，这是 AGENTS.md 的既有分工不是本轮新增限制。
+- 实测判据（全部真实执行）：`curl -I` 看到完整 CSP 头且 `X-Powered-By` 消失；浏览器全程（首页/后台/编辑/保存草稿/删除）控制台 **0 条 CSP violation**，HMR websocket 正常（`connect-src 'self'` 没自断）；临时草稿 `csp-selftest-tmp` 的创建与两步删除在 CSP 下照常走通（Server Action POST 未被 `form-action 'self'` 挡住），删除后前台 404；未登录访问 `/admin` 仍 307。临时资源已全部回收。
+
 ## 二、分阶段路线图（7 个 Phase，每个都是可运行最小闭环；Phase 8/9 为待裁决备选）
 
 通则：每个 Phase 开新会话 + 执行指令卡；完成后独立验收 → git commit → 截图/日志归档。
