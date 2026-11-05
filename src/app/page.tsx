@@ -16,7 +16,11 @@ import { getSafeLogs } from "@/lib/logs";
 import { getArchiveBoard } from "@/lib/projects";
 
 async function ArchiveOverview() {
-  const [board, logs] = await Promise.all([getArchiveBoard(), getSafeLogs()]);
+  // 首页的最新日志只要 3 条，取数交给数据库的 take，不再全表捞回内存
+  const [board, logs] = await Promise.all([
+    getArchiveBoard(),
+    getSafeLogs({ take: 3 }),
+  ]);
 
   // 精选规则（本轮定的，无数据库字段）：有已发布日志的项目按最近更新取前 3；
   // 零日志项目只进下面的状态看板，不进精选

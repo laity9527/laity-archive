@@ -84,7 +84,6 @@ const BANDS = [
       "src/lib/forms.ts",
       "src/lib/sensitive-scan.ts",
       "src/lib/oss.ts",
-      "src/lib/markdown.tsx",
       "src/lib/admin-password.ts",
       "src/auth.ts",
       "src/proxy.ts",
@@ -100,6 +99,9 @@ const BANDS = [
       // 对象键生成与断言是从 oss.ts 拆出的纯计算（I061），与嗅探函数同类，放折走段；
       // 它的调用方 oss.ts 与 upload-action.ts 都已在窗口内可见
       "src/lib/object-key.ts",
+      // Markdown 出口只是 react-markdown + rehype-sanitize 的一层壳（34 行），消毒规则在调用处（④ 的详情页）与注释里都看得见；
+      // 本轮 forms/logs/admin-password 三处各涨几行，①+② 到 1511 把 proxy.ts 切开，由它让位
+      "src/lib/markdown.tsx",
       // 图片类型嗅探是"读文件头几个字节比表"，调用它的上传动作本就在 ③；
       // 本轮 forms.ts / projects.ts / error-text 各自长了几行，①+② 第 1501 行起把 proxy.ts 切开，
       // 按 assertWindowFit 的处置建议由它让位（存证、鉴权、消毒三类真逻辑仍整份在前窗口）

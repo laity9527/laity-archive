@@ -16,9 +16,11 @@ type MarkdownProps = {
   source: string;
 };
 
-// 只降级标签，类名与内容不动：正文的层级关系由作者的 # 数量决定，页级 h1 归页面自己
+// 只降级标签：正文的层级关系由作者的 # 数量决定，页级 h1 归页面自己。
+// 清洗后的 h1 不带任何属性，所以这里只搬 children，不 spread 整个 props
+// （props 里混着 hast 的 node 对象，直接铺到 DOM 元素上会招来一条 React 警告）
 const COMPONENTS: Components = {
-  h1: ({ node, ...props }) => <h2 {...props} />,
+  h1: ({ children }) => <h2>{children}</h2>,
 };
 
 export function Markdown({ source }: MarkdownProps) {

@@ -15,6 +15,8 @@ import { db } from "@/lib/db";
 export type SafeLogFilter = {
   project?: string;
   tag?: string;
+  // 只要前 N 条时交给数据库取，而不是全表捞回内存再切（首页用）
+  take?: number;
 };
 
 const projectSelect = {
@@ -29,6 +31,8 @@ export async function getSafeLogs(filter: SafeLogFilter = {}) {
       ...(filter.tag ? { tags: { has: filter.tag } } : {}),
     },
     orderBy: { beforeDate: "desc" },
+    // 首页只要最新三条，原先把全部已发布日志取回内存再 slice(0,3)
+    ...(filter.take ? { take: filter.take } : {}),
     include: { project: projectSelect },
   });
 }

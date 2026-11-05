@@ -15,6 +15,8 @@
  *               而 `/\host` 这种写法能绕过只挡 `//` 的旧判定跳去外站
  * - 2026-11-04: 错误横幅补 role="alert"、<main> 补 id="main"（D27）：这张页不在前台导航的
  *               管辖里，此前既没有可读出的活区，也没有可跳转的正文地标
+ * - 2026-11-04: 删掉第二次 await connection()（I059）：同一个函数连调两次、注释各说一套，
+ *               第一处已经在读会话之前声明了请求期渲染，第二处什么都不做
  */
 import Link from "next/link";
 import { connection } from "next/server";
@@ -36,10 +38,6 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
   const callbackUrl = safeCallbackUrl(pickParam(params.callbackUrl));
   const errorCode = pickParam(params.error);
-
-  // 声明"以下要读请求期数据"，本页不再进预渲染：否则 NextAuth 初始化时无 csrf cookie
-  // 就用 crypto.randomBytes 现造一个，被 Cache Components 判成不稳定值并触发重渲染循环
-  await connection();
 
   const session = await requireAdminSession();
 

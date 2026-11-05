@@ -14,7 +14,6 @@
  *               发布前核对面板也移进表单、排在按钮之前——原先改了正文不点保存直接发布，发出去的是库里旧内容
  */
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import {
   deleteLogAction,
   publishLogAction,
@@ -23,8 +22,8 @@ import {
 } from "@/app/admin/log-actions";
 import { Editor } from "@/components/Editor";
 import { SubmitButton } from "@/components/SubmitButton";
-import { errorTextOf } from "@/lib/error-text";
-import { LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
+import { errorCodeChip, errorTextOf } from "@/lib/error-text";
+import { ID_PATTERN, LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
 import { getAdminLogById } from "@/lib/logs";
 import { listProjects } from "@/lib/projects";
 import { toDateTimeLocal } from "@/lib/publish";
@@ -53,8 +52,42 @@ export default async function EditLogPage({
   const query = await searchParams;
   const log = await getAdminLogById(id);
 
+  // 记录不在库里时不走 notFound()：那会落到公共 404 页，那页只给 /logs 与 /projects 两个出口，
+  // 从后台点进一条已删除的日志就回不了后台。这里在后台外壳内给一块同口径的提示面板。
   if (!log) {
-    notFound();
+    // 地址里的 id 是任何人可写的段，回显前先按形状挡一道（I065）
+    const shownId = ID_PATTERN.test(id) ? id : "（非法标识）";
+
+    return (
+      <>
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
+          <h1 className="text-3xl font-medium tracking-tight">编辑日志</h1>
+          <Link
+            href="/admin"
+            className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
+          >
+            ← 概览
+          </Link>
+        </div>
+
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+          LOG_002 · 这条日志不存在，可能已被删除。
+        </p>
+
+        <p className="mt-6 font-mono text-[11px] leading-relaxed text-ink-soft">
+          地址里的标识是 <span className="text-ink">{shownId}</span>
+          ，库里没有对应记录。回
+          <Link href="/admin" className="border-b border-ink text-ink">
+            概览
+          </Link>
+          看现有条目，或
+          <Link href="/admin/logs/new" className="border-b border-ink text-ink">
+            新建一条
+          </Link>
+          。
+        </p>
+      </>
+    );
   }
 
   const projects = await listProjects();
@@ -103,7 +136,7 @@ export default async function EditLogPage({
           id="form-error"
           role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
         >
-          {errorCode} · {errorText}
+          {errorCodeChip(errorCode ?? "")} · {errorText}
         </p>
       )}
 

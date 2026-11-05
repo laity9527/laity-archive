@@ -47,7 +47,7 @@ export default async function AdminLayout({
         跳到正文
       </a>
       <header className="flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-4">
-        <nav className="flex items-baseline gap-6">
+        <nav aria-label="后台导航" className="flex items-baseline gap-6">
           <Link
             href="/admin"
             className="font-mono text-[11px] tracking-[0.2em] text-ink"

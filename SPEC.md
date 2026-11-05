@@ -108,13 +108,13 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 
 | 路由 | 优先级 | 数据来源 | 说明 |
 |---|---|---|---|
-| / | P0 | getArchiveBoard + getSafeLogs | 首页：精选区（有已发布日志的项目按最近发布取前三）+ 状态看板（含零日志项目，显示"尚未发布"）+ 最新日志 |
+| / | P0 | getArchiveBoard + getSafeLogs({ take: 3 }) | 首页：精选区（有已发布日志的项目按最近发布取前三）+ 状态看板（含零日志项目，显示"尚未发布"）+ 最新三条日志（取数交给数据库 take，不再全表捞回内存） |
 | /logs | P0 | getSafeLogs（支持 project/tag 筛选参数） | 日志大厅；筛选无命中时给"清除筛选"出口 |
 | /logs/[slug] | P0 | getSafeLogBySlug（仅已发布） | 详情+防伪印章；未发布 slug 返回 404；已发布但缺摘要/时间时显式提示"存证缺失"，不静默省略印章 |
 | /projects、/projects/[slug] | P1 | 项目表 + getSafeLogs | 作品维度 |
 | /admin | P0 | 需登录 | 后台入口/概览 |
 | /admin/projects | P0 | 需登录 | 项目管理；新建与编辑共用一张表单，删除走两步生效（第一次点击置确认位、第二次才提交，缺确认位回 `PRJ_003`） |
-| /admin/logs/new、/admin/logs/[id]/edit | P0 | 需登录 | 双栏编辑器；草稿页在同一张表单里给「保存修改」与「保存并发布」两个动作，已发布日志的编辑页提供「下架」动作 |
+| /admin/logs/new、/admin/logs/[id]/edit | P0 | 需登录 | 双栏编辑器；草稿页在同一张表单里给「保存修改」与「保存并发布」两个动作，已发布日志的编辑页提供「下架」动作；标识不在库里时在后台外壳内提示并给"回概览 / 新建"出口（不落到公共 404 页，D28） |
 | /api/auth/* | P0 | NextAuth | 管理员口令登录的 CSRF/回调/退出端点 |
 | /robots.txt | P1 | 静态生成 | 放行公开路径，屏蔽 /admin、/login 与 /api，指向 sitemap |
 | /sitemap.xml | P1 | getSafeLogs + 项目表（请求期取数） | 只含公开路由（含 /privacy）与已发布内容，草稿与 /admin 不出现 |
@@ -139,7 +139,7 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 - 页面表单动作（saveLogDraft / publishLog / unpublishLog / saveProject / deleteProject）：成功与失败都 `redirect` 回原页，用 URL 参数表达结果——`?saved=1`、`?published=1`、`?unpublished=1`、`?deleted=1`、`?error=CODE`；校验类错误再带一个 `&field=<出错字段>`（D26），让页面把提示标到那一个控件上而不是复述整张表单的规则。这样结果可复核、可截图留证，是 Phase 4 既定验收口径；
 - 编辑器内动作（uploadImage）：调用方要拿返回值插进正文，因此返回对象 `{ ok: true, url, bytes }` 或 `{ ok: false, code }`。
 
-两种形态都不带 `message` 字段：错误码到用户文案的映射统一收在 `src/lib/error-text.ts`，其中 `VAL_001` 按来源表单（log / project）取细则，未知码原样显示码本身。
+两种形态都不带 `message` 字段：错误码到用户文案的映射统一收在 `src/lib/error-text.ts`，其中 `VAL_001` 按来源表单（log / project）与 `&field=` 取细则。文案层对未知码仍回落成码本身，但后台横幅展示时经 `errorCodeChip()` 过滤——只打已收录的错误码，URL 里手填的任意串一律显示"未收录的错误码"（D28）。
 
 ## 四、非目标清单（再次明确）
 

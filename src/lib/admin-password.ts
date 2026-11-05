@@ -44,8 +44,25 @@ type LoginBucket = { failures: number; openedAt: number };
 // 进程内计数：多实例不共享，所以它不是"防爆破的完整方案"，只是应用被直接暴露时的兜底
 const loginBuckets = new Map<string, LoginBucket>();
 
+// 桶只在被读到的时候判过期，过期项此前永远留在 Map 里。
+// 键取自 X-Forwarded-For 首跳——生产由 nginx 覆写故可信，但应用被直连暴露时那是攻击者可任意伪造的一串，
+// 每次换一个就能无限增长。这里在每次记账前扫一遍，窗口走光的桶直接删掉。
+function pruneExpiredBuckets(now: number) {
+  for (const [key, bucket] of loginBuckets) {
+    if (now - bucket.openedAt >= LOGIN_WINDOW_MS) {
+      loginBuckets.delete(key);
+    }
+  }
+}
+
+// 记账之外再兜一道上限：极端伪造下也不让条目无界堆积，
+// 满员时按最旧的桶先淘汰（宁可少计一个来源，也不吃掉进程内存）
+const LOGIN_MAX_BUCKETS = 512;
+
 // 窗口从第一次失败开始计；过期即视为新窗口，不维护定时器（读的时候判过期，省掉清理任务）
 export function attemptsLeft(key: string, now = Date.now()) {
+  pruneExpiredBuckets(now);
+
   const bucket = loginBuckets.get(key);
 
   if (!bucket || now - bucket.openedAt >= LOGIN_WINDOW_MS) {
@@ -56,6 +73,16 @@ export function attemptsLeft(key: string, now = Date.now()) {
 }
 
 export function registerFailure(key: string, now = Date.now()) {
+  pruneExpiredBuckets(now);
+
+  if (loginBuckets.size >= LOGIN_MAX_BUCKETS && !loginBuckets.has(key)) {
+    const oldest = loginBuckets.keys().next().value;
+
+    if (oldest !== undefined) {
+      loginBuckets.delete(oldest);
+    }
+  }
+
   const bucket = loginBuckets.get(key);
 
   if (!bucket || now - bucket.openedAt >= LOGIN_WINDOW_MS) {
@@ -65,6 +92,11 @@ export function registerFailure(key: string, now = Date.now()) {
   }
 
   bucket.failures += 1;
+}
+
+// 只给测试与运维自查用：当前还活着的桶数量
+export function loginBucketCount() {
+  return loginBuckets.size;
 }
 
 export function clearLoginFailures(key: string) {

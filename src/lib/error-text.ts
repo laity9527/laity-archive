@@ -105,3 +105,11 @@ export function errorTextOf(
 
   return ERROR_TEXT[code] ?? code;
 }
+
+// 后台横幅会把 ?error= 的值原样打成一枚码标签（截图留证要用）。但 URL 是任何人可改的，
+// 未知码不该回显到管理页上——已知码照打，其余一律换成中性标签
+export function errorCodeChip(code: string): string {
+  const known = code === "VAL_001" || Object.prototype.hasOwnProperty.call(ERROR_TEXT, code);
+
+  return known ? code : "未收录的错误码";
+}

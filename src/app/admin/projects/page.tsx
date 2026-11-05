@@ -16,7 +16,7 @@
 import Link from "next/link";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
 import { SubmitButton } from "@/components/SubmitButton";
-import { errorTextOf } from "@/lib/error-text";
+import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { LIMITS, REPO_URL_SOURCE, SLUG_SOURCE, pickParam } from "@/lib/forms";
 import { PROJECT_KINDS, PROJECT_STATUSES, getProjectById, listProjects } from "@/lib/projects";
 
@@ -129,7 +129,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           id="form-error"
           role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
         >
-          {errorCode} · {errorText}
+          {errorCodeChip(errorCode ?? "")} · {errorText}
         </p>
       )}
 

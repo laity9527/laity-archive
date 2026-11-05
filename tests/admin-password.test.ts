@@ -6,6 +6,8 @@
  * 修改记录：
  * - 2026-11-04: 初始创建（取消 GitHub 登录后接管准入判据）
  * - 2026-11-04: 补登录节流用例：窗口内计数、过期恢复、按来源隔离、成功即清零、XFF 取第一跳
+ * - 2026-11-04: 补两条过期清理与桶数上限的用例（I063：键是 XFF 首跳，应用被直连暴露时可伪造，
+ *               旧桶以前永不删除）
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -15,6 +17,7 @@ import {
   adminPasswordConfigured,
   attemptsLeft,
   clearLoginFailures,
+  loginBucketCount,
   passwordMatches,
   registerFailure,
   throttleKeyOf,
@@ -136,4 +139,30 @@ test("节流键取 X-Forwarded-For 的第一跳，缺头时落到 fallback", () 
   assert.equal(throttleKeyOf(undefined), "local");
   assert.equal(throttleKeyOf(""), "local");
   assert.equal(throttleKeyOf(" , x"), "local");
+});
+
+// 旧实现里桶只在被读到时判过期，过期项永远留在 Map 中；而键取 XFF 首跳，
+// 应用被直接暴露时那串可以每次换一个，计数表就变成无界内存增长（I063）
+test("记账会顺带清掉窗口已过期的来源桶", () => {
+  const base = loginBucketCount();
+
+  registerFailure("198.51.100.201", T0);
+  registerFailure("198.51.100.202", T0);
+  assert.equal(loginBucketCount(), base + 2);
+
+  // 窗口走光之后再记一次：那两个旧桶应当被扫掉
+  registerFailure("198.51.100.203", T0 + LOGIN_WINDOW_MS);
+
+  assert.ok(
+    loginBucketCount() <= base + 1,
+    `过期桶没被清：当前 ${loginBucketCount()}，基线 ${base}`,
+  );
+});
+
+test("来源桶数量有上限，伪造海量键也不会无界堆积", () => {
+  for (let i = 0; i < 600; i += 1) {
+    registerFailure(`203.0.113.${i}-bucket-${i}`, T0);
+  }
+
+  assert.ok(loginBucketCount() <= 512, `桶数失控：${loginBucketCount()}`);
 });
