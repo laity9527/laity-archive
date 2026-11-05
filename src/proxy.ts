@@ -9,6 +9,7 @@
  * - 2026-10-30: matcher 扩展 /projects/:slug，404 页文案按路由类型分别给出（Phase 5a，经我批准）
  * - 2026-10-30: 未登录改跳自建 /login?callbackUrl=…，不再经 /api/auth/signin 多绕一次 307（I012-B）
  * - 2026-11-04: 白名单校验改为会话里的管理员标记，不再 import src/auth（口令比较用 node:crypto，不该被拉进前置守卫）
+ * - 2026-11-05: 404 内联页背景随 D30 由 #FBFBF9 改为 #f4f1ec（只改色值，前置守卫逻辑与 matcher 一字未动）
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -51,7 +52,7 @@ function notFoundHtml(kind: NotFoundKind) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${copy.title}</title>
 <style>
-html,body{margin:0;padding:0;background:#FBFBF9;color:#131313}
+html,body{margin:0;padding:0;background:#f4f1ec;color:#131313}
 body{font-family:-apple-system,"Segoe UI","Noto Sans SC",sans-serif}
 main{max-width:720px;margin:0 auto;padding:112px 24px}
 .label{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.2em;color:#5C5C5C}

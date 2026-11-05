@@ -163,6 +163,9 @@ const BANDS = [
       // 错误边界只有一句提示与一个重试按钮，渲染真逻辑在 globals.css/布局里；
       // 挪进折走段是为了把 ④ 段整体推后，让 globals.css 的头部回到后窗口内（本轮加进出口令模块后窗口差 20 行）
       "src/app/error.tsx",
+      // 404 外壳与 error.tsx 同类：一句文案 + 两个出口链接，没有算法；
+      // 本轮为把 /about 留在后窗口可见而由它让位（收录不减，assertComplete 核过）
+      "src/app/not-found.tsx",
       // 隐私页是一份静态承诺文案（数据全在页面内的常量数组，无算法）；本轮 globals.css 为正文标题补了
       // 一段样式，④ 涨到把 globals.css 头部切在后窗口外，按 assertWindowFit 的建议由它让位（收录不减）
       "src/app/privacy/page.tsx",
@@ -170,7 +173,7 @@ const BANDS = [
   },
   {
     mark: "④",
-    name: "站点外壳（样式令牌 + 根布局 + 导航页脚）与访客可见界面，末段为对外公示页（开源致谢 / 404；隐私页本轮起进折走段）",
+    name: "站点外壳（样式令牌 + 根布局 + 导航页脚）与访客可见界面，末段为对外公示页（开源致谢 / 关于；隐私页与 404 外壳自本轮起进折走段）",
     files: [
       "src/app/globals.css",
       "src/app/layout.tsx",
@@ -183,8 +186,14 @@ const BANDS = [
       "src/app/logs/[slug]/page.tsx",
       "src/app/projects/page.tsx",
       "src/app/licenses/page.tsx",
+      // 关于页（SPEC F19 / DESIGN D31，2026-11-05 新增）：三段静态文案 + 环境变量联系方式，
+      // 属访客可见界面，与 /licenses、/privacy 同一类公示页
+      "src/app/about/page.tsx",
       "src/app/login/page.tsx",
-      "src/app/not-found.tsx",
+      // not-found.tsx 本轮起进折走段（2026-11-05，第八轮）：新增 /about 页让 ④ 涨了 155 行，
+      // 后窗口切口把 globals.css 的头部（令牌定义处）切了出去；按 assertWindowFit 的处置建议，
+      // 由这份只有一句文案与两个出口链接的 404 外壳让位——与它上面的 error.tsx 同类，
+      // 而视觉令牌与导航必须整份可见
     ],
   },
 ];

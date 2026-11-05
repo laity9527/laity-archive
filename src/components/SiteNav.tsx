@@ -1,11 +1,13 @@
 /**
  * 文件：src/components/SiteNav.tsx
- * 描述：前台站点导航：品牌字标 + 首页/开发日志/作品档案三入口，当前页用 aria-current 标记；后台与登录页不渲染
+ * 描述：前台站点导航：品牌字标（=首页）+ 开发日志/作品档案/关于三入口，当前页用 aria-current 标记；后台与登录页不渲染
  * 作者：张磊
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建。此前前台没有任何持久导航，/projects 只能手输 URL（I030 的根因）
  * - 2026-11-03: 前台/非前台判定改用 src/lib/routes.ts 的 isPublicRoute，与页脚共用一套规则
+ * - 2026-11-05: 按 SPEC F19 与 DESIGN D31 新增「关于」入口（导航三项）；activeKey 用按段边界匹配，
+ *               与 I060/I013 那条"裸 startsWith 会误判"的教训同口径；logs/projects 两行未动
  */
 "use client";
 
@@ -17,6 +19,7 @@ import { isPublicRoute } from "@/lib/routes";
 const SECTIONS = [
   { key: "logs", href: "/logs", label: "开发日志" },
   { key: "projects", href: "/projects", label: "作品档案" },
+  { key: "about", href: "/about", label: "关于" },
 ] as const;
 
 export function SiteNav() {
@@ -33,7 +36,9 @@ export function SiteNav() {
         ? "logs"
         : pathname.startsWith("/projects")
           ? "projects"
-          : null;
+          : pathname === "/about" || pathname.startsWith("/about/")
+            ? "about"
+            : null;
 
   return (
     <header className="border-b border-hairline">

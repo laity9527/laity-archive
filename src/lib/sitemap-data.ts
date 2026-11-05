@@ -7,6 +7,8 @@
  * - 2026-11-03: 初始创建
  * - 2026-11-03: 公开路由清单加 /privacy（隐私与数据说明页）
  * - 2026-11-03: 公开路由清单加 /licenses（开源许可与致谢页）
+ * - 2026-11-05: 公开路由清单加 /about（关于页，SPEC F19 / DESIGN D31；静态页无 lastModified，
+ *               与 /privacy、/licenses 同一写法）
  */
 import { connection } from "next/server";
 import { getSafeLogs } from "@/lib/logs";
@@ -32,6 +34,7 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     { url: `${base}/projects` },
     { url: `${base}/privacy` },
     { url: `${base}/licenses` },
+    { url: `${base}/about` },
     ...logs.map((log) => ({
       url: `${base}/logs/${log.slug}`,
       lastModified: log.updatedAt,
