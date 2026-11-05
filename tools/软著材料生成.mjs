@@ -166,6 +166,12 @@ const BANDS = [
       // 404 外壳与 error.tsx 同类：一句文案 + 两个出口链接，没有算法；
       // 本轮为把 /about 留在后窗口可见而由它让位（收录不减，assertComplete 核过）
       "src/app/not-found.tsx",
+      // 状态看板（67 行）本轮自 ④ 平移进来：D30 A1 给 proxy.ts 文件头加了两行修改记录，
+      // 后窗口切口推到第 5151 行，`globals.css` 的头部（设计令牌定义处，正是本轮改的地方）又被切出去。
+      // 按 assertWindowFit 的处置在 ④ 段挑让位者：Timeline 是 SPEC F02 点名的 Before/After 时间轴形态、
+      // 最能代表本站界面，不折；看板只是把 getArchiveBoard() 的结果排版成若干行，
+      // 而该取数口在 ② 段（src/lib/projects.ts）整份可见——折走的是排版，不是逻辑。
+      "src/components/StatusBoard.tsx",
       // 隐私页是一份静态承诺文案（数据全在页面内的常量数组，无算法）；本轮 globals.css 为正文标题补了
       // 一段样式，④ 涨到把 globals.css 头部切在后窗口外，按 assertWindowFit 的建议由它让位（收录不减）
       "src/app/privacy/page.tsx",
@@ -179,7 +185,7 @@ const BANDS = [
       "src/app/layout.tsx",
       "src/components/SiteNav.tsx",
       "src/components/SiteFooter.tsx",
-      "src/components/StatusBoard.tsx",
+      // StatusBoard.tsx 于本轮自 ④ 平移进折走段 ③（2026-11-05，D30 A1，见 ③ 段注释）
       "src/components/Timeline.tsx",
       "src/app/page.tsx",
       "src/app/logs/page.tsx",

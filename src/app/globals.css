@@ -2,14 +2,14 @@
 
 :root {
   --background: #f4f1ec;
-  --foreground: #131313;
+  --foreground: #1a1a18;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-paper: var(--background);
-  --color-ink: #131313;
+  --color-ink: var(--foreground);
   --color-ink-soft: #5c5c5c;
   --color-hairline: #e7e7e2;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Arial,
@@ -136,7 +136,7 @@ body {
 
 /* 键盘可达性：焦点必须可见，用主墨色 2px 实线，保持零圆角与无阴影 */
 :focus-visible {
-  outline: 2px solid #131313;
+  outline: 2px solid var(--foreground);
   outline-offset: 2px;
 }
 
