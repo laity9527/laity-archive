@@ -8,6 +8,7 @@
  * - 2026-11-03: 前台/非前台判定改用 src/lib/routes.ts 的 isPublicRoute，与页脚共用一套规则
  * - 2026-11-05: 按 SPEC F19 与 DESIGN D31 新增「关于」入口（导航三项）；activeKey 用按段边界匹配，
  *               与 I060/I013 那条"裸 startsWith 会误判"的教训同口径；logs/projects 两行未动
+ * - 2026-11-05: D30 B1 当前项由主墨改为唯一强调色 --brown（`border-brown text-brown`）；非当前项的辅助灰与 aria-current 逻辑均未动
  */
 "use client";
 
@@ -64,7 +65,7 @@ export function SiteNav() {
               aria-current={activeKey === section.key ? "page" : undefined}
               className={`border-b pb-1 font-mono text-[10px] tracking-[0.2em] ${
                 activeKey === section.key
-                  ? "border-ink text-ink"
+                  ? "border-brown text-brown"
                   : "border-transparent text-ink-soft hover:text-ink"
               }`}
             >

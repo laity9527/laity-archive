@@ -12,6 +12,9 @@
   --color-ink: var(--foreground);
   --color-ink-soft: #625d53;
   --color-hairline: #d9d2c5;
+  /* D30 B1：全站唯一强调色，目前只给持久导航的当前项（文字 + 下边框）用；
+     非文本对比 #7a5a3a / #f4f1ec = 5.56:1，≥3:1；不加进按钮、边框或正文 */
+  --color-brown: #7a5a3a;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Arial,
     sans-serif;
   --font-serif: var(--font-noto-serif-sc), "Noto Serif SC",
