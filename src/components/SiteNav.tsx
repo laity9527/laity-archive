@@ -9,6 +9,7 @@
  * - 2026-11-05: 按 SPEC F19 与 DESIGN D31 新增「关于」入口（导航三项）；activeKey 用按段边界匹配，
  *               与 I060/I013 那条"裸 startsWith 会误判"的教训同口径；logs/projects 两行未动
  * - 2026-11-05: D30 B1 当前项由主墨改为唯一强调色 --brown（`border-brown text-brown`）；非当前项的辅助灰与 aria-current 逻辑均未动
+ * - 2026-11-05: D30 B1 补——字标在首页时下边框走 `border-brown`、文字保持 `text-ink`，非首页为 `border-transparent`；"当前态 = 棕色下划线"从此无例外
  */
 "use client";
 
@@ -52,7 +53,9 @@ export function SiteNav() {
       <div className="mx-auto flex max-w-[1080px] flex-wrap items-baseline gap-x-8 gap-y-2 px-6 py-5">
         <Link
           href="/"
-          className="font-mono text-[11px] tracking-[0.3em] text-ink"
+          className={`border-b font-mono text-[11px] tracking-[0.3em] text-ink ${
+            activeKey === "home" ? "border-brown" : "border-transparent"
+          }`}
           aria-current={activeKey === "home" ? "page" : undefined}
         >
           LAITY
