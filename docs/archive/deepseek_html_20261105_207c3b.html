@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laity 数字档案库 · 页面预览</title>
+<style>
+  :root{
+    --paper:#f4f1ec; --paper-2:#efeae1;
+    --ink:#1a1a18; --ink-2:#45423b; --ink-3:#625d53;
+    --brown:#7a5a3a; --rule:#d9d2c5; --rule-strong:#b9b0a0;
+    --green:#1f5a4a; --gold:#9a7228;
+    --serif:"Noto Serif SC","Songti SC","STSong",Georgia,serif;
+    --sans:"Inter",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box;border-radius:0!important;box-shadow:none!important;}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{transition:none!important;}}
+  body{margin:0;background:var(--paper);color:var(--ink-2);font-family:var(--sans);font-size:clamp(.95rem,.9rem + .2vw,1rem);line-height:1.68;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{color:var(--ink);}
+  p{margin:0 0 .85em;} p:last-child{margin-bottom:0;}
+  a{color:var(--brown);text-decoration:none;border-bottom:1px solid rgba(122,90,58,.35);transition:border-color .15s;cursor:pointer;}
+  a:hover{border-bottom-color:var(--brown);}
+  :where(a,button,input,textarea):focus-visible{outline:2px solid var(--brown);outline-offset:3px;}
+  .skip{position:absolute;left:1rem;top:-4rem;z-index:99;background:var(--ink);color:var(--paper);padding:.6rem 1rem;border:0;font-size:.85rem;}
+  .skip:focus{top:1rem;}
+  .wrap{width:100%;max-width:1160px;margin-inline:auto;padding-inline:clamp(18px,5vw,64px);}
+
+  /* 顶部 */
+  .head{position:sticky;top:0;z-index:50;background:rgba(244,241,236,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule);}
+  .head-in{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.5rem 2rem;padding-block:.85rem;}
+  .brand{font-family:var(--serif);font-size:1.22rem;color:var(--ink);letter-spacing:.06em;border:0;}
+  .brand span{color:var(--brown);}
+  .nav ul{display:flex;flex-wrap:wrap;gap:.2rem 1.4rem;list-style:none;margin:0;padding:0;}
+  .nav a{position:relative;padding:.15rem 0;font-size:.82rem;letter-spacing:.04em;color:var(--ink-3);border:0;}
+  .nav a:hover,.nav a.on{color:var(--ink);}
+  .nav a.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:var(--brown);}
+
+  /* 通用 */
+  .view{display:none;} .view.on{display:block;}
+  .kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--brown);margin:0 0 .5rem;}
+  h1{font-family:var(--serif);font-weight:500;font-size:clamp(2rem,.9rem + 4.5vw,3.8rem);line-height:1.08;letter-spacing:-.02em;margin:.55rem 0 1.15rem;text-wrap:balance;}
+  h1 em{font-style:normal;color:var(--brown);}
+  h2{font-family:var(--serif);font-weight:500;font-size:clamp(1.6rem,1rem + 2vw,2.4rem);line-height:1.15;margin:0 0 .5rem;}
+  .btn{font-family:var(--sans);font-size:.8rem;letter-spacing:.04em;padding:.5rem 1rem;background:transparent;color:var(--ink);border:1px solid var(--rule-strong);cursor:pointer;transition:background .15s,border-color .15s;}
+  .btn:hover{background:rgba(122,90,58,.07);border-color:var(--brown);}
+  .sec{padding-block:clamp(2rem,5vw,4rem);border-bottom:1px solid var(--rule);}
+  .sec-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem 2rem;margin-bottom:1.5rem;}
+  .lede{max-width:62ch;color:var(--ink-2);}
+
+  /* 首屏 */
+  .hero{padding-block:clamp(2.2rem,6vw,4.5rem) clamp(1.8rem,4vw,3rem);border-bottom:1px solid var(--rule);}
+  .hero-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:clamp(1.5rem,5vw,4rem);align-items:start;}
+  .hero-side{border-left:1px solid var(--rule);padding-left:clamp(1rem,3vw,2.25rem);}
+  .side-t{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--brown);font-weight:500;margin:0 0 .7rem;}
+  .status{margin:1.1rem 0 0;display:grid;gap:.7rem;}
+  .status>div{display:grid;grid-template-columns:5.2rem 1fr;gap:.6rem;padding-top:.7rem;border-top:1px solid var(--rule);}
+  .status dt{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase;margin:0;}
+  .status dd{margin:0;font-size:.9rem;color:var(--ink);}
+
+  /* 档案条目 */
+  .entries{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule-strong);}
+  .entry{border-bottom:1px solid var(--rule);}
+  .entry-head{width:100%;display:flex;align-items:baseline;gap:clamp(.7rem,2vw,1.5rem);padding:1.1rem .2rem;background:transparent;border:0;text-align:left;cursor:pointer;font:inherit;color:inherit;transition:background .15s;}
+  .entry-head:hover{background:rgba(122,90,58,.045);}
+  .e-no{font-family:var(--mono);font-size:.78rem;letter-spacing:.1em;color:var(--brown);flex:none;}
+  .e-name{font-family:var(--serif);font-weight:500;font-size:clamp(1.25rem,.9rem + 1.8vw,1.8rem);color:var(--ink);line-height:1.2;flex:1 1 auto;}
+  .e-meta{font-size:.74rem;letter-spacing:.03em;color:var(--ink-3);flex:none;}
+  .e-icon{flex:none;width:1.1rem;text-align:center;font-family:var(--mono);font-size:1.1rem;color:var(--brown);}
+  .e-icon::before{content:"+";}
+  .entry-head[aria-expanded="true"] .e-icon::before{content:"−";}
+  .entry-panel{padding:.3rem .2rem 1.8rem;}
+  .entry-panel[hidden]{display:none;}
+  .panel-grid{display:grid;grid-template-columns:260px minmax(0,1fr);gap:clamp(1.2rem,3.5vw,2.4rem);align-items:start;}
+  .panel-body{max-width:64ch;font-size:.95rem;}
+  .facts{margin:1rem 0;display:grid;gap:.8rem;}
+  .facts>div{display:grid;grid-template-columns:5.2rem minmax(0,1fr);gap:.7rem;padding-top:.7rem;border-top:1px solid var(--rule);}
+  .facts dt{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--brown);margin:0;}
+  .facts dd{margin:0;font-size:.9rem;color:var(--ink-2);}
+  .demo-note{margin:0;font-size:.82rem;color:var(--ink-3);padding:.65rem .8rem;border:1px dashed var(--rule-strong);}
+  .demo-note b{color:var(--ink-2);font-weight:600;}
+  .detail-link{display:inline-block;margin-top:1rem;font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;}
+
+  /* 预览缩略图 */
+  .thumb{aspect-ratio:4/3;display:grid;gap:5px;padding:8px;background:#fff;border:1px solid var(--rule);}
+  .thumb b{display:block;min-height:0;background:#e9e3d9;}
+  .thumb--portfolio{grid-template-columns:1fr 1fr .72fr;}
+  .thumb--portfolio .c{display:grid;grid-template-rows:1fr 1fr;gap:5px;}
+  .thumb--portfolio .c b{background:#e7ddd0;}
+  .thumb--portfolio .s{display:grid;grid-template-rows:repeat(3,1fr);gap:5px;}
+  .thumb--portfolio .s b{background:transparent;border-top:1px solid var(--brown);opacity:.5;}
+  .thumb--report{grid-template-columns:.75fr 1.4fr .75fr;}
+  .thumb--report .c{display:grid;align-content:start;gap:5px;}
+  .thumb--report .c b{height:7px;background:#e3e6e2;}
+  .thumb--report .chart{display:flex;align-items:flex-end;gap:4px;padding:5px;border:1px solid #dfe3df;}
+  .thumb--report .chart b{flex:1;background:var(--green);opacity:.7;height:38%;}
+  .thumb--report .chart b:nth-child(2){height:62%;} .thumb--report .chart b:nth-child(3){height:50%;}
+  .thumb--report .chart b:nth-child(4){height:84%;} .thumb--report .chart b:nth-child(5){height:70%;}
+  .thumb--report .chart b:nth-child(6){height:96%;background:var(--gold);}
+  .thumb--saas{grid-template-columns:26px 1fr;}
+  .thumb--saas .n{display:grid;align-content:start;gap:5px;}
+  .thumb--saas .n b{height:6px;background:#e4e6e3;} .thumb--saas .n b:first-child{height:8px;background:#4c5a66;opacity:.7;}
+  .thumb--saas .m{display:grid;grid-template-rows:auto 1fr;gap:6px;}
+  .thumb--saas .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+  .thumb--saas .kpi b{height:20px;background:#fff;border:1px solid #e4e6e3;}
+  .thumb--saas .ch{display:grid;grid-template-columns:1.4fr 1fr;gap:5px;}
+  .thumb--saas .ch b{background:#e4e6e3;} .thumb--saas .ch b:first-child{background:#4c5a66;opacity:.3;}
+  .thumb--assets{grid-template-columns:26px 1fr 1fr;}
+  .thumb--assets .n{display:grid;align-content:start;gap:5px;}
+  .thumb--assets .n b{height:6px;background:#e4e6e3;} .thumb--assets .n b:first-child{height:8px;background:var(--pos);opacity:.7;}
+  .thumb--assets .s{display:grid;align-content:start;gap:5px;}
+  .thumb--assets .s b{height:14px;background:#e4e6e3;} .thumb--assets .s b:nth-child(2){height:40px;background:#fff;border:1px solid #e4e6e3;}
+  .thumb--assets .ring{width:100%;max-width:52px;aspect-ratio:1;border-radius:50%!important;justify-self:center;align-self:start;background:conic-gradient(var(--pos) 0 62%,#e4e6e3 62% 100%);opacity:.9;}
+
+  /* 精选与日志 */
+  .mini-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--ink);}
+  .mini-list>li{border-bottom:1px solid var(--rule);padding:1rem 0;}
+  .mini-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:.3rem 1.4rem;}
+  .mini-name{font-family:var(--serif);font-size:1.15rem;color:var(--ink);border:0;}
+  .mini-name:hover{color:var(--brown);}
+  .mini-meta{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--ink-3);}
+  .mini-sum{margin:.35rem 0 0;font-size:.88rem;color:var(--ink-3);}
+
+  /* 时间轴 */
+  .log-item{display:grid;grid-template-columns:200px minmax(0,1fr);gap:clamp(1.2rem,3vw,2.5rem);padding:1.5rem 0;border-bottom:1px solid var(--rule);}
+  .tl{position:relative;font-family:var(--mono);}
+  .tl::before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:1px;background:var(--rule);}
+  .tl-row{display:flex;gap:.8rem;position:relative;z-index:1;}
+  .tl-row+.tl-row{margin-top:1rem;}
+  .tl-lab{font-size:.66rem;letter-spacing:.1em;color:var(--ink-3);width:52px;padding-top:2px;}
+  .tl-val{font-size:.78rem;color:var(--ink);line-height:1.5;}
+  .tl-node{width:7px;height:7px;background:var(--ink);margin-top:5px;flex:none;}
+  .tl-node.empty{background:transparent;border:1px solid var(--rule-strong);}
+  .log-meta{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;color:var(--ink-3);margin-bottom:.3rem;}
+  .log-title{font-family:var(--serif);font-size:1.15rem;font-weight:500;color:var(--ink);margin:0 0 .3rem;}
+  .log-title a{color:var(--ink);border:0;} .log-title a:hover{color:var(--brown);}
+  .log-sum{font-size:.9rem;color:var(--ink-3);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+  /* 筛选 */
+  .filters{display:flex;flex-wrap:wrap;gap:.6rem 1.6rem;padding:1rem 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:1.5rem;align-items:baseline;}
+  .f-group{display:flex;flex-wrap:wrap;gap:.3rem 1rem;align-items:baseline;}
+  .f-lab{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;color:var(--ink-3);}
+  .filters button{font:inherit;font-size:.8rem;background:none;border:0;border-bottom:1px solid transparent;color:var(--ink-3);cursor:pointer;padding:.1rem 0;}
+  .filters button:hover{color:var(--ink);}
+  .filters button.on{color:var(--ink);border-bottom-color:var(--ink);}
+
+  /* 日志详情 */
+  .detail{max-width:720px;margin-inline:auto;}
+  .detail-head{border-bottom:1px solid var(--rule);padding-bottom:1.6rem;margin-bottom:2rem;}
+  .detail-head h1{font-size:clamp(1.6rem,1rem + 2.2vw,2.4rem);margin:.5rem 0 1rem;}
+  .prose{font-family:var(--serif);font-size:18px;line-height:1.85;color:var(--ink-2);}
+  .prose h2{font-family:var(--serif);font-size:1.35em;font-weight:500;margin:1.6em 0 .5em;color:var(--ink);}
+  .prose p{margin:0 0 1.2em;}
+  .prose ul{padding-left:1.4em;margin:0 0 1.2em;}
+  .prose li{margin-bottom:.4em;}
+  .prose code{font-family:var(--mono);font-size:.85em;background:rgba(122,90,58,.08);padding:.1em .35em;}
+  .sec-lab{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--brown);margin:2rem 0 .6rem;}
+  .seal{margin-top:3rem;border-top:1px solid var(--ink);padding-top:1rem;font-family:var(--mono);font-size:.78rem;line-height:1.8;color:var(--ink-3);}
+  .seal b{display:block;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin-bottom:.4rem;}
+  .seal .hash{word-break:break-all;color:var(--ink);}
+  .warn{margin-top:2.5rem;border:1px solid var(--ink);padding:1rem;font-family:var(--mono);font-size:.76rem;line-height:1.7;color:var(--ink);}
+  .warn b{display:block;letter-spacing:.14em;margin-bottom:.4rem;}
+
+  /* 项目详情 */
+  .crumb{font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;color:var(--ink-3);margin-bottom:1.6rem;display:inline-block;border:0;}
+  .crumb:hover{color:var(--brown);}
+  .proj-head h1{font-size:clamp(1.8rem,1rem + 2.6vw,2.8rem);margin:.4rem 0 .6rem;}
+  .proj-sub{font-size:1rem;color:var(--ink-3);margin:0 0 1.6rem;}
+  .meta-grid{display:grid;grid-template-columns:6rem minmax(0,1fr);gap:.5rem 1rem;font-family:var(--mono);font-size:.8rem;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:1.2rem 0;margin-bottom:1.8rem;}
+  .meta-grid dt{color:var(--ink-3);} .meta-grid dd{margin:0;color:var(--ink);}
+  .proj-desc{font-size:.98rem;line-height:1.8;max-width:64ch;}
+
+  /* 联系 */
+  .contact-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(1.5rem,5vw,4rem);margin-top:1.4rem;align-items:start;}
+  .c-list{margin:0;border-top:1px solid var(--rule-strong);}
+  .c-list>div{display:grid;grid-template-columns:5.5rem minmax(0,1fr);gap:1rem;padding:.8rem 0;border-bottom:1px solid var(--rule);align-items:baseline;}
+  .c-list dt{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:0;}
+  .c-list dd{margin:0;color:var(--ink);font-size:.94rem;}
+  .c-list dd.pending{color:var(--ink-3);font-style:italic;}
+  .form{display:grid;gap:.9rem;}
+  .field{display:grid;gap:.25rem;}
+  .field label{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);}
+  .field input,.field textarea{font-family:var(--sans);font-size:.94rem;color:var(--ink);background:#fff;border:1px solid var(--rule-strong);padding:.55rem .65rem;width:100%;resize:vertical;}
+  .field input:focus-visible,.field textarea:focus-visible{outline:2px solid var(--brown);outline-offset:1px;border-color:var(--brown);}
+  .form-note{font-size:.8rem;color:var(--ink-3);min-height:1.3em;margin:0;}
+
+  .foot{padding-block:2rem;background:var(--paper-2);border-top:1px solid var(--rule);}
+  .foot-in{display:flex;flex-wrap:wrap;gap:.5rem 2rem;justify-content:space-between;align-items:baseline;}
+  .foot-in p{margin:0;font-size:.78rem;color:var(--ink-3);max-width:70ch;}
+  .foot-in p:first-child{font-family:var(--serif);font-size:.94rem;color:var(--ink);letter-spacing:.05em;}
+
+  @media(max-width:900px){
+    .hero-grid{grid-template-columns:1fr;}
+    .hero-side{border-left:0;padding-left:0;border-top:1px solid var(--rule);padding-top:1.3rem;}
+    .panel-grid{grid-template-columns:1fr;}
+    .thumb{max-width:300px;}
+    .log-item{grid-template-columns:1fr;gap:1rem;}
+    .contact-grid{grid-template-columns:1fr;}
+  }
+  @media(max-width:620px){
+    .entry-head{display:grid;grid-template-columns:2.2rem minmax(0,1fr) 1.1rem;grid-template-areas:"no name icon" "no meta icon";column-gap:.7rem;row-gap:.15rem;align-items:center;}
+    .e-no{grid-area:no;align-self:center;} .e-name{grid-area:name;} .e-meta{grid-area:meta;font-size:.7rem;} .e-icon{grid-area:icon;align-self:center;}
+    .facts>div,.c-list>div{grid-template-columns:1fr;gap:.2rem;}
+    .filters{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">跳到主内容</a>
+
+<header class="head">
+  <div class="wrap head-in">
+    <a class="brand" href="#" onclick="show('home');return false;">Laity<span>.</span></a>
+    <nav class="nav" aria-label="主导航">
+      <ul>
+        <li><a href="#" id="nav-home" class="on" onclick="show('home');return false;">索引大厅</a></li>
+        <li><a href="#" id="nav-logs" onclick="show('logs');return false;">开发日志</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ============ 1. 索引大厅 ============ -->
+<div class="view on" id="view-home">
+  <section class="hero wrap">
+    <div class="hero-grid">
+      <div>
+        <p class="kicker">数字档案库 · 2026</p>
+        <h1>把四类界面收进一个<em>可查阅</em>的档案库</h1>
+        <p class="lede">作品集、研究报告、分析工作台与资产看板，共用一套纸色底、衬线标题与等宽编号的秩序。每份档案保留自己的强调色与数据逻辑，但排版、间距与焦点规则完全一致。</p>
+      </div>
+      <aside class="hero-side">
+        <h2 class="side-t">简介</h2>
+        <p>档案库是一份关于「同一套视觉语言如何承载四种不同任务」的设计方案：展示型内容用大号衬线与充足留白，数据型内容用无衬线数字与克制强调色。</p>
+        <dl class="status">
+          <div><dt>当前状态</dt><dd>四份档案结构已定稿，交互规范同步落地</dd></div>
+          <div><dt>数据</dt><dd>全部为本地演示数据</dd></div>
+          <div><dt>署名</dt><dd>待补充（未提供）</dd></div>
+        </dl>
+      </aside>
+    </div>
+  </section>
+
+  <section class="sec wrap">
+    <div class="sec-head">
+      <div>
+        <p class="kicker">档案 01 — 04</p>
+        <h2>四个档案条目</h2>
+        <p class="lede">展开查看背景、职责、成果与演示声明；点击条目名称进入项目详情页。</p>
+      </div>
+      <button class="btn" id="toggle-all" type="button" aria-expanded="false">展开全部</button>
+    </div>
+
+    <ol class="entries">
+      <li><article class="entry">
+        <button class="entry-head" aria-expanded="false" aria-controls="p1" type="button">
+          <span class="e-no">01</span><span class="e-name">个人作品集</span><span class="e-meta">展示型 · 2026</span><span class="e-icon" aria-hidden="true"></span>
+        </button>
+        <div class="entry-panel" id="p1" hidden>
+          <div class="panel-grid">
+            <div class="thumb thumb--portfolio" aria-hidden="true">
+              <div class="c"><b></b><b></b></div><div class="c"><b></b><b></b></div>
+              <div class="s"><b></b><b></b><b></b></div>
+            </div>
+            <div class="panel-body">
+              <p><strong>个人创作者的作品与履历档案。</strong>暖纸色与衬线标题承载第一印象：顶部姓名、专业与区块导航；首屏大标题说明擅长的工作，右侧简介与当前状态；往下左侧双列作品卡，右侧职业时间线、技能标签与联系入口。</p>
+              <dl class="facts">
+                <div><dt>职责</dt><dd>信息架构、视觉系统、前端实现</dd></div>
+                <div><dt>成果</dt><dd>可复用的纸色排版规范；作品卡点击展开背景、职责与成果，支持关闭</dd></div>
+              </dl>
+              <p class="demo-note"><b>演示声明：</b>作品名称、客户与年份均为本地演示内容；不虚构获奖、背书或真实来源。</p>
+              <a class="detail-link" href="#" onclick="show('project');return false;">查看项目详情 →</a>
+            </div>
+          </div>
+        </div>
+      </article></li>
+
+      <li><article class="entry">
+        <button class="entry-head" aria-expanded="false" aria-controls="p2" type="button">
+          <span class="e-no">02</span><span class="e-name">数据研究报告</span><span class="e-meta">阅读型 · 2026</span><span class="e-icon" aria-hidden="true"></span>
+        </button>
+        <div class="entry-panel" id="p2" hidden>
+          <div class="panel-grid">
+            <div class="thumb thumb--report" aria-hidden="true">
+              <div class="c"><b></b><b></b><b></b></div>
+              <div class="chart"><b></b><b></b><b></b><b></b><b></b><b></b></div>
+              <div class="c"><b></b><b></b></div>
+            </div>
+            <div class="panel-body">
+              <p><strong>可阅读、可打印的数据报告档案。</strong>顶部展示报告主题、作者与时间；桌面为左侧执行摘要与编号洞察、中部关键指标与图表、右侧固定章节目录。图表含分组柱状图与趋势折线图，单位、图例与时间范围均与摘要一致。</p>
+              <dl class="facts">
+                <div><dt>职责</dt><dd>数据叙事结构、图表规范、打印样式</dd></div>
+                <div><dt>成果</dt><dd>目录点击滚动并高亮当前章节；移动端目录改为可展开列表；提供打印样式与演示数据 CSV 下载</dd></div>
+              </dl>
+              <p class="demo-note"><b>演示声明：</b>全部数值为本地示例数据；来源区明确说明数据为示例，不伪造引用。</p>
+              <a class="detail-link" href="#" onclick="show('project');return false;">查看项目详情 →</a>
+            </div>
+          </div>
+        </div>
+      </article></li>
+
+      <li><article class="entry">
+        <button class="entry-head" aria-expanded="false" aria-controls="p3" type="button">
+          <span class="e-no">03</span><span class="e-name">分析工作台</span><span class="e-meta">操作型 · 2026</span><span class="e-icon" aria-hidden="true"></span>
+        </button>
+        <div class="entry-panel" id="p3" hidden>
+          <div class="panel-grid">
+            <div class="thumb thumb--saas" aria-hidden="true">
+              <div class="n"><b></b><b></b><b></b><b></b></div>
+              <div class="m"><div class="kpi"><b></b><b></b><b></b><b></b></div><div class="ch"><b></b><b></b></div></div>
+            </div>
+            <div class="panel-body">
+              <p><strong>SaaS 团队的日常指标与任务面板。</strong>桌面左侧导航，顶部工作区与搜索；主区域依次为问候与时间范围、四个指标卡、收入趋势面积图与套餐收入环图，下方为任务列表、团队状态与通知。</p>
+              <dl class="facts">
+                <div><dt>职责</dt><dd>数据可视化、交互状态设计、前端实现</dd></div>
+                <div><dt>成果</dt><dd>时间范围切换更新同一套数据；搜索筛选任务或通知；任务勾选即时更新完成数；CSV 导出当前范围</dd></div>
+              </dl>
+              <p class="demo-note"><b>演示声明：</b>品牌 Mercator 与全部指标均为本地演示数据，不对应任何真实企业或业绩。</p>
+              <a class="detail-link" href="#" onclick="show('project');return false;">查看项目详情 →</a>
+            </div>
+          </div>
+        </div>
+      </article></li>
+
+      <li><article class="entry">
+        <button class="entry-head" aria-expanded="false" aria-controls="p4" type="button">
+          <span class="e-no">04</span><span class="e-name">资产看板</span><span class="e-meta">台账型 · 2026</span><span class="e-icon" aria-hidden="true"></span>
+        </button>
+        <div class="entry-panel" id="p4" hidden>
+          <div class="panel-grid">
+            <div class="thumb thumb--assets" aria-hidden="true">
+              <div class="n"><b></b><b></b><b></b><b></b></div>
+              <div class="s"><b></b><b></b><b></b><b></b></div>
+              <div class="s"><b class="ring"></b><b></b></div>
+            </div>
+            <div class="panel-body">
+              <p><strong>本地模拟的资产与交易台账。</strong>桌面左侧导航；中部展示总资产、投入资金、现金、年度收入与收益趋势；右侧资产配置环图、风险信息与操作入口；下方近期交易表。所有金额、收益与持仓均标注为演示。</p>
+              <dl class="facts">
+                <div><dt>职责</dt><dd>台账信息架构、状态色系统、表格交互</dd></div>
+                <div><dt>成果</dt><dd>时间范围与净值/收益视图切换更新一致数据；交易表支持类型筛选、搜索与 CSV 导出；金额可一键隐藏</dd></div>
+              </dl>
+              <p class="demo-note"><b>演示声明：</b>不连接任何金融账户、不发起交易、不提供个性化投资建议；所有数值为本地模拟。</p>
+              <a class="detail-link" href="#" onclick="show('project');return false;">查看项目详情 →</a>
+            </div>
+          </div>
+        </div>
+      </article></li>
+    </ol>
+  </section>
+
+  <section class="sec wrap">
+    <div class="sec-head"><div><p class="kicker">最新 · 三条</p><h2>最新日志</h2></div></div>
+    <ul class="mini-list">
+      <li><div class="mini-row"><a class="mini-name" href="#" onclick="show('detail');return false;">决定放弃本地搜索，改用索引预构建</a><span class="mini-meta">个人作品集 · 2026-03-12</span></div><p class="mini-sum">构建耗时从 3.2s 涨到 11.8s，权衡后改为构建期预生成索引。</p></li>
+      <li><div class="mini-row"><a class="mini-name" href="#" onclick="show('detail');return false;">重构时间轴锚点组件</a><span class="mini-meta">数据研究报告 · 2026-03-10</span></div><p class="mini-sum">引入等宽字体，统一全站时间显示格式，解决多项目下的 UI 错位。</p></li>
+      <li><div class="mini-row"><a class="mini-name" href="#" onclick="show('detail');return false;">时区偏移吃掉了一整天</a><span class="mini-meta">数据研究报告 · 2026-03-08</span></div><p class="mini-sum">UTC 与本地时间混用导致图表横轴整体错位，改为存储 UTC、展示层转换。</p></li>
+    </ul>
+  </section>
+
+  <section class="sec wrap">
+    <div class="sec-head"><div><p class="kicker">联系 · 索引</p><h2>联系</h2><p class="lede">仅展示已提供的信息；未提供的字段保留占位。</p></div></div>
+    <div class="contact-grid">
+      <dl class="c-list">
+        <div><dt>姓名</dt><dd class="pending">待补充</dd></div>
+        <div><dt>邮箱</dt><dd class="pending">待补充</dd></div>
+        <div><dt>作品外链</dt><dd class="pending">待补充</dd></div>
+        <div><dt>所在城市</dt><dd class="pending">待补充</dd></div>
+      </dl>
+      <form class="form" onsubmit="event.preventDefault();document.getElementById('fn').textContent='这是本地演示表单，未连接任何服务。正式联系方式待补充。';">
+        <div class="field"><label for="n">姓名</label><input id="n" type="text" autocomplete="name"></div>
+        <div class="field"><label for="e">邮箱</label><input id="e" type="email" autocomplete="email"></div>
+        <div class="field"><label for="m">留言</label><textarea id="m" rows="4"></textarea></div>
+        <button class="btn" type="submit">发送留言</button>
+        <p class="form-note" id="fn" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+</div>
+
+<!-- ============ 2. 开发日志大厅 ============ -->
+<div class="view" id="view-logs">
+  <section class="sec wrap">
+    <p class="kicker">日志 · 全部</p>
+    <h1 style="font-size:clamp(1.8rem,1rem + 3vw,3rem);">开发日志</h1>
+    <p class="lede" style="margin-bottom:1.5rem;">按项目与标签筛选；每条分成 BEFORE 判断与 AFTER 验证两段，详情页附正文 SHA-256 摘要与发布时间。</p>
+
+    <nav class="filters" aria-label="日志筛选">
+      <div class="f-group">
+        <span class="f-lab">PROJECT</span>
+        <button class="on" type="button">全部</button>
+        <button type="button">个人作品集</button>
+        <button type="button">数据研究报告</button>
+      </div>
+      <div class="f-group">
+        <span class="f-lab">TAG</span>
+        <button type="button">全部</button>
+        <button type="button">需求判断</button>
+        <button type="button">踩坑</button>
+        <button type="button">实现</button>
+      </div>
+    </nav>
+
+    <div>
+      <article class="log-item">
+        <div class="tl">
+          <div class="tl-row"><span class="tl-lab">BEFORE</span><span class="tl-val">2026-03-12<br>14:02</span><span class="tl-node"></span></div>
+          <div class="tl-row"><span class="tl-lab">AFTER</span><span class="tl-val">2026-03-12<br>15:47</span><span class="tl-node"></span></div>
+        </div>
+        <div>
+          <p class="log-meta">个人作品集 · 需求判断</p>
+          <h2 class="log-title"><a href="#" onclick="show('detail');return false;">决定放弃本地搜索，改用索引预构建</a></h2>
+          <p class="log-sum">构建耗时从 3.2s 涨到 11.8s，权衡后改为构建期预生成索引。前者改动小，但首次搜索仍有 3s 冷启动；后者把成本从运行时挪到构建时。</p>
+        </div>
+      </article>
+
+      <article class="log-item">
+        <div class="tl">
+          <div class="tl-row"><span class="tl-lab">BEFORE</span><span class="tl-val">2026-03-10<br>10:15</span><span class="tl-node"></span></div>
+          <div class="tl-row"><span class="tl-lab">AFTER</span><span class="tl-val">2026-03-10<br>11:30</span><span class="tl-node"></span></div>
+        </div>
+        <div>
+          <p class="log-meta">数据研究报告 · 实现</p>
+          <h2 class="log-title"><a href="#" onclick="show('detail');return false;">重构时间轴锚点组件</a></h2>
+          <p class="log-sum">引入等宽字体，强制统一全站的时间显示格式，解决多项目下的 UI 错位问题。</p>
+        </div>
+      </article>
+
+      <article class="log-item">
+        <div class="tl">
+          <div class="tl-row"><span class="tl-lab">BEFORE</span><span class="tl-val">2026-03-08<br>09:20</span><span class="tl-node"></span></div>
+          <div class="tl-row"><span class="tl-lab">AFTER</span><span class="tl-val">进行中</span><span class="tl-node empty"></span></div>
+        </div>
+        <div>
+          <p class="log-meta">数据研究报告 · 踩坑</p>
+          <h2 class="log-title"><a href="#" onclick="show('detail');return false;">时区偏移吃掉了一整天</a></h2>
+          <p class="log-sum">UTC 与本地时间混用导致图表横轴整体错位，改为存储 UTC、展示层转换，并给所有时间标注时区。</p>
+        </div>
+      </article>
+    </div>
+  </section>
+</div>
+
+<!-- ============ 3. 日志详情 ============ -->
+<div class="view" id="view-detail">
+  <section class="sec wrap">
+    <div class="detail">
+      <a class="crumb" href="#" onclick="show('logs');return false;">← 开发日志</a>
+      <header class="detail-head">
+        <p class="log-meta" style="margin:0;">个人作品集</p>
+        <h1>决定放弃本地搜索，改用索引预构建</h1>
+        <div class="tl" style="max-width:220px;">
+          <div class="tl-row"><span class="tl-lab">BEFORE</span><span class="tl-val">2026-03-12 14:02 UTC</span><span class="tl-node"></span></div>
+          <div class="tl-row"><span class="tl-lab">AFTER</span><span class="tl-val">2026-03-12 15:47 UTC</span><span class="tl-node"></span></div>
+        </div>
+        <p class="log-meta" style="margin:1rem 0 0;">需求判断 · 踩坑</p>
+      </header>
+
+      <p class="sec-lab">BEFORE</p>
+      <div class="prose">
+        <p>站点从 12 篇日志涨到 40 篇后，构建耗时从 3.2s 涨到 11.8s。本地搜索的候选方案有两个：</p>
+        <ul>
+          <li>方案 A：保留运行时全文检索，用 <code>flexsearch</code> 在客户端建索引。改动小，但首次搜索有约 3s 冷启动。</li>
+          <li>方案 B：构建期预生成索引，把成本从运行时挪到构建时。</li>
+        </ul>
+        <p>我倾向于 B：读者打开页面是为了阅读，不是为了等待一个搜索框可用。</p>
+      </div>
+
+      <p class="sec-lab">AFTER</p>
+      <div class="prose">
+        <p>预构建后首次打开 1.1s，构建期多 4s，可接受。索引文件按项目分片，单篇日志更新只重建对应分片。</p>
+      </div>
+
+      <p class="sec-lab">LESSON LEARNED</p>
+      <div class="prose"><p>用构建期成本换首次打开速度。凡是「读者一进来就要用」的能力，都不该让它在运行时冷启动。</p></div>
+
+      <div class="seal">
+        <b>存证印章</b>
+        <div>CONTENT HASH</div>
+        <div class="hash">3f9a1c8e5b7d2a4f6c0e8b1d3a5f7c9e2b4d6f8a0c1e3b5d7f9a1c3e5b7d2a4f</div>
+        <div style="margin-top:.5rem;">PUBLISHED AT</div>
+        <div>2026-03-12 08:00 UTC</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ 4. 项目详情（下钻页） ============ -->
+<div class="view" id="view-project">
+  <section class="sec wrap">
+    <div style="max-width:820px;">
+      <a class="crumb" href="#" onclick="show('home');return false;">← 返回索引大厅</a>
+      <div class="proj-head">
+        <p class="kicker">项目 · 01</p>
+        <h1>个人作品集</h1>
+        <p class="proj-sub">用暖纸色与衬线字体，建立高信任度的个人档案。</p>
+      </div>
+      <dl class="meta-grid">
+        <dt>标识</dt><dd>portfolio</dd>
+        <dt>类型</dt><dd>PRODUCT</dd>
+        <dt>状态</dt><dd>LIVE</dd>
+        <dt>起始</dt><dd>2026-01</dd>
+        <dt>日志</dt><dd>2 篇已发布</dd>
+        <dt>仓库</dt><dd><a href="#" onclick="return false;">github.com/laity9527/portfolio</a></dd>
+      </dl>
+      <div class="proj-desc">
+        <p>本卷是一个高度克制的展示型页面。放弃了常见的暗黑模式与卡片堆叠，采用暖纸底与衬线标题的组合，以留白和极细的分隔线来构建信息层级。</p>
+        <p>项目详情属于下钻页面，只能从索引大厅的档案条目进入，不出现在全局导航中。</p>
+      </div>
+
+      <p class="sec-lab" style="margin-top:2.5rem;">本项目日志</p>
+      <div>
+        <article class="log-item" style="padding-top:1rem;">
+          <div class="tl">
+            <div class="tl-row"><span class="tl-lab">BEFORE</span><span class="tl-val">2026-03-12<br>14:02</span><span class="tl-node"></span></div>
+            <div class="tl-row"><span class="tl-lab">AFTER</span><span class="tl-val">2026-03-12<br>15:47</span><span class="tl-node"></span></div>
+          </div>
+          <div>
+            <h3 class="log-title"><a href="#" onclick="show('detail');return false;">决定放弃本地搜索，改用索引预构建</a></h3>
+            <p class="log-sum">构建耗时从 3.2s 涨到 11.8s，权衡后改为构建期预生成索引。</p>
+          </div>
+        </article>
+        <article class="log-item">
+          <div class="tl">
+            <div class="tl-row"><span class="tl-lab">BEFORE</span><span class="tl-val">2026-02-20<br>11:00</span><span class="tl-node"></span></div>
+            <div class="tl-row"><span class="tl-lab">AFTER</span><span class="tl-val">2026-02-20<br>16:20</span><span class="tl-node"></span></div>
+          </div>
+          <div>
+            <h3 class="log-title"><a href="#" onclick="show('detail');return false;">双列作品卡的断点取舍</a></h3>
+            <p class="log-sum">900px 以下改为单列，避免卡片在中等宽度下被压扁。</p>
+          </div>
+        </article>
+      </div>
+      <p style="margin-top:1.5rem;"><a href="#" onclick="show('logs');return false;">在日志大厅中按本项目筛选 →</a></p>
+    </div>
+  </section>
+</div>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <p>Laity 数字档案库 · 2026</p>
+    <p>本页所有品牌、人物、客户与数值均为本地演示内容，不构成真实研究、业绩背书或投资建议。</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // 视图切换
+  window.show = function(id){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    var v = document.getElementById('view-'+id);
+    if(v) v.classList.add('on');
+    var navHome=document.getElementById('nav-home'), navLogs=document.getElementById('nav-logs');
+    navHome.classList.toggle('on', id==='home'||id==='project');
+    navLogs.classList.toggle('on', id==='logs'||id==='detail');
+    window.scrollTo(0,0);
+  };
+
+  // 档案条目展开/收起
+  var heads = Array.prototype.slice.call(document.querySelectorAll('.entry-head'));
+  var toggleAll = document.getElementById('toggle-all');
+
+  function setEntry(btn, open){
+    btn.setAttribute('aria-expanded', String(open));
+    var panel = document.getElementById(btn.getAttribute('aria-controls'));
+    if(panel) panel.hidden = !open;
+  }
+  function syncAll(){
+    if(!toggleAll) return;
+    var allOpen = heads.every(function(b){return b.getAttribute('aria-expanded')==='true';});
+    toggleAll.textContent = allOpen ? '收起全部' : '展开全部';
+    toggleAll.setAttribute('aria-expanded', String(allOpen));
+  }
+  heads.forEach(function(b){
+    b.addEventListener('click', function(){
+      setEntry(b, b.getAttribute('aria-expanded')!=='true');
+      syncAll();
+    });
+  });
+  if(toggleAll){
+    toggleAll.addEventListener('click', function(){
+      var allOpen = heads.every(function(b){return b.getAttribute('aria-expanded')==='true';});
+      heads.forEach(function(b){ setEntry(b, !allOpen); });
+      syncAll();
+    });
+  }
+})();
+</script>
+</body>
+</html>
