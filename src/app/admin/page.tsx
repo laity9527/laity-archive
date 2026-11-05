@@ -9,6 +9,7 @@
  * - 2026-11-02: 补 instant 注释说明（false 是退出即时导航校验，不改变渲染方式）
  * - 2026-11-03: 接收 ?deleted=1，删除后回概览时给出结果提示
  * - 2026-11-04: 概览状态横幅补 role=alert（D27）
+ * - 2026-11-05: 三项计数、区块标题与列表状态标签中文化（不译数据，isPublished 判定未动）；中文标签去 font-mono 与 0.2em 字距，计数值与带日期的状态格仍用 font-mono
  */
 import Link from "next/link";
 import { pickParam } from "@/lib/forms";
@@ -31,9 +32,9 @@ export default async function AdminHomePage({
     await getAdminOverview();
 
   const stats = [
-    { label: "PROJECTS", value: projectCount },
-    { label: "PUBLISHED", value: publishedCount },
-    { label: "DRAFTS", value: draftCount },
+    { label: "项目总数", value: projectCount },
+    { label: "已发布", value: publishedCount },
+    { label: "草稿", value: draftCount },
   ];
 
   return (
@@ -52,7 +53,7 @@ export default async function AdminHomePage({
             key={item.label}
             className="flex items-baseline justify-between border-b border-hairline py-4"
           >
-            <span className="font-mono text-[11px] tracking-[0.2em] text-ink-soft">
+            <span className="font-sans text-[11px] text-ink-soft">
               {item.label}
             </span>
             <span className="font-mono text-2xl text-ink">{item.value}</span>
@@ -61,9 +62,7 @@ export default async function AdminHomePage({
       </ul>
 
       <section className="mt-16">
-        <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-          RECENT ACTIVITY
-        </h2>
+        <h2 className="font-sans text-[10px] text-ink-soft">最近动态</h2>
         {recentLogs.length === 0 ? (
           <p className="mt-4 border-t border-ink py-6 font-mono text-xs text-ink-soft">
             NO LOG YET
@@ -83,7 +82,7 @@ export default async function AdminHomePage({
                   {log.project.name}
                 </span>
                 <span className="ml-auto font-mono text-[11px] text-ink-soft">
-                  {log.isPublished ? "PUBLISHED" : "DRAFT"} ·{" "}
+                  {log.isPublished ? "已发布" : "草稿"} ·{" "}
                   {log.updatedAt.toISOString().slice(0, 10)}
                 </span>
                 <Link

@@ -34,6 +34,12 @@
  *               auth.ts 再加配置体检后 proxy.ts 第三次被切开（1369-1520）——不再逐个文件临时让位，
  *               改为一次性把 db.ts、routes.ts、.env.example 三类无算法内容移出必可见段，
  *               给 ①+② 换回约 75 行余量（前窗口现止于 time.ts）。5723 行 / 115 页 / 收录 65
+ * - 2026-11-05: 核心界面文案中文化这一轮：新文件 src/lib/labels.ts（枚举中文映射单源）登记进折走段 ③，
+ *               与同为"常量表 + 查表函数"的 error-text.ts 相邻。放 ③ 而不放 ② 是为了不动 ①+② 的行数
+ *               ——proxy.ts 被前窗口切开过三次，而 labels.ts 的三个调用方（首页、看板、日志大厅）都在 ④。
+ *               本次 assertWindowFit() 未拒绝出件：前窗口仍止于 error-text.ts 第 1500 行（零余量，下轮加行要先配平），
+ *               后窗口起于 privacy/page.tsx，labels.ts 整份落在省略段，属 ③ 段口径的正常结果而非漏登记。
+ *               6655 行 / 134 页 / 收录 68
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -96,6 +102,10 @@ const BANDS = [
     foldable: true,
     files: [
       "src/lib/error-text.ts",
+      // 枚举中文映射同样是"一张常量表 + 一个查表函数"，与 error-text 同类，放折走段：
+      // 它不进 ② 是为了不动 ①+② 的行数（proxy.ts 被前窗口切开过三次），
+      // 而它的三个调用方（首页、看板、日志大厅）都在 ④，排版上读得通
+      "src/lib/labels.ts",
       "src/lib/time.ts",
       // package.json 从 ① 让位进折走段（2026-11-05 第七轮）：next.config.ts 加 CSP 与 poweredByHeader
       // 涨行，proxy.ts（1358–1509）被 1500 切口打断；package.json 是依赖清单与脚本表，无程序逻辑

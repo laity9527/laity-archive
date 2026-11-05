@@ -7,11 +7,13 @@
  * - 2026-10-30: 初始创建占位版
  * - 2026-10-30: Phase 2 完整版，看板与最新日志均读真库（未缓存查询由 Suspense 包裹）
  * - 2026-11-02: 看板改由 getArchiveBoard 供数（零日志项目也上榜），新增精选区与 /projects 入口（I029/I030，经批准补做）
+ * - 2026-11-05: 三个区头与精选行的枚举标签中文化，枚举翻译改走 src/lib/labels.ts 单源；中文标签去 font-mono 与 0.2em 字距
  */
 import Link from "next/link";
 import { Suspense } from "react";
 import { StatusBoard } from "@/components/StatusBoard";
 import { Timeline } from "@/components/Timeline";
+import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { getSafeLogs } from "@/lib/logs";
 import { getArchiveBoard } from "@/lib/projects";
 
@@ -32,9 +34,7 @@ async function ArchiveOverview() {
       {featured.length > 0 && (
         <section>
           <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              FEATURED PROJECTS
-            </h2>
+            <h2 className="font-sans text-[10px] text-ink-soft">精选项目</h2>
             <Link
               href="/projects"
               className="border-b border-ink font-mono text-[11px] hover:underline hover:decoration-1 hover:underline-offset-4"
@@ -52,8 +52,9 @@ async function ArchiveOverview() {
                   >
                     {project.name}
                   </Link>
-                  <span className="font-mono text-[11px] tracking-[0.2em] text-ink-soft">
-                    {project.kind.toUpperCase()} · {project.status} · {project.count} LOGS
+                  <span className="font-sans text-[11px] text-ink-soft">
+                    {kindLabel(project.kind)} · {statusLabel(project.status)} ·{" "}
+                    {logsCountLabel(project.count)}
                   </span>
                 </div>
                 {project.summary && (
@@ -68,17 +69,13 @@ async function ArchiveOverview() {
       )}
 
       <section className={featured.length > 0 ? "mt-20" : ""}>
-        <h2 className="mb-4 font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-          ARCHIVE STATUS
-        </h2>
+        <h2 className="mb-4 font-sans text-[10px] text-ink-soft">档案状态</h2>
         <StatusBoard entries={board} />
       </section>
 
       <section className="mt-20">
         <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            LATEST LOGS
-          </h2>
+          <h2 className="font-sans text-[10px] text-ink-soft">最新日志</h2>
           <Link href="/logs" className="border-b border-ink text-sm">
             全部日志 →
           </Link>

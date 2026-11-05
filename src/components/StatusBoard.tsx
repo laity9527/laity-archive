@@ -6,8 +6,10 @@
  * 修改记录：
  * - 2026-10-30: 创建，数据由首页从已发布日志归并得到，不额外查询项目表
  * - 2026-11-02: latest 允许为 null（零日志项目不拿创建时间冒充最近更新），改由 src/lib/projects.ts 的 getArchiveBoard 供数
+ * - 2026-11-05: 类型与状态两格改走 src/lib/labels.ts 的中文映射（去 toUpperCase），中文格由 font-mono 改 font-sans；带日期的最后一格保留 font-mono
  */
 import Link from "next/link";
+import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 
 export type StatusBoardEntry = {
   name: string;
@@ -50,14 +52,14 @@ export function StatusBoard({ entries }: StatusBoardProps) {
           >
             {entry.name}
           </Link>
-          <span className="font-mono text-[11px] tracking-[0.2em] text-ink-soft">
-            {entry.kind.toUpperCase()}
+          <span className="font-sans text-[11px] text-ink-soft">
+            {kindLabel(entry.kind)}
           </span>
-          <span className="font-mono text-[11px] text-ink-soft">
-            {entry.status}
+          <span className="font-sans text-[11px] text-ink-soft">
+            {statusLabel(entry.status)}
           </span>
           <span className="ml-auto font-mono text-[11px] text-ink-soft">
-            {entry.count} LOGS
+            {logsCountLabel(entry.count)}
             {entry.latest ? ` · ${entry.latest.toISOString().slice(0, 10)}` : " · 尚未发布"}
           </span>
         </li>

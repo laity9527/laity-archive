@@ -9,6 +9,7 @@
  * - 2026-11-02: pickParam 改由 src/lib/forms.ts 提供
  * - 2026-11-03: 补页面标题与描述；正文容器加 id 供导航的"跳到正文"使用
  * - 2026-11-03: 描述改为"附 SHA-256 摘要与发布时间，可核对是否被改动"，去掉"存证"口吻
+ * - 2026-11-05: 两层筛选的维度名 PROJECT/TAG 改为「项目」「标签」并去 font-mono 与 0.2em 字距；标签值属库里的用户数据，本轮不翻译（筛选参数与 tags: { has } 判定均未动）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -65,9 +66,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
     <>
       <nav className="mb-12 flex flex-col gap-4 border-y border-hairline py-4 md:flex-row md:items-baseline md:gap-10">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            PROJECT
-          </span>
+          <span className="font-sans text-[10px] text-ink-soft">项目</span>
           <Link
             href={logsHref({ tag: tagFilter })}
             className={filterClass(!projectFilter)}
@@ -89,9 +88,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         </div>
         {tagOptions.length > 0 && (
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 md:ml-auto">
-            <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              TAG
-            </span>
+            <span className="font-sans text-[10px] text-ink-soft">标签</span>
             {tagOptions.map((item) => (
               <Link
                 key={item}
