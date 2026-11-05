@@ -12,6 +12,8 @@
  * - 2026-11-05: 404 内联页背景随 D30 由 #FBFBF9 改为 #f4f1ec（只改色值，前置守卫逻辑与 matcher 一字未动）
  * - 2026-11-05: D30 A1 主墨色 #131313 → #1a1a18，共三处（body 文字、链接文字、a:hover 下边框）；
  *               同一段里的 #5C5C5C 属 A2、#E7E7E2 属 A3，本轮**故意不改**，免得回退值与令牌值不一致
+ * - 2026-11-05: D30 A2 辅助灰 #5C5C5C → #625d53，两处（`.label`、`p`）；#E7E7E2 属 A3，仍未动；
+ *               内联样式自成一套、拿不到 CSS 变量，故这里保持字面量与令牌同值（改令牌必须同步改这里）
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -57,9 +59,9 @@ function notFoundHtml(kind: NotFoundKind) {
 html,body{margin:0;padding:0;background:#f4f1ec;color:#1a1a18}
 body{font-family:-apple-system,"Segoe UI","Noto Sans SC",sans-serif}
 main{max-width:720px;margin:0 auto;padding:112px 24px}
-.label{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.2em;color:#5C5C5C}
+.label{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.2em;color:#625d53}
 h1{margin:24px 0 0;font-size:30px;font-weight:500;letter-spacing:-0.01em}
-p{margin:16px 0 0;font-size:16px;line-height:1.85;color:#5C5C5C}
+p{margin:16px 0 0;font-size:16px;line-height:1.85;color:#625d53}
 a{display:inline-block;margin-top:48px;padding-bottom:2px;border-bottom:1px solid #E7E7E2;color:#1a1a18;text-decoration:none;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.2em}
 a:hover{border-bottom-color:#1a1a18}
 </style>

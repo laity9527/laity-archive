@@ -10,7 +10,7 @@
   --color-foreground: var(--foreground);
   --color-paper: var(--background);
   --color-ink: var(--foreground);
-  --color-ink-soft: #5c5c5c;
+  --color-ink-soft: #625d53;
   --color-hairline: #e7e7e2;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Arial,
     sans-serif;
@@ -91,7 +91,7 @@ body {
 .log-body blockquote {
   border-left: 1px solid var(--foreground);
   padding-left: 1.2em;
-  color: var(--color-ink-soft, #5c5c5c);
+  color: var(--color-ink-soft);
 }
 
 .log-body code {
