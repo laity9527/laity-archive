@@ -4,6 +4,8 @@
 创建日期：2026-10-30
 状态：待确认（门禁 2）
 上游：AGENTS.md（事实基座）；下游：DESIGN.md
+维护留痕：2026-11-05 按负责人点名"根据你的经验及相关文件继续修改"，新增「五、需求到实现的追溯矩阵」，
+原「上线基线」顺延为「六」；既有需求条目与决策引用未改动。
 
 已确认的三项决策（2026-10-30）：
 1. 后台登录：NextAuth + GitHub OAuth，仅允许我本人的 GitHub 账号；
@@ -147,7 +149,34 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 2. 不做富文本所见即所得编辑器——Markdown 双栏纯文本足够；
 3. 不做日志版本历史/回收站——git 与数据库备份承担该职责；
 4. 不做移动端 App/小程序——响应式 Web 覆盖。
-## 五、上线基线（工程与合规）
+
+## 五、需求到实现的追溯矩阵
+
+每条需求都要能回答"靠哪条决策实现、落在哪个文件、用什么证据验收"。本表是防止"实现缺项"（I028 那类）的常备对照，
+新增或变更需求时同步维护；空着"证据"一栏的条目等于尚未验收。
+
+| 需求 | 关键决策 | 主要落点 | 验收证据 |
+|---|---|---|---|
+| F01 首页 | D13 | `src/app/page.tsx`、`projects.ts:getArchiveBoard` | 精选规则 + 看板含零日志项目 |
+| F02 日志大厅 | D3 | `src/app/logs/page.tsx` | 双层筛选经 URL 参数、可分享 |
+| F03 日志详情 | D5 | `logs/[slug]/page.tsx`、`Seal.tsx` | 印章哈希独立重算逐字一致 |
+| F04 后台登录 | D2→D20、D8、D11、D12、D21、D22 | `src/auth.ts`、`admin-password.ts`、`/login` | D20 三条分支本机实跑 |
+| F05 新建/编辑日志 | D4、D9 | `admin/logs/*`、`Editor.tsx` | 草稿前台不可见、保存即退回草稿 |
+| F06 发布存证 | D5、D25 | `publish.ts`、`log-actions.ts` | D25 正向判据：按新正文算摘要 |
+| F07 项目管理 | D26 | `admin/projects`、`project-actions.ts` | PRJ_002 / PRJ_003 / PRJ_004 |
+| F08 草稿隔离 | D7、D10 | `logs.ts:getSafeLogs`、`proxy.ts` | 直访草稿 404（非 200 错误页） |
+| F09 XSS 防护 | D4、D29 | `markdown.tsx`、CSP（`next.config.ts`） | 脚本不执行 + 浏览器 0 violation |
+| F10 图片上传 | D27、I022 | `oss.ts`、`object-key.ts`、`upload-action.ts` | 70 字节真图上传、直链可加载 |
+| F11 项目维度页 | D7、D10 | `projects/*`、`proxy.ts` | 不存在 slug 返回 404 |
+| F12 导航与可达性 | D16 | `SiteNav.tsx`、`routes.ts` | 键盘可达、`aria-current`、跳转链接 |
+| F13 SEO 与抓取 | D16、D29 | `sitemap.ts`、`robots.ts`、`generateMetadata` | sitemap 只含已发布内容 |
+| F14 健康检查 | D17、D18、I036 | `api/health/route.ts` | 拔库 503、恢复 200 |
+| F15 合规页 | D17、D19 | `/privacy`、`SiteFooter.tsx` | 未配置的合规位整行不渲染 |
+| F16 敏感信息门 | D19 | `sensitive-scan.ts` | 阻截级未确认时 `LOG_003` 拒发 |
+| F17 删除权 | D19 | `deleteLog` | 回填 slug 不符得 `LOG_004` |
+| F18 开源许可 | D19 | `licenses.ts`、`/licenses` | 与 package.json 对拍、无传染性许可 |
+
+## 六、上线基线（工程与合规）
 
 | 项 | 要求 | 现状 |
 |---|---|---|

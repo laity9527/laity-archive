@@ -4,12 +4,43 @@
 创建日期：2026-10-30
 状态：待确认（门禁 3）
 上游：SPEC.md（待门禁 2 确认）、AGENTS.md
+维护留痕：2026-11-05 按负责人点名"根据你的经验及相关文件继续修改"，新增「零、架构总览」「决策记录模板」
+与「决策索引（D1–D29 一览）」；既有 D1–D29 正文与路线图未改动。
 
 ---
+
+## 零、架构总览（一页看懂）
+
+- **形态**：单人档案库——Next.js App Router 全栈单体，无注册、无 UGC，不设独立 API 层（仅 `/api/health` 与 NextAuth 端点）。
+- **分层与数据流**：
+  - 访客界面（RSC 直读库，PPR：静态壳 + 请求期数据）：`src/app/**` 页面路由 → `src/lib/**`（唯一数据访问层）→ Prisma Client → PostgreSQL 16。
+  - 后台（口令登录）：`src/app/admin/**` → Server Actions（`requireAdminSession()` 统一准入门）→ 同一 `src/lib` 层。
+  - 生产边缘：nginx（TLS / 安全头 / 登录限流 / XFF 覆写）→ `app`（standalone 容器）→ `db`（容器）。
+- **三条关键链路**：
+  1. 发布：表单 → `parseInput` → `saveLog`（写库）→ `publishLog`（按库中正文算 SHA-256 + 记服务器时间）→ `redirect(?published=1)`。
+  2. 读日志：页面 → `getSafeLogs` / `getSafeLogBySlug`（强制 `isPublished: true`）→ 详情页印章。
+  3. 上传：`Editor` → `uploadImage`（收 Blob）→ `object-key` 生成键 + `image-signature` 判类型 → OSS → 外链回填。
+- **唯一真相点（改这里就改全局，别处不得重算/重定义）**：
+  `content-hash.ts`（摘要口径）、`site.ts`（站点标识）、`routes.ts`（路由归属）、`error-text.ts`（错误文案）、`forms.ts`（表单规则与限额）、`time.ts`（时间格式化）。
+- **信任边界**：库口令、`NEXTAUTH_SECRET`、`ADMIN_PASSWORD`、OSS AK 四类只进 `.env`；生产走 `${VAR:?}` + preflight 硬卡，不进仓库、不进产物。
 
 ## 一、架构决策记录
 
 凡 AGENTS.md / SPEC.md 已锁定事项（技术栈、视觉、OAuth、部署目标）不在此重新决策，只记录剩余自由度上的选择。
+
+### 记录模板（新增 D 时照此写）
+
+```
+### D##：<一句话决策名>
+- 背景：<触发这件事的现实问题，尽量带判据/现象，不写"感觉" >
+- 决策：<选了什么，写明被否的备选 >
+- 理由：<为什么这样选 >
+- 代价与边界：<如实标注没解决的、可能要还的债 >
+- 判据：<本机实测结果；未实测的写清缺哪一步 >
+- 连带：<同步改了哪些文件与文档 >
+```
+
+编号一经分配不再复用；被后续决策取代时，在旧条加一行"已被 D## 取代"、并在索引表标注，不删除旧文（留痕优先）。
 
 ### D1：写操作走 Server Actions，不另建 REST API 层
 - 决策：全部写操作（存草稿/发布/项目管理/上传）用 Server Actions。
@@ -284,6 +315,42 @@
 - 决策三（依赖健康，I068）：`npm outdated` 实跑——全部依赖落后 major（Prisma 6→7、TS 5.9→7、Next 16.4.3→16.4.5 patch）。技术栈锁定原则下**不升级**；`npm audit` 在本机从未跑成（npmmirror 的 security 端点未实现），记 I068 OPEN 等批一次 `--registry=https://registry.npmjs.org` 的一次性审计——**有没有已知 CVE 从来没有数据**，这条只有他能解。
 - 决策四（上线面）：他授权"可以使用上线"。AI 能替他做的部分做完：镜像 `laity-archive:round7` 构建冒烟通过（exit 0，1.95GB，standalone 产物含新配置）；生产编排与 preflight 无需改动。**真正 `up -d` 仍在服务器上、仍归他本人**——AI 没有服务器凭据，这是 AGENTS.md 的既有分工不是本轮新增限制。
 - 实测判据（全部真实执行）：`curl -I` 看到完整 CSP 头且 `X-Powered-By` 消失；浏览器全程（首页/后台/编辑/保存草稿/删除）控制台 **0 条 CSP violation**，HMR websocket 正常（`connect-src 'self'` 没自断）；临时草稿 `csp-selftest-tmp` 的创建与两步删除在 CSP 下照常走通（Server Action POST 未被 `form-action 'self'` 挡住），删除后前台 404；未登录访问 `/admin` 仍 307。临时资源已全部回收。
+
+## 决策索引（D1–D29 一览）
+
+编号按落定顺序分配，因此在正文里并非按数字排列。下表按编号汇总，便于反查；状态与正文保持同步。
+
+| 编号 | 一句话 | 状态 |
+|---|---|---|
+| D1 | 写操作走 Server Actions，不建 REST 层 | 有效 |
+| D2 | 鉴权用 NextAuth GitHub Provider + 白名单 | 已被 D20 取代 |
+| D3 | 渲染以 RSC 为主，不引客户端状态库 | 有效 |
+| D4 | Markdown 管线固定 react-markdown + rehype-sanitize | 有效 |
+| D5 | 摘要口径 `SHA-256(title + "\n" + before + "\n" + after?)` | 有效（改即不兼容历史印章） |
+| D6 | 生产镜像多阶段构建 + standalone | 有效 |
+| D7 | 详情页真 404 由 Proxy 前置判定 | 有效 |
+| D8 | 先 JWT 会话，数据库会话留作后续 | 有效（D20 修订载荷） |
+| D9 | 已发布日志保存即退回草稿 | 有效 |
+| D10 | 项目页公开口径 = 字段白名单 + 只统计已发布 | 有效 |
+| D11 | 登录页自建，落 `/login` | 有效 |
+| D12 | 上线门禁一次性 preflight 硬卡 | 有效（D20 修订判定项） |
+| D13 | 首页看板与精选走专用取数口 | 有效 |
+| D14 | 下架动作独立存在，错误返回描述按实现改写 | 有效 |
+| D15 | 开 `allowImportingTsExtensions` 共用哈希口径 | 有效 |
+| D16 | 补产品骨架：导航、元信息、抓取、可达性 | 有效 |
+| D17 | 上线基线：测试、健康探针、错误页、合规页 | 有效 |
+| D18 | 把门禁与材料核对交给 CI | 有效 |
+| D19 | 外部合规方案先裁定位、再逐条吸收 | 有效 |
+| D20 | 取消 GitHub 登录，改为管理员口令 | 有效 |
+| D21 | 可达性、提交反馈、三层判定统一 | 有效 |
+| D22 | 边缘覆写 XFF，未配口令留服务器提示 | 有效 |
+| D23 | 退出不再经框架英文确认页 | 有效 |
+| D24 | 动效与丢稿保护 | 有效 |
+| D25 | 发布＝先存再发；会话寿命 12 小时 | 有效 |
+| D26 | 后台写路径正确性收口 | 有效 |
+| D27 | 第一条真实数据、上传三层根因 | 有效 |
+| D28 | 兜底机制自身成攻击面的收口 | 有效 |
+| D29 | CSP 补进纵深防御最后一层 | 有效 |
 
 ## 二、分阶段路线图（7 个 Phase，每个都是可运行最小闭环；Phase 8/9 为待裁决备选）
 

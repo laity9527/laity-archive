@@ -9,6 +9,8 @@
 preflight 门禁清单的最后一项；同日再按我点名"I049、I050 可以改，根据你的经验改"更新登录行末尾的
 "三处会话判定"（统一到 `requireAdminSession()`）并新增"登录限速两层"一条（见 DESIGN D21/D22）；
 除此之外 AI 仍不得自改本文件。
+修订留痕续：2026-11-05 由 AI 按我点名"根据你的经验及相关文件继续修改"新增四节——
+文档体系与阅读顺序、常见变更操作手册、已知坑速查、术语表；纯增量，未改动任何既有事实行。
 
 ---
 
@@ -225,6 +227,86 @@ docs/02-测试记录/ 的自测表与人工联调，不能用测试全绿代替�
 - 生成必须逐字节幂等。改了任何收录文件或 `软件操作说明书.md` 都必须重出两份 HTML 并一起提交，
   CI 用 `git diff --exit-code -- docs/04-软著材料` 卡这一条。
 - 材料里禁止出现任何真实凭据。自检脚本要先用注入的伪凭据验证扫描器有效，再采信"未见凭据"的结论。
+
+## 文档体系与阅读顺序
+
+本文件与另外三份根文档构成闭环。冲突按下表判定，发现冲突点一律回报、不私自动手抹平：
+
+| 优先级 | 来源 | 角色 | 何时读 |
+|---|---|---|---|
+| 1 | 代码与运行时实测 | 唯一事实 | 与任何文档冲突时以现实为准 |
+| 2 | 本文件（AGENTS.md） | 事实基座：技术栈、环境、红线、验收命令 | 每次开工前必读 |
+| 3 | SPEC.md | 需求规格：做什么、做到什么算数 | 改功能前后 |
+| 4 | DESIGN.md | 架构决策与路线图：为什么这样做、分几步做 | 涉及结构或取舍时 |
+| 5 | ISSUES.md | 范围外问题台账：发现但不动手的事 | 遇到疑似历史遗留问题时先查 |
+
+- 编号即坐标：`F##` 是需求（SPEC）、`D##` 是决策（DESIGN）、`I###` 是问题（ISSUES）、`Phase #` 是阶段（DESIGN）。引用一律带编号，不写"那个某某功能"。
+- 三份下游文档互相引用：SPEC 引 AGENTS 与 D 编号；DESIGN 引 SPEC 的 F 编号与 AGENTS；ISSUES 回指 D 编号。改了需求或决策的编号等于重命名，需点名授权。
+- 每次只改与本轮任务直接相关的那几行，不做"顺手统一措辞"；范围外的成文问题记 ISSUES，不动手。
+
+## 常见变更操作手册（改一处，跟着改哪里）
+
+单人项目最易出的错不是写不对，是**改漏了配套点**。下列清单照做，做完逐项打勾；清单随项目演化，新增一类变更就在这里加一节。
+
+### 新增一个数据库字段
+1. 只改 `prisma/schema.prisma`，再 `npx prisma migrate dev --name <意图>` 生成迁移；不直接对库执行 SQL。
+2. 字段若要出现在访客可见范围，更新 `src/lib/projects.ts` / `src/lib/logs.ts` 的显式 `select` 白名单（D10：公开口径由查询层说了算，不靠 `include` 全量返回）。
+3. 字段若影响摘要口径，改 `src/lib/content-hash.ts`（唯一实现）——口径变更即与历史印章不兼容，禁止"顺手规范一下"（D5）。
+4. 表单要采集就改 `src/lib/forms.ts` 的 `LIMITS` 与 `parseInput`，并在 `src/lib/error-text.ts` 补该字段文案。
+5. 补一条纯逻辑测试进 `tests/`，跑四道门禁。
+6. 若该文件在软著收录清单内，重出材料（见下）。
+
+### 新增一个页面
+1. 页面放 `src/app/<路由>/page.tsx`；取数一律经 `src/lib/`，页面内禁止 `new PrismaClient()`。
+2. 访客可见页面必须齐备：正文容器 `id="main"`、持久导航高亮 `aria-current`、`generateMetadata` 给 `title`/`description`。
+3. 是否进 sitemap：只收公开稳定路由，改 `src/lib/sitemap-data.ts`；后台等例外路由在 `robots.txt` 显式排除。
+4. 新文件若进收录清单会吃软著材料窗口容量——改完立刻跑 `node tools/软著材料生成.mjs`，看 `assertWindowFit()` 是否放行。
+
+### 新增一个 Server Action
+1. 动作第一行必须是 `requireAdminSession()`（三处判定共用入口，D21）；"存在会话"不等于放行。
+2. 参数先过 `parseInput`，失败回 `redirect(?error=VAL_001&field=<字段>)`；结果统一走 URL 参数，可截图留证（D14）。
+3. 来自 URL 的 id 拼进回跳地址前必须过 `ID_PATTERN`；`projectId` 之类外键先校验存在性，别让 P2025 变 500（D26）。
+4. 新错误码写进 `src/lib/error-text.ts`，后台横幅经 `errorCodeChip()` 过滤——未知码不打成标签（D28）。
+
+### 新增一个环境变量
+1. 三处同步：应用读取点、`.env.example`、`.env.production.example`。
+2. 生产要能进容器：在 `docker-compose.prod.yml` 的 `app.environment` 里显式列出——`--env-file` 只参与插值、不注入容器（I024 踩过）。判断"未配置是否合法"：合法用 `${VAR:-}`，必须配置用 `${VAR:?}` 并进 preflight。
+3. 值由我本人填进 `.env` / `.env.production`；AI 不读真实值、不复述内容，只报键名与存在性/长度。
+
+### 新增一个依赖
+1. 先停下报批：用途、许可证（GPL/AGPL 一律拒）、`npm install --dry-run` 的新增包数与被删条目。
+2. 批准后安装，装完立刻在 linux 容器里重算锁文件（I018 会复发），并同步 `src/lib/licenses.ts` 与 `tests/licenses.test.ts`。
+3. 若是 Server Component 用到的依赖、且内部有 Turbopack 解析不到的懒加载 `require`，按 I022 处置加进 `next.config.ts` 的 `serverExternalPackages`。
+
+## 已知坑速查（踩过的，别再踩）
+
+| 场景 | 现象 | 处置 | 来源 |
+|---|---|---|---|
+| Windows 装包 | linux 平台 `@emnapi/*` 条目被静默删掉，`npm ci` 红 | 在 `node:24-slim` 容器里 `--package-lock-only` 重算 | I018 |
+| MSYS 路径改写 | `docker -w /w` 变 `W:/`、`openssl -subj /CN=` 被吞 | 命令前加 `MSYS_NO_PATHCONV=1` | 环境实况 |
+| Node 的 `/tmp` | 指的是 `D:\tmp`，不是 Git Bash 的 `/tmp` | 临时产物写仓库内 `tmp/`（已 gitignore、排除 lint） | I039 |
+| 管道尾取退出码 | `\| head` 让退出码变 SIGPIPE 假红 | 输出重定向到文件后再判 `$?` | 环境实况 |
+| 长跑进程输出 | `npm run dev > tmp/dev.log` 自激、整页重载 | 标准输出写到仓库外 | I048 |
+| 正则 source 喂 HTML 属性 | 表单静默不提交（`pattern` 按 `v` flag 编译，尾随 `-`、双反斜杠都非法） | lib 里存"源串单源"，服务端 `RegExp` 派生，加两侧一致测试 | I060 / D26 |
+| 对象名安全断言 | 断言把 `toISOString()` 生成的键自己拒了；白名单又放行 `../` | 键生成与断言拆到 `src/lib/object-key.ts`，逐段判、禁空段/`.`/`..` | D27 |
+| Server Action 文件参数 | `formData.get("file")` 跨 RSC 边界后是 **Blob** 不是 File | 按 Blob 判并显式拒零字节 | D27 |
+| 软著材料窗口 | 普通改动就可能顶破窗口容量（真实容量按整页折算，非 1500 行） | `assertWindowFit()` 拒出件，按其建议调整分带；改完必重出并提交 | I034-补2 |
+| 合规位变量 | 填了 `.env.production` 页脚也不显示 | 在 `docker-compose.prod.yml` 的 `app.environment` 显式列出 | I024 / D19 |
+| 开发容器被连带删除 | 生产预演 `down -v` 删掉了同名的开发容器 | 生产编排顶层写 `name: laity-prod` | I043 |
+
+## 术语表（统一叫法，避免同一件事三个名字）
+
+| 术语 | 含义 | 不要写成 |
+|---|---|---|
+| 档案条目 | 一个项目在索引大厅里的展示单元（Project） | 卷册 / 卷宗 / 卡片 |
+| 开发日志 | 一条 Before/After 复盘（Log） | 博客 / 文章 / 帖子 |
+| 索引大厅 | 首页 `/` | 主页 / 落地页 |
+| 日志大厅 | `/logs` | 列表页 |
+| 存证 / 内容摘要 | 发布时按 D5 口径算出的 SHA-256，页面印章展示 | 防伪认证 / 区块链存证（对外措辞见红线） |
+| 草稿 | `isPublished=false` 的日志，前台一律不可见 | 未发布 / 私密 |
+| 下架 | 只翻 `isPublished`，保留历史摘要与时间（D9） | 删除 |
+| 彻底删除 | 正文、摘要、时间一起移除、不可逆（需回填 slug） | 下架 |
+| 归属 | 页面/路由属于前台还是后台（`src/lib/routes.ts`） | 权限 |
 
 ## 工作方式（对 AI 的行为要求）
 
