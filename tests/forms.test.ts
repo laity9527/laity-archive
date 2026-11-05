@@ -11,7 +11,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { LIMITS, SLUG_PATTERN, SLUG_SOURCE, ID_PATTERN, pickParam, readField, safeCallbackUrl } from "../src/lib/forms.ts";
+import { LIMITS, REPO_URL_PATTERN, REPO_URL_SOURCE, SLUG_PATTERN, SLUG_SOURCE, ID_PATTERN, pickParam, readField, safeCallbackUrl } from "../src/lib/forms.ts";
 
 test("pickParam 只认非空字符串", () => {
   assert.equal(pickParam("abc"), "abc");
@@ -60,6 +60,37 @@ test("SLUG_SOURCE 在服务端正则与浏览器 pattern 两种编译下都合�
   assert.equal(new RegExp(`^(?:${SLUG_SOURCE})$`, "v").test("-lead"), false);
   assert.equal(new RegExp(`^(?:${SLUG_SOURCE})$`, "v").test("Earth"), false);
   assert.doesNotThrow(() => new RegExp(`^(?:${SLUG_SOURCE})$`, "v"));
+});
+
+// 仓库地址同理：上一轮把 pattern 写成 JSX 字符串属性，反斜杠成了两个，
+// 浏览器要求 URL 里真有一个反斜杠，于是所有合法地址被静默拒掉（表单不提交、无提示，I060）
+test("REPO_URL_SOURCE 两侧都成立，且真实 GitHub 地址过得了浏览器的 v flag", () => {
+  // 不比对 RegExp.source（它会把 / 转义成 \/），比对两侧的判定结果——这才是"同一份规则"的含义
+  const browserSide = new RegExp("^(?:" + REPO_URL_SOURCE + ")$", "v");
+  const samples = [
+    "https://github.com/laity9527/laity-archive",
+    "http://example.com",
+    "github.com/no/scheme",
+    "https://has space",
+    "javascript:alert(1)",
+  ];
+
+  for (const url of samples) {
+    assert.equal(
+      REPO_URL_PATTERN.test(url),
+      browserSide.test(url),
+      `服务端与浏览器对 "${url}" 判定不一致`,
+    );
+  }
+
+  assert.ok(REPO_URL_PATTERN.test(samples[0]));
+  assert.ok(browserSide.test(samples[0]));
+
+  // 反斜杠形式必须过不了——那是上一轮属性里实际的形状（两个反斜杠 + S）
+  assert.equal(
+    new RegExp("^(?:" + "https?://\\\\S+" + ")$", "v").test(samples[0]),
+    false,
+  );
 });
 
 test("id 规则挡得住拼进 redirect 的脏值", () => {

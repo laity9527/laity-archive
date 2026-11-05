@@ -25,6 +25,13 @@ export function readField(formData: FormData, key: string) {
 export const SLUG_SOURCE = "[a-z0-9][a-z0-9\\-]{1,63}";
 export const SLUG_PATTERN = new RegExp(`^${SLUG_SOURCE}$`);
 
+// 同上一条坑：HTML 的 pattern 属性要的是"单个反斜杠"的源串，
+// 而 JSX 里写 attr="...\\S..." 是原样两个反斜杠，等于要求 URL 里真有一个反斜杠——
+// 真实仓库地址会被浏览器静默拒掉（表单不提交、也没有任何提示）。
+// 所以正则也只从这一份派生，两侧共用
+export const REPO_URL_SOURCE = "https?://\\S+";
+export const REPO_URL_PATTERN = new RegExp(`^${REPO_URL_SOURCE}$`);
+
 // 库里的主键是 cuid（小写字母数字）；表单里来的 id 先按形状挡一道，
 // 免得 "../"、带空格、超长串被原样拼进 redirect 目标或送去查库
 export const ID_PATTERN = /^[a-z0-9]{1,64}$/;

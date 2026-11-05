@@ -11,6 +11,7 @@
  * - 2026-11-04: 正文与初始值不一致时挂 beforeunload 拦截；任一表单提交即清除标记，
  *               避免"刚点保存就被浏览器问要不要离开"
  * - 2026-11-04: 提交时把两份正文暂存进 sessionStorage，仅在服务端打回（页面带 ?error= 回来）时回填
+ * - 2026-11-04: 上传结果提示补活区：错误用 role=alert、成功用 role=status，读屏才会在异步返回时读出来（D27）
  *               （D26）——原先被拒的保存会 redirect 回编辑页并从库里重渲染，写到一半的字整段没，
  *               而清 dirty 标记又恰好把丢稿拦截在这条路上解除武装
  */
@@ -255,6 +256,7 @@ export function Editor({
 
         {status.kind !== "idle" && status.kind !== "busy" && (
           <p
+            role={status.kind === "error" ? "alert" : "status"}
             className={`mt-3 border px-3 py-2 font-mono text-[11px] ${
               status.kind === "error" ? "border-ink text-ink" : "border-hairline text-ink-soft"
             }`}
@@ -279,3 +281,4 @@ export function Editor({
     </div>
   );
 }
+

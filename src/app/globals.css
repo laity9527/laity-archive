@@ -36,8 +36,24 @@ body {
   margin-top: 1.5em;
 }
 
+/* 正文里作者用 `#` 起头时，页面已经有自己的 h1：这里把它降级成 h2 的观感，
+   既不出现第二个页级标题，也不让浏览器默认的 2em 黑体脱开字号阶 */
+.log-body h1 {
+  font-size: 1.35em;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
 .log-body h2,
 .log-body h3 {
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.log-body h4,
+.log-body h5,
+.log-body h6 {
+  font-size: 1.05em;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -84,7 +100,7 @@ body {
 }
 
 .log-body pre {
-  border: 1px solid #e7e7e2;
+  border: 1px solid var(--color-hairline);
   padding: 1em 1.2em;
   overflow-x: auto;
   font-size: 0.85em;
@@ -97,7 +113,7 @@ body {
 
 .log-body hr {
   border: 0;
-  border-top: 1px solid #e7e7e2;
+  border-top: 1px solid var(--color-hairline);
 }
 
 .log-body img {
@@ -113,7 +129,7 @@ body {
 
 .log-body th,
 .log-body td {
-  border-bottom: 1px solid #e7e7e2;
+  border-bottom: 1px solid var(--color-hairline);
   padding: 0.5em 0.6em;
   text-align: left;
 }

@@ -9,12 +9,15 @@
  * - 2026-11-04: 新建/保存与删除按钮改用 SubmitButton：提交进行中禁用，避免重复创建或重复删除
  * - 2026-11-04: 删除改两步生效（再点一次确认）、保存/删除带 ?saved=1/?deleted=1 回显、
  *               VAL_001 按 ?field= 标到具体控件（D26）
+ * - 2026-11-04: REPO URL 的 pattern 改取 src/lib/forms.ts 的 REPO_URL_SOURCE：上一轮直接写 JSX 属性字符串，
+ * - 2026-11-04: 三条状态横幅补 role=alert（D27）
+ *               反斜杠变成两个，真实仓库地址被浏览器静默拒掉（I060）
  */
 import Link from "next/link";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
-import { LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
+import { LIMITS, REPO_URL_SOURCE, SLUG_SOURCE, pickParam } from "@/lib/forms";
 import { PROJECT_KINDS, PROJECT_STATUSES, getProjectById, listProjects } from "@/lib/projects";
 
 // 本页查库并读编辑参数，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
@@ -124,20 +127,20 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       {errorText && (
         <p
           id="form-error"
-          className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
+          role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
         >
           {errorCode} · {errorText}
         </p>
       )}
 
       {saved && (
-        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
           SAVED · 项目已保存
         </p>
       )}
 
       {deleted && (
-        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
           DELETED · 该项目已删除
         </p>
       )}
@@ -239,7 +242,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             label="REPO URL"
             name="repoUrl"
             defaultValue={editing?.repoUrl ?? undefined}
-            pattern="https?://\\S+"
+            pattern={REPO_URL_SOURCE}
             invalid={bad("repoUrl")}
           />
 
@@ -263,3 +266,4 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     </>
   );
 }
+

@@ -8,6 +8,7 @@
  * - 2026-10-30: 最近动态加编辑链接、底部加新建日志入口（Phase 4，经批准改本清单外文件）
  * - 2026-11-02: 补 instant 注释说明（false 是退出即时导航校验，不改变渲染方式）
  * - 2026-11-03: 接收 ?deleted=1，删除后回概览时给出结果提示
+ * - 2026-11-04: 概览状态横幅补 role=alert（D27）
  */
 import Link from "next/link";
 import { pickParam } from "@/lib/forms";
@@ -40,7 +41,7 @@ export default async function AdminHomePage({
       <h1 className="text-3xl font-medium tracking-tight">概览</h1>
 
       {deleted && (
-        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
           DELETED · 该条日志已彻底删除，正文与摘要都不再保留
         </p>
       )}
@@ -111,3 +112,4 @@ export default async function AdminHomePage({
     </>
   );
 }
+

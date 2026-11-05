@@ -97,6 +97,9 @@ const BANDS = [
     files: [
       "src/lib/error-text.ts",
       "src/lib/time.ts",
+      // 对象键生成与断言是从 oss.ts 拆出的纯计算（I061），与嗅探函数同类，放折走段；
+      // 它的调用方 oss.ts 与 upload-action.ts 都已在窗口内可见
+      "src/lib/object-key.ts",
       // 图片类型嗅探是"读文件头几个字节比表"，调用它的上传动作本就在 ③；
       // 本轮 forms.ts / projects.ts / error-text 各自长了几行，①+② 第 1501 行起把 proxy.ts 切开，
       // 按 assertWindowFit 的处置建议由它让位（存证、鉴权、消毒三类真逻辑仍整份在前窗口）
@@ -154,11 +157,14 @@ const BANDS = [
       // 错误边界只有一句提示与一个重试按钮，渲染真逻辑在 globals.css/布局里；
       // 挪进折走段是为了把 ④ 段整体推后，让 globals.css 的头部回到后窗口内（本轮加进出口令模块后窗口差 20 行）
       "src/app/error.tsx",
+      // 隐私页是一份静态承诺文案（数据全在页面内的常量数组，无算法）；本轮 globals.css 为正文标题补了
+      // 一段样式，④ 涨到把 globals.css 头部切在后窗口外，按 assertWindowFit 的建议由它让位（收录不减）
+      "src/app/privacy/page.tsx",
     ],
   },
   {
     mark: "④",
-    name: "站点外壳（样式令牌 + 根布局 + 导航页脚）与访客可见界面，末段为合规页（隐私 / 开源致谢 / 404）",
+    name: "站点外壳（样式令牌 + 根布局 + 导航页脚）与访客可见界面，末段为对外公示页（开源致谢 / 404；隐私页本轮起进折走段）",
     files: [
       "src/app/globals.css",
       "src/app/layout.tsx",
@@ -170,7 +176,6 @@ const BANDS = [
       "src/app/logs/page.tsx",
       "src/app/logs/[slug]/page.tsx",
       "src/app/projects/page.tsx",
-      "src/app/privacy/page.tsx",
       "src/app/licenses/page.tsx",
       "src/app/login/page.tsx",
       "src/app/not-found.tsx",

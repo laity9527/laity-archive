@@ -405,6 +405,54 @@ GET  /login                          → http=200，正文含"管理员口令"�
 
 材料第四次被窗口护栏拦下：`①+②` 涨到 1501 行、`src/proxy.ts`（1353–1504）被前窗口切开，`assertWindowFit()` 拒绝出件。按它给的处置把 `src/lib/image-signature.ts`（46 行，读文件头比表；调用它的上传动作本就在折走段）从 ② 平移进 ③，出件 6213 行 / 125 页 / 收录 65、说明书 518 行 / 18 页（未超 60 页上限，整份提交）、必须整份可见 29 个文件全部通过，连续两次生成 MD5 相同。我自己的反查脚本 `tmp/whole-check.mjs` 先报了"1 个文件未整份可见"——那是它的 MUST 清单没跟着这次有意分带调整更新，属清单过期而非产物出错，摘掉该条并写明理由后复跑为全绿（这正是"自研工具的输出来当真值用"要先对拍的那一类）。凭据扫描四组伪凭据控制组全命中后采信结论，产物 7 处命中逐行读过，全是 `process.env.ADMIN_PASSWORD`、`accessKeySecret: requireEnv(...)`、`password=xxx` 这类键名与规则描述，无任何值。
 
-### 记账不动手（我点的范围是"只修正确性"）
+### 记账不动手（我点的范围是"只修正确性"；下列已在第十七节逐项落地，除注明者）
 
 `role=alert`（8 处横幅）、`confirmSlug` 可访问名、`/login` 的 `main#main` 与跳转链接、正文 `#` 渲染成第二个 `<h1>` 且脱离字号系统、后台导航 `aria-current`/`aria-label`、`globals.css` 三处硬编码 `#e7e7e2`、`licenses` 的 `text-[13px]`、复选框 `items-baseline`、首页全量取日志再 `slice(0,3)`、零调用的 `listAdminLogs`、节流桶不回收、`/admin` 的 `notFound()` 落公共 404、四处日期口径不一、`login/page.tsx` 两次重复的 `await connection()` —— 全部写进 I058/I059，等我把范围切到外观/无障碍那一轮再逐项批。另有两条判断记录在 D26：登录失败与审计日志不做（与 `/privacy` 的"不追踪"冲突），`sensitiveConfirmed` 维持自证不改。
+
+## 十七、真实入库与真实上传：第五轮把两份"未验证"顶成 bug（2026-11-04，我点名"重点看页面美观和功能权限""以本项目做第一个测试入库，相关数据要真实""真实上传成功分支不能上传成功"）
+
+本地库是我自己清空的，明确不恢复。于是这轮第一件事不是优化，而是**把本项目当成第一条真实数据录进去**——用 `prisma db seed` 灌示例数据十秒就能让前台不为空，但那条日志讲的是假情景，而且会把"新建项目 → 存草稿 → 保存并发布 → 前台读印章"这条真实路径整个绕开。绕开的部分恰好埋着两个确定性故障。
+
+### 入库判据
+
+| 项 | 实测 |
+|---|---|
+| 项目 | `laity-archive` / Laity 项目档案库 / product / WIP / 仓库地址 https://github.com/laity9527/laity-archive —— 走后台表单新建，`?saved=1` + 横幅 `SAVED · 项目已保存` |
+| 日志 | slug `archive-itself-as-first-entry`，正文写的就是这次入库决定本身；`?published=1`，前台 200 |
+| 摘要独立复核 | 页面印章 `73020c50d142c3d7affd6211d0f6ee9dae80ec4a26875df9d6ed0b880358f15b`；在浏览器里取服务端从库里渲染出的 title / before / after 三值，按 D5 口径用 `crypto.subtle.digest('SHA-256')` 独立重算 → 逐字符相同；`PUBLISHED AT · 2026-11-04 10:59 UTC` |
+| 概览 | `PROJECTS 1 / PUBLISHED 1 / DRAFTS 0` |
+
+### 上传：一个症状，三层根因
+
+症状是永远回 IMG_001（"图片不合格"），而这句话在 AGENTS.md 与三份自测表里以"未验证"的身份存在了很久。排除与定位的判据：
+
+1. Node 里直接跑同一份 `sniffImage()` → 对这张 PNG 返回 `{ext:'png',mime:'image/png'}`。**类型判定不是原因**——只看文案就会一头扎进 magic bytes。
+2. 三个 IMG_001 出口在页面上分不开，于是在动作里临时把形状数字经既有 `code` 字段带回页面（只带数字，不带内容与凭据，用完即删）：`blob=70 ab=70 type=image/png` → 首因是 `formData.get("file") instanceof File`，而跨 React 边界反序列化后它是 **Blob**。
+3. 改判 Blob 后仍 IMG_001；服务端日志里动作耗时由 7ms 变 248ms，说明开始真走网络，回头查 `oss.ts` 的 `!/^[a-z0-9./-]+$/.test(key)`：时间戳来自 `toISOString()` 必带大写 `T`/`Z`，**断言把自己生成的每个键都判死**。
+4. 写回归测试时现形第三层：白名单里本来就含 `.` 与 `/`，`logs/../etc/passwd` 完全通过——注释里的"防目录穿越"此前是假的。改为逐段判（空段 / `.` / `..` 全拒）并要求 `logs/` 前缀。
+
+结构处置：键生成与断言从 `oss.ts` 拆到新文件 `src/lib/object-key.ts`，理由与当初拆 `image-signature.ts` 相同——留在原文件里进不了 `node --test`（会拉起 ali-oss），"生成器比断言宽松"这类矛盾就只能靠人肉撞见。
+
+端到端结果：70 字节合法 PNG 两次上传均 `已上传 · 70 字节`，直链 `https://laity-archive.oss-cn-beijing.aliyuncs.com/logs/2026-11/20261104T112157Z-72fc4931e9ca.png` 以 `<img>` 加载成功（`naturalWidth=1`）。方法记一条：直链跨域，`fetch()` 被 CORS 挡（`Failed to fetch`），**判可达性不能用 fetch，要用 `<img>` 的 onload/onerror**。探针图片没有进任何日志正文（编辑器引用已回退、未落库）；桶里两个 70 字节对象由我手工清理或交生命周期规则（应用按设计无删除权限）——记 I062。
+
+### 顺带现形的第二条：原生校验静默失效
+
+填仓库地址点保存"没反应"——无跳转、无横幅、无报错。判据是 `[...f.elements].filter(e => e.willValidate && !e.checkValidity())` 指到 `repoUrl`，以及 `getAttribute('pattern')` 读回 `https?://\S+`（两个反斜杠）的形状：**JSX 字符串属性不做 JS 转义**，两个反斜杠等于要求 URL 里真有一个反斜杠。与上一轮的 `SLUG_PATTERN.source`（`v` flag 下尾随 `-` 非法，控制台报 `Invalid character class`）合成一条口径：跨运行时复用的正则一律存"源串"，服务端从它派生，两侧判定用测试钉住（I060）。同时纠正一条读数：我最初把 `checkValidity()=false` 归因给超长标题，逐控件查下来无效的是空着的 slug；而 `maxLength` 在真实键入时直接截断，`tooLong` 根本不会为真。
+
+### "美观"这轮改的七项（零新依赖，不动视觉语言）
+
+10 处状态横幅补 `role="alert"`（后台 9 + 登录页 1），编辑器上传提示按语义分 `alert`/`status`；`confirmSlug` 补可访问名；`/login` 的 `<main>` 补 `id="main"`；正文 `#` 由渲染出口降级成 `h2` 并补 `h4–h6` 阶内字号——用一条临时日志实测：`# 一级` 与 `## 二级` 均 24.3px Noto Serif SC、`#### 四级` 18px，**页面 `h1` 总数从 2 变 1**；`globals.css` 三处硬编码 `#e7e7e2` 改回 `var(--color-hairline)`（grep 后只剩令牌定义那一处）；`/licenses` 三处 `text-[13px]` 归 `text-sm`；勾选行 `items-baseline` → `items-center`。被否：后台导航 `aria-current`（Server Component 拿不到 pathname，为三个链接引 `headers()` 或包一层客户端组件不划算）。
+
+活区与地标在真 DOM 里核对：编辑页 `p[role]` 读出 `alert · SAVED · 已保存`，`main` 的 id 为 `main`，确认删除输入框的 aria-label 完整带出 slug，全页 13px 元素计数 0。
+
+### 清理与门禁
+
+临时资源全部回收：临时项目 `two-step-selftest-tmp` 与标题降级日志 `heading-demote-selftest-tmp` 都已删除（前者两步删除、后者回填 slug 的彻底删除），其 slug 前台 404，概览回到 `1/1/0`；库里现有内容只有第一条真实数据。
+
+`npm run lint` 0、`npx tsc --noEmit` 0、`npm test` **71/71**（新增：对象键必过自身断言、穿越与控制字符被拒、月份补零形状、REPO URL 两侧判定一致）、`npm run build` 0。材料第五次被窗口护栏拦下——`④` 因正文标题样式涨行把 `globals.css` 头部切在后窗口外，按护栏建议把 `src/app/privacy/page.tsx`（88 行静态承诺文案）平移进折走段 ③；出件 6313 行 / 127 页 / 收录 66、说明书 527 行 / 18 页、必须整份可见 28 个文件全通过，连续两次生成 MD5 相同。`tmp/whole-check.mjs` 又一次先报假错（它的 MUST 清单没跟着这次有意分带更新），摘条后复跑全绿——自研清单是第二份真相，动完分带必须回头改它。凭据扫描四组伪凭据控制组全命中后采信，产物 7 处命中逐行读为键名、参数名与规则描述，无任何值。
+
+### 仍未实测（照旧如实标）
+
+`PRJ_003` 的服务端分支（把删除请求指向真实项目被安全策略按不可逆动作拦下，我没换写法绕）、HTTP 层 `AUTH_001`（I013）、服务器上的 `up -d` 实跑、nginx `limit_req` 线上计时、`:focus-visible` 视觉环、浏览器原生"离开页面?"对话框外观、`docs/03-功能截图`、I021 打印分页、I040 字体上游 LICENSE 复核。
+
+一条口径变更（同日写进研发日志第五节）：以后凡是本地有条件跑、却因为怕副作用或怕麻烦而没跑的，不再写"未验证"，写"未跑，怀疑不可用"——今天这两条"未验证"里，至少一条实际上是"从来没成功过"。

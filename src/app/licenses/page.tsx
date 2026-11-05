@@ -5,6 +5,7 @@
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建（合规方案 7.1 / 7.2 落地）。依赖许可值来自 node_modules 实测，字体许可标注为未联网复核
+ * - 2026-11-04: 三处 text-[13px] 归到字号阶上的 14px（text-sm）——13 不在 10/11/12/14/18 里（D27）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -33,7 +34,7 @@ function LicenseList({ items }: { items: DependencyLicense[] }) {
           <span className="font-mono text-[10px] tracking-[0.1em] text-ink-soft">
             {item.license}
           </span>
-          <span className="w-full text-[13px] leading-relaxed text-ink-soft sm:w-auto sm:flex-1">
+          <span className="w-full text-sm leading-relaxed text-ink-soft sm:w-auto sm:flex-1">
             {item.purpose}
           </span>
         </li>
@@ -71,7 +72,7 @@ export default function LicensesPage() {
           字体
         </h2>
         <LicenseList items={FONT_LICENSES} />
-        <p className="mt-4 text-[13px] leading-relaxed text-ink-soft">
+        <p className="mt-4 text-sm leading-relaxed text-ink-soft">
           字体不随本仓库分发，由框架构建期从 Google Fonts 拉取后自托管产物。
           上述许可按项目事实基座登记的字体白名单（SIL OFL / Apache 2.0）填写，
           <strong className="font-medium text-ink">本次未联网复核上游 LICENSE 原文</strong>
@@ -83,7 +84,7 @@ export default function LicensesPage() {
         <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
           商标声明
         </h2>
-        <p className="mt-4 text-[13px] leading-relaxed text-ink-soft">
+        <p className="mt-4 text-sm leading-relaxed text-ink-soft">
           {TRADEMARK_NOTE}
         </p>
       </section>

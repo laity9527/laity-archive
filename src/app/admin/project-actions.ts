@@ -16,7 +16,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
 import type { ProjectField } from "@/lib/error-text";
-import { ID_PATTERN, LIMITS, SLUG_PATTERN, readField } from "@/lib/forms";
+import { ID_PATTERN, LIMITS, REPO_URL_PATTERN, SLUG_PATTERN, readField } from "@/lib/forms";
 import {
   PROJECT_KINDS,
   PROJECT_STATUSES,
@@ -73,7 +73,7 @@ function parseInput(formData: FormData): ParseResult {
     return { ok: false, field: "summary" };
   }
 
-  if (input.repoUrl && !/^https?:\/\/\S+$/.test(input.repoUrl)) {
+  if (input.repoUrl && !REPO_URL_PATTERN.test(input.repoUrl)) {
     return { ok: false, field: "repoUrl" };
   }
 

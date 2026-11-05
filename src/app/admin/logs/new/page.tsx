@@ -7,6 +7,7 @@
  * - 2026-10-30: 初始创建
  * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
  * - 2026-11-04: 保存按钮改用 SubmitButton：提交进行中禁用并显示"保存中…"，防连点重复写
+ * - 2026-11-04: 状态横幅补 role=alert（D27）
  */
 import Link from "next/link";
 import { saveLogAction } from "@/app/admin/log-actions";
@@ -51,7 +52,7 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
       {errorText && (
         <p
           id="form-error"
-          className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
+          role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
         >
           {errorCode} · {errorText}
         </p>
@@ -192,3 +193,4 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
     </>
   );
 }
+

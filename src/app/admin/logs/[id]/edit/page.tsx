@@ -10,6 +10,7 @@
  * - 2026-11-03: 发布前展示敏感信息命中清单并要求勾选确认；新增"彻底删除"（回填 slug 确认）
  * - 2026-11-04: 保存/发布/下架/彻底删除四个按钮改用 SubmitButton，提交中禁用并换文案
  * - 2026-11-04: 发布不再是独立小表单（D25）：改成"保存并发布"按钮挂在同一张表单上（per-button formAction），
+ * - 2026-11-04: 状态横幅补 role=alert、确认删除输入框补可访问名、勾选行改 items-center（D27）
  *               发布前核对面板也移进表单、排在按钮之前——原先改了正文不点保存直接发布，发出去的是库里旧内容
  */
 import Link from "next/link";
@@ -100,26 +101,26 @@ export default async function EditLogPage({
       {errorText && (
         <p
           id="form-error"
-          className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
+          role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
         >
           {errorCode} · {errorText}
         </p>
       )}
 
       {saved && (
-        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
           SAVED · 已保存{log.isPublished ? "" : "，当前为草稿"}
         </p>
       )}
 
       {published && (
-        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
           PUBLISHED · 已发布，前台可见
         </p>
       )}
 
       {unpublished && (
-        <p className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
           UNPUBLISHED · 已下架，前台不再可见，历史摘要与发布时间保留
         </p>
       )}
@@ -279,7 +280,7 @@ export default async function EditLogPage({
           {!log.isPublished && (
             <>
               {blocking.length > 0 && (
-                <label className="flex items-baseline gap-3">
+                <label className="flex items-center gap-3">
                   <input
                     type="checkbox"
                     name="sensitiveConfirmed"
@@ -333,6 +334,7 @@ export default async function EditLogPage({
           <input
             name="confirmSlug"
             placeholder={`原样输入 ${log.slug}`}
+            aria-label={`删除确认：原样输入这条日志的标识 ${log.slug}`}
             className="border border-ink bg-transparent px-3 py-2 font-mono text-[11px] text-ink"
           />
           <SubmitButton
@@ -345,3 +347,4 @@ export default async function EditLogPage({
     </>
   );
 }
+

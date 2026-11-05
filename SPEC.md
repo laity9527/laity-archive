@@ -132,7 +132,7 @@ kind/status 用字符串而非 enum，降低迁移成本，合法值在服务层
 | deleteLog | {id, confirmSlug} | {ok} | AUTH_001；LOG_002；LOG_004 确认 slug 与库中不一致，删除未执行 |
 | saveProject | {id?, slug, name, kind, status, summary?, repoUrl?} | {id} | AUTH_001；VAL_001 带 `&field=<出错字段>`；PRJ_002 slug 重复；PRJ_004 该项目已被删除（P2025，D26） |
 | deleteProject | {id, confirmDelete} | {ok} | AUTH_001；PRJ_001 项目下仍有日志，禁止删除；PRJ_003 缺少二次确认位，删除未执行；PRJ_004 项目不存在（不再当作"已删除"返回成功，D26） |
-| uploadImage（P1） | FormData(file) | {url} | AUTH_001；IMG_001 类型/大小不合法（仅 jpg/png/webp/gif，≤5MB） |
+| uploadImage（P1） | FormData(file)：动作参数跨 React 边界后是 **Blob**（不是 File），按 Blob 判定并显式拒零字节 | {url, bytes} | AUTH_001；IMG_001 内容为空/超 5MB/文件头签名不认/生成的对象名逐段判不通过（D27） |
 
 动作有两种形态（2026-11-02 经我确认，SPEC 原写"统一 `{ok,code,message}`"与实际不符，按实际改）：
 

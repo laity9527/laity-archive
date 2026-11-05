@@ -8,6 +8,7 @@
  * - 2026-10-30: 列表支持 project/tag 筛选；新增 getSafeLogBySlug 详情查询
  * - 2026-10-30: 新增 isPublishedLogSlug 供 Proxy 前置判定 404 状态码
  * - 2026-10-30: 追加管理侧查询 listAdminLogs / getAdminLogById（不经过 isPublished 过滤，仅供后台）
+ * - 2026-11-04: 删掉零调用的 listAdminLogs（D27）：后台概览与编辑页各有各的取数，这个全表查询自Phase 4后没人引；顺带给前窗口腾出 7 行
  */
 import { db } from "@/lib/db";
 
@@ -49,17 +50,10 @@ export async function isPublishedLogSlug(slug: string) {
   return hit !== null;
 }
 
-// 管理侧查询：后台要看草稿，这里故意不过滤 isPublished；前台仍只能走上面的封装
-export async function listAdminLogs() {
-  return db.log.findMany({
-    orderBy: { updatedAt: "desc" },
-    include: { project: { select: { name: true } } },
-  });
-}
-
 export async function getAdminLogById(id: string) {
   return db.log.findUnique({
     where: { id },
     include: { project: { select: { name: true } } },
   });
 }
+

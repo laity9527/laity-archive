@@ -9,10 +9,17 @@
  * - 2026-11-03: 类型判定改为读文件内容签名（magic bytes），不再信任浏览器上报的 MIME；
  *               伪造 image/png 的 .exe 或不完整文件头一律 IMG_001（I032）
  * - 2026-11-03: 签名判定拆到 src/lib/image-signature.ts，本文件只管"凭据、大小上限、对象键、写入"
+ * - 2026-11-04: 入参类型由 File 放宽到 Blob：动作参数跨 React 边界反序列化后拿到的是 Blob，
+ *               上传路径因此一直被判 IMG_001（I061）；本函数只用到 arrayBuffer 与大小，两者都成立
+ * - 2026-11-04: 对象名断言改为允许大写（同 I061）：时间戳取自 toISOString()，里面必然有大写 T 与 Z，
+ *               原来的 [a-z0-9./-] 把自己生成的每个键都判死，上传从来没有过一次成功
+ * - 2026-11-04: 键生成与断言拆到 src/lib/object-key.ts，本文件不再自带这两段——拆前它们都在
+ *               ali-oss 的模块里，node --test 覆盖不到，所以这条"生成器比断言更宽松"的矛盾活了很久
  */
 import { randomBytes } from "node:crypto";
 import OSS from "ali-oss";
 import { sniffImage } from "@/lib/image-signature";
+import { buildObjectKey as objectKeyOf, isObjectKeySafe } from "@/lib/object-key";
 
 // SPEC IMG_001：仅 jpg/png/webp/gif，且不超过 5MB
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -33,15 +40,10 @@ function requireEnv(name: string) {
 
 // 对象键只用服务端生成的字符集，避免把用户文件名拼进路径（防目录穿越与奇字符）
 function buildObjectKey(ext: string) {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-
-  return `logs/${year}-${month}/${stamp}-${randomBytes(6).toString("hex")}.${ext}`;
+  return objectKeyOf(new Date(), ext, randomBytes(6).toString("hex"));
 }
 
-export async function uploadImage(file: File): Promise<UploadImageResult> {
+export async function uploadImage(file: Blob): Promise<UploadImageResult> {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   if (buffer.byteLength === 0 || buffer.byteLength > MAX_BYTES) {
@@ -66,7 +68,7 @@ export async function uploadImage(file: File): Promise<UploadImageResult> {
 
   const key = buildObjectKey(image.ext);
 
-  if (!/^[a-z0-9./-]+$/.test(key)) {
+  if (!isObjectKeySafe(key)) {
     return { ok: false, code: "IMG_001" };
   }
 

@@ -13,6 +13,8 @@
  *               Cache Components 判它不稳定，dev 下整条路由反复重渲染
  * - 2026-11-04: safeCallbackUrl 搬到 src/lib/forms.ts 并补上反斜杠判定（D26）：留在页面里就测不到，
  *               而 `/\host` 这种写法能绕过只挡 `//` 的旧判定跳去外站
+ * - 2026-11-04: 错误横幅补 role="alert"、<main> 补 id="main"（D27）：这张页不在前台导航的
+ *               管辖里，此前既没有可读出的活区，也没有可跳转的正文地标
  */
 import Link from "next/link";
 import { connection } from "next/server";
@@ -46,7 +48,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-[560px] flex-col justify-center px-6 py-24">
+    <main id="main" className="mx-auto flex min-h-screen max-w-[560px] flex-col justify-center px-6 py-24">
       <Link
         href="/"
         className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
@@ -62,7 +64,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       </p>
 
       {errorCode && (
-        <p className="mt-8 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p
+          role="alert"
+          className="mt-8 border border-ink px-4 py-3 font-mono text-xs text-ink"
+        >
           {ERROR_TEXT[errorCode] ?? ERROR_TEXT.Default}
         </p>
       )}
