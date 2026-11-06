@@ -8,6 +8,7 @@
  * - 2026-11-02: latest 允许为 null（零日志项目不拿创建时间冒充最近更新），改由 src/lib/projects.ts 的 getArchiveBoard 供数
  * - 2026-11-05: 类型与状态两格改走 src/lib/labels.ts 的中文映射（去 toUpperCase），中文格由 font-mono 改 font-sans；带日期的最后一格保留 font-mono
  * - 2026-11-05: 最后一格再拆两层 span——「N 篇日志」与「尚未发布」走 font-sans、日期仍 font-mono（时间戳强制等宽属视觉铁律），外层只留 ml-auto 与字号色，避免 flex 的 gap-x-6 在两段之间撑出 24px
+ * - 2026-11-06: 空态 NO ARCHIVE YET 改「暂无项目档案」并去 font-mono 与宽字距（中文标签走 Inter，AGENTS 视觉铁律 2026-11-06 口径）
  */
 import Link from "next/link";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
@@ -28,9 +29,7 @@ type StatusBoardProps = {
 export function StatusBoard({ entries }: StatusBoardProps) {
   if (entries.length === 0) {
     return (
-      <p className="font-mono text-xs tracking-[0.2em] text-ink-soft">
-        NO ARCHIVE YET
-      </p>
+      <p className="font-sans text-xs text-ink-soft">暂无项目档案</p>
     );
   }
 

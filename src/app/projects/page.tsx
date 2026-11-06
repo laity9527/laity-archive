@@ -7,9 +7,12 @@
  * - 2026-10-30: Phase 5a 初始创建
  * - 2026-11-02: 更正 instant 注释：false 是退出即时导航校验，不是把路由改成动态
  * - 2026-11-03: 补页面标题与描述；正文容器加 id 供"跳到正文"使用
+ * - 2026-11-06: 全站去英文第一批——kind/status 与 LOGS 改走 src/lib/labels.ts 映射、空态 NO PROJECT YET 改「暂无项目」；
+ *               按视觉铁律新口径拆字体：slug 留 font-mono（英文标识），中文与量词走 font-sans，日期留 font-mono
  */
 import type { Metadata } from "next";
 import Link from "next/link";
+import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { listPublicProjects } from "@/lib/projects";
 
 export const metadata: Metadata = {
@@ -39,8 +42,8 @@ export default async function ProjectsPage() {
       </p>
 
       {projects.length === 0 ? (
-        <p className="mt-12 border-t border-ink py-6 font-mono text-xs text-ink-soft">
-          NO PROJECT YET
+        <p className="mt-12 border-t border-ink py-6 font-sans text-xs text-ink-soft">
+          暂无项目
         </p>
       ) : (
         <ul className="mt-12 border-t border-ink">
@@ -61,9 +64,9 @@ export default async function ProjectsPage() {
                     {project.name}
                   </Link>
                 </h2>
-                <p className="mt-2 font-mono text-[11px] tracking-[0.1em] text-ink-soft">
-                  {project.slug} · {project.kind.toUpperCase()} ·{" "}
-                  {project.status}
+                <p className="mt-2 text-[11px] text-ink-soft">
+                  <span className="font-mono tracking-[0.1em]">{project.slug}</span>
+                  <span className="font-sans">{` · ${kindLabel(project.kind)} · ${statusLabel(project.status)}`}</span>
                 </p>
                 {project.summary && (
                   <p className="mt-3 max-w-xl text-sm text-ink-soft">
@@ -71,10 +74,13 @@ export default async function ProjectsPage() {
                   </p>
                 )}
               </div>
-              <p className="font-mono text-[11px] text-ink-soft md:text-right">
-                {project.logs.length} LOGS
-                {project.logs.length > 0 &&
-                  ` · ${project.logs[0].beforeDate.toISOString().slice(0, 10)}`}
+              <p className="text-[11px] text-ink-soft md:text-right">
+                <span className="font-sans">
+                  {logsCountLabel(project.logs.length)}
+                </span>
+                {project.logs.length > 0 && (
+                  <span className="font-mono">{` · ${project.logs[0].beforeDate.toISOString().slice(0, 10)}`}</span>
+                )}
               </p>
             </li>
           ))}

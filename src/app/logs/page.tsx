@@ -10,6 +10,7 @@
  * - 2026-11-03: 补页面标题与描述；正文容器加 id 供导航的"跳到正文"使用
  * - 2026-11-03: 描述改为"附 SHA-256 摘要与发布时间，可核对是否被改动"，去掉"存证"口吻
  * - 2026-11-05: 两层筛选的维度名 PROJECT/TAG 改为「项目」「标签」并去 font-mono 与 0.2em 字距；标签值属库里的用户数据，本轮不翻译（筛选参数与 tags: { has } 判定均未动）
+ * - 2026-11-06: 空态 NO LOG MATCHED 与 Suspense fallback 的 LOADING… 中文化（没有符合条件的日志 / 加载中…），同批去掉中文行的 font-mono 与宽字距
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -107,9 +108,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
       {logs.length === 0 ? (
         <div>
-          <p className="font-mono text-xs tracking-[0.2em] text-ink-soft">
-            NO LOG MATCHED
-          </p>
+          <p className="font-sans text-xs text-ink-soft">没有符合条件的日志</p>
           {(projectFilter || tagFilter) && (
             <Link
               href={logsHref({})}
@@ -158,7 +157,7 @@ export default function LogsPage({ searchParams }: LogsPageProps) {
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
       <h1 className="mb-12 text-4xl font-medium tracking-tight">开发日志</h1>
       <Suspense
-        fallback={<p className="font-mono text-sm text-ink-soft">LOADING…</p>}
+        fallback={<p className="font-sans text-sm text-ink-soft">加载中…</p>}
       >
         <LogBoard searchParams={searchParams} />
       </Suspense>

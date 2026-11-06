@@ -8,6 +8,7 @@
  * - 2026-10-30: Phase 2 完整版，看板与最新日志均读真库（未缓存查询由 Suspense 包裹）
  * - 2026-11-02: 看板改由 getArchiveBoard 供数（零日志项目也上榜），新增精选区与 /projects 入口（I029/I030，经批准补做）
  * - 2026-11-05: 三个区头与精选行的枚举标签中文化，枚举翻译改走 src/lib/labels.ts 单源；中文标签去 font-mono 与 0.2em 字距
+ * - 2026-11-06: 空态 NO LOG YET 与 Suspense fallback 的 LOADING… 中文化（暂无已发布日志 / 加载中…），同批去掉中文行的 font-mono 与宽字距
  */
 import Link from "next/link";
 import { Suspense } from "react";
@@ -81,8 +82,8 @@ async function ArchiveOverview() {
           </Link>
         </div>
         {latestLogs.length === 0 ? (
-          <p className="border-t border-ink py-6 font-mono text-xs text-ink-soft">
-            NO LOG YET
+          <p className="border-t border-ink py-6 font-sans text-xs text-ink-soft">
+            暂无已发布日志
           </p>
         ) : (
           <ul className="border-t border-ink">
@@ -132,9 +133,7 @@ export default function Home() {
 
       <div className="mt-20">
         <Suspense
-          fallback={
-            <p className="font-mono text-sm text-ink-soft">LOADING…</p>
-          }
+          fallback={<p className="font-sans text-sm text-ink-soft">加载中…</p>}
         >
           <ArchiveOverview />
         </Suspense>

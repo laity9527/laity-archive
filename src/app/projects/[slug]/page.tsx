@@ -8,11 +8,15 @@
  * - 2026-10-30: 更正说明：页面级 notFound 换不了状态码，真 404 由 src/proxy.ts 前置判定（与详情页同一路数）
  * - 2026-11-02: 补 instant 注释说明（false 是退出即时导航校验，不改变渲染方式）
  * - 2026-11-03: 按项目名生成页面标题与描述；正文容器加 id 供"跳到正文"使用
+ * - 2026-11-06: 全站去英文第一批——kind/status 与 LOGS 改走 src/lib/labels.ts 映射（含 generateMetadata 的描述串）、
+ *               空态 NO LOG YET 改「该项目暂无已发布日志」；slug 与日期留 font-mono，中文走 font-sans。
+ *               同页的 SINCE / REPO / LOGS 三个纯英文标签按分工留在第二批，本轮未动
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Timeline } from "@/components/Timeline";
+import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { getSafeLogs } from "@/lib/logs";
 import { getPublicProjectBySlug } from "@/lib/projects";
 
@@ -31,7 +35,7 @@ export async function generateMetadata({
     title: project.name,
     description:
       project.summary?.trim() ||
-      `${project.name}（${project.kind} · ${project.status}）的作品档案：判断与验证过程按时间轴归档。`,
+      `${project.name}（${kindLabel(project.kind)} · ${statusLabel(project.status)}）的作品档案：判断与验证过程按时间轴归档。`,
   };
 }
 
@@ -62,7 +66,8 @@ export default async function ProjectDetailPage({
 
       <header className="mt-8 border-b border-hairline pb-8">
         <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
-          {project.slug} · {project.kind.toUpperCase()} · {project.status}
+          {project.slug}
+          <span className="font-sans">{` · ${kindLabel(project.kind)} · ${statusLabel(project.status)}`}</span>
         </p>
         <h1 className="mt-3 text-4xl font-medium tracking-tight">
           {project.name}
@@ -74,7 +79,7 @@ export default async function ProjectDetailPage({
         )}
         <p className="mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-2 font-mono text-[11px] text-ink-soft">
           <span>SINCE {project.createdAt.toISOString().slice(0, 10)}</span>
-          <span>{logs.length} LOGS</span>
+          <span className="font-sans">{logsCountLabel(logs.length)}</span>
           {project.repoUrl && (
             <a
               href={project.repoUrl}
@@ -93,8 +98,8 @@ export default async function ProjectDetailPage({
           LOGS
         </h2>
         {logs.length === 0 ? (
-          <p className="border-t border-ink py-6 font-mono text-xs text-ink-soft">
-            NO LOG YET
+          <p className="border-t border-ink py-6 font-sans text-xs text-ink-soft">
+            该项目暂无已发布日志
           </p>
         ) : (
           <ul className="border-t border-ink">

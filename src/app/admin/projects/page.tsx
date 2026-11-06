@@ -14,13 +14,15 @@
  *               反斜杠变成两个，真实仓库地址被浏览器静默拒掉（I060）
  * - 2026-11-05: Select 加一层可选 labelMap：kind/status 下拉的 <option value> 仍是库里的英文原值（写库与校验口径不动），
  *               显示文案走 src/lib/labels.ts 的中文映射；PROJECT_KINDS / PROJECT_STATUSES 两个常量未改
+ * - 2026-11-06: 全站去英文第一批——列表行的 kind/status 与 LOGS 改走 labels 映射、空态 NO PROJECT YET 改「暂无项目」；
+ *               slug 仍 font-mono，中文改 font-sans。状态灯的 status === "LIVE" 判定与表单取值未动
  */
 import Link from "next/link";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { LIMITS, REPO_URL_SOURCE, SLUG_SOURCE, pickParam } from "@/lib/forms";
-import { kindLabel, statusLabel } from "@/lib/labels";
+import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { PROJECT_KINDS, PROJECT_STATUSES, getProjectById, listProjects } from "@/lib/projects";
 
 // 本页查库并读编辑参数，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
@@ -152,8 +154,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
       <ul className="mt-10 border-t border-ink">
         {projects.length === 0 && (
-          <li className="border-b border-hairline py-6 font-mono text-xs text-ink-soft">
-            NO PROJECT YET
+          <li className="border-b border-hairline py-6 font-sans text-xs text-ink-soft">
+            暂无项目
           </li>
         )}
         {projects.map((project) => (
@@ -168,11 +170,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             <span className="font-mono text-[11px] text-ink-soft">
               {project.slug}
             </span>
-            <span className="font-mono text-[11px] tracking-[0.2em] text-ink-soft">
-              {project.kind.toUpperCase()} · {project.status}
+            <span className="font-sans text-[11px] text-ink-soft">
+              {kindLabel(project.kind)} · {statusLabel(project.status)}
             </span>
-            <span className="font-mono text-[11px] text-ink-soft">
-              {project._count.logs} LOGS
+            <span className="font-sans text-[11px] text-ink-soft">
+              {logsCountLabel(project._count.logs)}
             </span>
             <span className="ml-auto flex items-baseline gap-4 font-mono text-[11px]">
               <Link
