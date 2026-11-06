@@ -95,6 +95,11 @@ SPEC C2 与第九节、README 快照、方案文档进度；材料重出并核�
 并补记 B1 已实施。本文件「已裁决」块之外的色值口径未动（仍是续九后的四值 + 强调色）。
 **本轮 commit 只含 .md 与 ISSUES 的 I075 备注，不含任何 `.ts`/`.tsx`/`.css` 改动、未重出软著材料。**
 本轮 amend 追加：D30 小节标题、D31 实施确认、路线图引言三处过期表述一并改为已闭环（原 commit `cc8f3ca`，本次 amend 以替换该条生效，故最终哈希以 `git log -1` 为准）。
+修订留痕续十三：2026-11-06 由我点名"AGENTS.md 视觉铁律「字体」行，授权修改"——**本轮按负责人授权，更新视觉铁律字体行，
+同步中文标签的字体策略**。起因是 `f2eb2d8` 与 `12940c1` 两轮把界面英文标签改成中文后，原句"时间戳与标签强制 JetBrains Mono"
+与实现不符（中文标签已走 Inter）。改动只有那一句，按我给的口径替换为"时间戳、数字与英文标识（如 BEFORE/AFTER）强制
+JetBrains Mono；中文标签走 Inter（font-sans），并移除大写字母专用的宽字距（tracking-[0.2em]）"；
+同节的色彩、形态、图标、版式与焦点可见性各行均未改动，技术选型（Next 16.4.3 / Prisma 6.19.3 / Tailwind 4.3.3）未改动。
 
 
 ---
@@ -206,7 +211,7 @@ laity-archive/
   漏改就是"改了 A 忘了 B"——A3 就是把 `--color-hairline` 与它的 `#E7E7E2` 绑在同一批落地的。
 - 形态：border-radius: 0（全局零圆角）；box-shadow: none（无阴影）；无渐变
 - 字体：UI 用 Inter；日志正文强制 Noto Serif SC（思源宋体，18px / 行高 1.85）；
-  时间戳与标签强制 JetBrains Mono（等宽，font-mono）
+  时间戳、数字与英文标识（如 BEFORE/AFTER）强制 JetBrains Mono；中文标签走 Inter（font-sans），并移除大写字母专用的宽字距（tracking-[0.2em]）
 - 图标：禁用一切图标库，只允许字符（↗ ← ● ○）
 - 版式：内容最大宽 1080px；日志详情限宽 720px；
   日志列表左侧 200px BEFORE/AFTER 时间轴（1px 竖线贯穿）
