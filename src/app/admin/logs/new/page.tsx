@@ -8,6 +8,8 @@
  * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
  * - 2026-11-04: 保存按钮改用 SubmitButton：提交进行中禁用并显示"保存中…"，防连点重复写
  * - 2026-11-04: 状态横幅补 role=alert（D27）
+ * - 2026-11-06: 第三批去英文——六个表单标签（TITLE/SLUG/PROJECT/TAGS/BEFORE DATE/AFTER DATE）中文化并走 font-sans；
+ *               BEFORE/AFTER 术语保留；placeholder 的示例值（prebuild-index / search, prisma）是格式样例，不译
  * - 2026-11-06: 第二批去英文（按负责人"全局搜索 LESSON LEARNED 并一并中文化"的指令扩到本页）：
  *               表单标签 LESSON LEARNED 改「经验总结」并走 font-sans；BEFORE/AFTER 术语与 name="lessonLearned" 字段名未动
  */
@@ -71,9 +73,7 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
       ) : (
         <form action={saveLogAction} className="mt-10 grid gap-6 md:grid-cols-2">
           <label className="flex flex-col gap-2">
-            <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              TITLE
-            </span>
+            <span className="font-sans text-[10px] text-ink-soft">标题</span>
             <input
               name="title"
               required
@@ -85,9 +85,7 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              SLUG
-            </span>
+            <span className="font-sans text-[10px] text-ink-soft">标识</span>
             <input
               name="slug"
               placeholder="prebuild-index"
@@ -100,9 +98,7 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              PROJECT
-            </span>
+            <span className="font-sans text-[10px] text-ink-soft">项目</span>
             <select
               name="projectId"
               defaultValue={projects[0].id}
@@ -117,9 +113,7 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              TAGS（逗号分隔，可空）
-            </span>
+            <span className="font-sans text-[10px] text-ink-soft">标签（逗号分隔，可空）</span>
             <input
               name="tags"
               placeholder="search, prisma"
@@ -130,9 +124,7 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              BEFORE DATE（本地时间，存库转 UTC）
-            </span>
+            <span className="font-sans text-[10px] text-ink-soft">BEFORE 日期（本地时间，存库转 UTC）</span>
             <input
               type="datetime-local"
               name="beforeDate"
@@ -145,9 +137,7 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              AFTER DATE（可空）
-            </span>
+            <span className="font-sans text-[10px] text-ink-soft">AFTER 日期（可空）</span>
             <input
               type="datetime-local"
               name="afterDate"

@@ -15,6 +15,8 @@
  * - 2026-11-05: D30 A2 辅助灰 #5C5C5C → #625d53，两处（`.label`、`p`）；#E7E7E2 属 A3，仍未动；
  *               内联样式自成一套、拿不到 CSS 变量，故这里保持字面量与令牌同值（改令牌必须同步改这里）
  * - 2026-11-05: D30 A3 分隔线 #E7E7E2 → #d9d2c5（一处：`a` 的下边框），与 globals.css 的 `--color-hairline` 同批落，避免 404 页与全站不同色（I073 豁免 3:1，实算只作留档）
+ * - 2026-11-06: 第四批去英文（负责人裁断二）：404 内联页的 `404 · NOT FOUND` 改为 `404 · 页面未找到`；
+ *               只改这一行文案，前置守卫逻辑、matcher 与四组色值字面量一字未动
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -69,7 +71,7 @@ a:hover{border-bottom-color:#1a1a18}
 </head>
 <body>
 <main>
-<p class="label">404 · NOT FOUND</p>
+<p class="label">404 · 页面未找到</p>
 <h1>${copy.heading}</h1>
 <p>${copy.hint}</p>
 <a href="${copy.backHref}">${copy.backText}</a>

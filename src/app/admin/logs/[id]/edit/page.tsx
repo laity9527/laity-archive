@@ -12,6 +12,9 @@
  * - 2026-11-04: 发布不再是独立小表单（D25）：改成"保存并发布"按钮挂在同一张表单上（per-button formAction），
  * - 2026-11-04: 状态横幅补 role=alert、确认删除输入框补可访问名、勾选行改 items-center（D27）
  *               发布前核对面板也移进表单、排在按钮之前——原先改了正文不点保存直接发布，发出去的是库里旧内容
+ * - 2026-11-06: 第三批去英文——六个表单标签（TITLE/SLUG/PROJECT/TAGS/BEFORE DATE/AFTER DATE）中文化并走 font-sans；
+ *               四条状态横幅去掉 SAVED/PUBLISHED/UNPUBLISHED 英文前缀；● 已发布 / ○ 草稿、上次发布与内容摘要两行
+ *               标签走 sans、时刻与哈希留 mono。BEFORE/AFTER 术语与 LOG_002 等错误码 chip 未动
  * - 2026-11-06: 第二批去英文（按负责人"全局搜索 LESSON LEARNED 并一并中文化"的指令扩到本页）：
  *               表单标签 LESSON LEARNED 改「经验总结」并走 font-sans；同页的 CONTENT HASH、PUBLISHED/LAST PUBLISHED 等按分工留后续，本轮未动
  */
@@ -124,7 +127,7 @@ export default async function EditLogPage({
       </div>
 
       <p className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-[11px] text-ink-soft">
-        <span className="text-ink">{log.isPublished ? "● PUBLISHED" : "○ DRAFT"}</span>
+        <span className="text-ink">{log.isPublished ? "● 已发布" : "○ 草稿"}</span>
         <span>/logs/{log.slug}</span>
         {log.isPublished && (
           <Link href={`/logs/${log.slug}`} className="border-b border-ink text-ink">
@@ -144,29 +147,32 @@ export default async function EditLogPage({
 
       {saved && (
         <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
-          SAVED · 已保存{log.isPublished ? "" : "，当前为草稿"}
+          已保存{log.isPublished ? "" : "，当前为草稿"}
         </p>
       )}
 
       {published && (
         <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
-          PUBLISHED · 已发布，前台可见
+          已发布，前台可见
         </p>
       )}
 
       {unpublished && (
         <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
-          UNPUBLISHED · 已下架，前台不再可见，历史摘要与发布时间保留
+          已下架，前台不再可见，历史摘要与发布时间保留
         </p>
       )}
 
       {log.contentHash && log.publishedAt && (
         <div className="mt-6 border-t border-hairline pt-4 font-mono text-[11px] leading-relaxed text-ink-soft">
           <p>
-            LAST PUBLISHED ·{" "}
-            {log.publishedAt.toISOString().slice(0, 16).replace("T", " ")} UTC
+            <span className="font-sans">{`上次发布 · `}</span>
+            <span>{log.publishedAt.toISOString().slice(0, 16).replace("T", " ")} UTC</span>
           </p>
-          <p className="break-all">CONTENT HASH · {log.contentHash}</p>
+          <p className="break-all">
+            <span className="font-sans">{`内容摘要 · `}</span>
+            <span>{log.contentHash}</span>
+          </p>
           {!log.isPublished && (
             <p className="mt-2">
               这份哈希对应的是上一次发布的正文；重新发布会按当前正文重算。
@@ -179,9 +185,7 @@ export default async function EditLogPage({
         <input type="hidden" name="id" value={log.id} />
 
         <label className="flex flex-col gap-2">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            TITLE
-          </span>
+          <span className="font-sans text-[10px] text-ink-soft">标题</span>
           <input
             name="title"
             defaultValue={log.title}
@@ -194,9 +198,7 @@ export default async function EditLogPage({
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            SLUG
-          </span>
+          <span className="font-sans text-[10px] text-ink-soft">标识</span>
           <input
             name="slug"
             defaultValue={log.slug}
@@ -209,9 +211,7 @@ export default async function EditLogPage({
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            PROJECT
-          </span>
+          <span className="font-sans text-[10px] text-ink-soft">项目</span>
           <select
             name="projectId"
             defaultValue={log.projectId}
@@ -226,9 +226,7 @@ export default async function EditLogPage({
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            TAGS（逗号分隔，可空）
-          </span>
+          <span className="font-sans text-[10px] text-ink-soft">标签（逗号分隔，可空）</span>
           <input
             name="tags"
             defaultValue={log.tags.join(", ")}
@@ -239,9 +237,7 @@ export default async function EditLogPage({
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            BEFORE DATE（本地时间，存库转 UTC）
-          </span>
+          <span className="font-sans text-[10px] text-ink-soft">BEFORE 日期（本地时间，存库转 UTC）</span>
           <input
             type="datetime-local"
             name="beforeDate"
@@ -251,9 +247,7 @@ export default async function EditLogPage({
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            AFTER DATE（可空）
-          </span>
+          <span className="font-sans text-[10px] text-ink-soft">AFTER 日期（可空）</span>
           <input
             type="datetime-local"
             name="afterDate"

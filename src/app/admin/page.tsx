@@ -12,6 +12,7 @@
  * - 2026-11-05: 三项计数、区块标题与列表状态标签中文化（不译数据，isPublished 判定未动）；中文标签去 font-mono 与 0.2em 字距，计数值与带日期的状态格仍用 font-mono
  * - 2026-11-05: 状态格拆成两层 span——「已发布/草稿」走 font-sans、日期走 font-mono（时间戳强制等宽），外层只留 ml-auto 与字号色
  * - 2026-11-06: 空态 NO LOG YET 改「暂无日志」并去 font-mono（中文标签走 Inter）
+ * - 2026-11-06: 第三批去英文——DELETED 横幅去掉英文前缀，中文句自解释；?deleted= 参数名与 errorCodeChip 未动
  */
 import Link from "next/link";
 import { pickParam } from "@/lib/forms";
@@ -45,7 +46,7 @@ export default async function AdminHomePage({
 
       {deleted && (
         <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
-          DELETED · 该条日志已彻底删除，正文与摘要都不再保留
+          该条日志已彻底删除，正文与摘要都不再保留
         </p>
       )}
 

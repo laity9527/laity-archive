@@ -14,6 +14,8 @@
  *               反斜杠变成两个，真实仓库地址被浏览器静默拒掉（I060）
  * - 2026-11-05: Select 加一层可选 labelMap：kind/status 下拉的 <option value> 仍是库里的英文原值（写库与校验口径不动），
  *               显示文案走 src/lib/labels.ts 的中文映射；PROJECT_KINDS / PROJECT_STATUSES 两个常量未改
+ * - 2026-11-06: 第三批去英文——SAVED/DELETED 两条横幅去掉英文前缀（中文句已自解释），小节标题 EDIT/NEW PROJECT 改中文，
+ *               六个 Field/Select 的 label 中文化（REPO URL 保留 URL 缩写）；Field/Select/h2 三处标签类统一走 font-sans
  * - 2026-11-06: 全站去英文第一批——列表行的 kind/status 与 LOGS 改走 labels 映射、空态 NO PROJECT YET 改「暂无项目」；
  *               slug 仍 font-mono，中文改 font-sans。状态灯的 status === "LIVE" 判定与表单取值未动
  */
@@ -61,7 +63,7 @@ function Field({
 }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
+      <span className="font-sans text-[10px] text-ink-soft">
         {label}
       </span>
       <input
@@ -94,7 +96,7 @@ function Select({
 }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
+      <span className="font-sans text-[10px] text-ink-soft">
         {label}
       </span>
       <select
@@ -142,13 +144,13 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
       {saved && (
         <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
-          SAVED · 项目已保存
+          项目已保存
         </p>
       )}
 
       {deleted && (
         <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
-          DELETED · 该项目已删除
+          该项目已删除
         </p>
       )}
 
@@ -198,8 +200,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       </ul>
 
       <section className="mt-16 border-t border-ink pt-8">
-        <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-          {editing ? "EDIT PROJECT" : "NEW PROJECT"}
+        <h2 className="font-sans text-[10px] text-ink-soft">
+          {editing ? "编辑项目" : "新建项目"}
         </h2>
 
         <form
@@ -209,7 +211,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
         >
           {editing && <input type="hidden" name="id" value={editing.id} />}
           <Field
-            label="SLUG"
+            label="标识"
             name="slug"
             defaultValue={editing?.slug}
             placeholder="earth-mirror"
@@ -218,7 +220,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             invalid={bad("slug")}
           />
           <Field
-            label="NAME"
+            label="名称"
             name="name"
             defaultValue={editing?.name}
             placeholder="地球 Mirror"
@@ -227,28 +229,28 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             invalid={bad("name")}
           />
           <Select
-            label="KIND"
+            label="类型"
             name="kind"
             options={PROJECT_KINDS}
             labelMap={kindLabel}
             defaultValue={editing?.kind ?? PROJECT_KINDS[0]}
           />
           <Select
-            label="STATUS"
+            label="状态"
             name="status"
             options={PROJECT_STATUSES}
             labelMap={statusLabel}
             defaultValue={editing?.status ?? PROJECT_STATUSES[0]}
           />
           <Field
-            label="SUMMARY"
+            label="简介"
             name="summary"
             defaultValue={editing?.summary ?? undefined}
             maxLength={LIMITS.projectSummary}
             invalid={bad("summary")}
           />
           <Field
-            label="REPO URL"
+            label="仓库 URL"
             name="repoUrl"
             defaultValue={editing?.repoUrl ?? undefined}
             pattern={REPO_URL_SOURCE}

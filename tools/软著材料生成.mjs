@@ -40,6 +40,10 @@
  *               本次 assertWindowFit() 未拒绝出件：前窗口仍止于 error-text.ts 第 1500 行（零余量，下轮加行要先配平），
  *               后窗口起于 privacy/page.tsx，labels.ts 整份落在省略段，属 ③ 段口径的正常结果而非漏登记。
  *               6655 行 / 134 页 / 收录 68
+ * - 2026-11-06: 第三批开工第一步（负责人预批的让位）：src/app/licenses/page.tsx 自 ④ 平移进折走段 ③，
+ *               与它消费的 licenses.ts 同段。起因是量测算出后窗口余量对总页数敏感——6721 行时余 41 行，
+ *               一旦净加行跨过 6750 翻到 136 页，容量由 1471 掉到 1451、余量只剩 21 行。
+ *               让位后 ④ 段从 1430 行降到 1321 行，第三批可安全加行。前窗口未受影响（①② 一字未动）。
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -122,6 +126,8 @@ const BANDS = [
       "src/lib/image-signature.ts",
       // 许可清单是一张静态表（值来自 node_modules 实测），逻辑在 tests/licenses.test.ts 的对拍里
       "src/lib/licenses.ts",
+      // /licenses 页自 ④ 平移进来（2026-11-06），与上面那张表成对：本页只是把表排版出来
+      "src/app/licenses/page.tsx",
       // 站点标识同样是"一串常量 + 读环境变量"，没有算法；第十二轮（取消 GitHub 登录）为让出口令模块的位置移进 ③，
       // ②→③ 平移不改 ④ 的起点，后窗口不受影响
       "src/lib/site.ts",
@@ -201,7 +207,9 @@ const BANDS = [
       "src/app/logs/page.tsx",
       "src/app/logs/[slug]/page.tsx",
       "src/app/projects/page.tsx",
-      "src/app/licenses/page.tsx",
+      // licenses/page.tsx 于本轮自 ④ 平移进折走段 ③（2026-11-06 第三批开工第一步，负责人预批）：
+      // 后窗口余量对总页数敏感（跨页界即从 41 掉到 21），先把这 109 行回血再动代码。
+      // 它承载的是许可清单的排版，值来自 ③ 段 licenses.ts 那张静态表，SPEC 未点名本页形态
       // 关于页（SPEC F19 / DESIGN D31，2026-11-05 新增）：三段静态文案 + 环境变量联系方式，
       // 属访客可见界面，与 /licenses、/privacy 同一类公示页
       "src/app/about/page.tsx",

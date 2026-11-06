@@ -11,6 +11,8 @@
  * - 2026-11-06: 全站去英文第一批——kind/status 与 LOGS 改走 src/lib/labels.ts 映射（含 generateMetadata 的描述串）、
  *               空态 NO LOG YET 改「该项目暂无已发布日志」；slug 与日期留 font-mono，中文走 font-sans。
  *               同页的 SINCE / REPO / LOGS 三个纯英文标签按分工留在第二批，本轮未动
+ * - 2026-11-06: 第四批（负责人裁断一）——SINCE 改「始于」、REPO ↗ 改「仓库 ↗」、区块标题 LOGS 改「开发日志」，
+ *               三处标签走 font-sans；日期仍留 font-mono，且「始于 」与日期同处一个 span，避免 flex 的 gap-x-6 在两段间撑出 24px
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -78,25 +80,23 @@ export default async function ProjectDetailPage({
           </p>
         )}
         <p className="mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-2 font-mono text-[11px] text-ink-soft">
-          <span>SINCE {project.createdAt.toISOString().slice(0, 10)}</span>
+          <span><span className="font-sans">{`始于 `}</span>{project.createdAt.toISOString().slice(0, 10)}</span>
           <span className="font-sans">{logsCountLabel(logs.length)}</span>
           {project.repoUrl && (
             <a
               href={project.repoUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+              className="font-sans text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
             >
-              REPO ↗
+              仓库 ↗
             </a>
           )}
         </p>
       </header>
 
       <section className="mt-12">
-        <h2 className="mb-4 font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-          LOGS
-        </h2>
+        <h2 className="mb-4 font-sans text-[10px] text-ink-soft">开发日志</h2>
         {logs.length === 0 ? (
           <p className="border-t border-ink py-6 font-sans text-xs text-ink-soft">
             该项目暂无已发布日志
