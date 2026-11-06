@@ -12,6 +12,8 @@
  * - 2026-11-04: 发布不再是独立小表单（D25）：改成"保存并发布"按钮挂在同一张表单上（per-button formAction），
  * - 2026-11-04: 状态横幅补 role=alert、确认删除输入框补可访问名、勾选行改 items-center（D27）
  *               发布前核对面板也移进表单、排在按钮之前——原先改了正文不点保存直接发布，发出去的是库里旧内容
+ * - 2026-11-06: 第二批去英文（按负责人"全局搜索 LESSON LEARNED 并一并中文化"的指令扩到本页）：
+ *               表单标签 LESSON LEARNED 改「经验总结」并走 font-sans；同页的 CONTENT HASH、PUBLISHED/LAST PUBLISHED 等按分工留后续，本轮未动
  */
 import Link from "next/link";
 import {
@@ -270,8 +272,8 @@ export default async function EditLogPage({
         </div>
 
         <label className="flex flex-col gap-2 md:col-span-2">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            LESSON LEARNED（Markdown，可空）
+          <span className="font-sans text-[10px] text-ink-soft">
+            经验总结（Markdown，可空）
           </span>
           <textarea
             name="lessonLearned"

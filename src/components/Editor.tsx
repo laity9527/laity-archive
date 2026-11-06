@@ -14,6 +14,8 @@
  * - 2026-11-04: 上传结果提示补活区：错误用 role=alert、成功用 role=status，读屏才会在异步返回时读出来（D27）
  *               （D26）——原先被拒的保存会 redirect 回编辑页并从库里重渲染，写到一半的字整段没，
  *               而清 dirty 标记又恰好把丢稿拦截在这条路上解除武装
+ * - 2026-11-06: 第二批去英文——PREVIEW 改「预览」、空态 EMPTY 改「暂无内容」并走 font-sans；
+ *               BEFORE / AFTER 作为系统专有术语保留等宽英文（含 tab.toUpperCase() 的页签回显与两处 aria-label）
  */
 "use client";
 
@@ -267,14 +269,15 @@ export function Editor({
       </div>
 
       <div className="border border-hairline px-4 py-3">
-        <p className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-          PREVIEW · {tab.toUpperCase()}
+        <p className="text-[10px] text-ink-soft">
+          <span className="font-sans">{`预览 · `}</span>
+          <span className="font-mono">{tab.toUpperCase()}</span>
         </p>
         <div className="mt-4">
           {active.trim().length > 0 ? (
             <Markdown source={active} />
           ) : (
-            <p className="font-mono text-[11px] text-ink-soft">EMPTY</p>
+            <p className="font-sans text-[11px] text-ink-soft">暂无内容</p>
           )}
         </div>
       </div>

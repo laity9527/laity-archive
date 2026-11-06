@@ -8,6 +8,8 @@
  * - 2026-11-02: pickParam 与错误文案表改由 src/lib 提供
  * - 2026-11-04: 保存按钮改用 SubmitButton：提交进行中禁用并显示"保存中…"，防连点重复写
  * - 2026-11-04: 状态横幅补 role=alert（D27）
+ * - 2026-11-06: 第二批去英文（按负责人"全局搜索 LESSON LEARNED 并一并中文化"的指令扩到本页）：
+ *               表单标签 LESSON LEARNED 改「经验总结」并走 font-sans；BEFORE/AFTER 术语与 name="lessonLearned" 字段名未动
  */
 import Link from "next/link";
 import { saveLogAction } from "@/app/admin/log-actions";
@@ -165,8 +167,8 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
           </div>
 
           <label className="flex flex-col gap-2 md:col-span-2">
-            <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              LESSON LEARNED（Markdown，可空）
+            <span className="font-sans text-[10px] text-ink-soft">
+              经验总结（Markdown，可空）
             </span>
             <textarea
               name="lessonLearned"

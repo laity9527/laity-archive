@@ -9,6 +9,7 @@
  * - 2026-11-02: 更正 instant 注释：false 是退出即时导航校验，不是把路由改成动态
  * - 2026-11-03: 按日志标题生成页面标题、以经验总结作描述；已发布但缺摘要时改为显式告警而不是静默不画印章
  * - 2026-11-03: 告警文案中性化（"存证缺失"→"摘要缺失"），只说"无法核对是否被改动"，不自称存证或权属凭证
+ * - 2026-11-06: 第二批去英文——区块标题 LESSON LEARNED 改「经验总结」并改走 font-sans（去 0.2em 宽字距）；BEFORE / AFTER 作为系统专有术语按负责人裁定保留等宽英文
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -104,9 +105,7 @@ export default async function LogDetailPage({
 
       {log.lessonLearned && (
         <section className="mt-12">
-          <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            LESSON LEARNED
-          </h2>
+          <h2 className="font-sans text-[10px] text-ink-soft">经验总结</h2>
           <div className="mt-4">
             <Markdown source={log.lessonLearned} />
           </div>
