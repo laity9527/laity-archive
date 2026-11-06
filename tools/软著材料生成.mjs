@@ -48,6 +48,8 @@
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
  * 打印时选 A4、边距"无"、缩放 100%，并关掉浏览器的页眉页脚选项。
+ * - 2026-11-06: 第十五次窗口配平（负责人裁断一批准）：prisma/seed.ts 内联 12 篇日志正文后从 ① 平移进折走段 ③ 末位；
+ *               ①+② 保住整份可见，材料总页数 137 → 150（提交页数仍为前 30 + 后 30）。窗口判据实测：移动前生成器拒绝出件并报五个文件越界
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -78,7 +80,6 @@ const BANDS = [
     name: "数据模型与运行时配置",
     files: [
       "prisma/schema.prisma",
-      "prisma/seed.ts",
       // package.json 是依赖清单与脚本表（配置而非程序逻辑，与折走段里的 tsconfig/docker 同类）；
       // 本轮 next.config.ts 加 CSP 涨行，把 proxy.ts 尾部推过 1500 切口，按 assertWindowFit 的处置由它让位
       "next.config.ts",
@@ -191,6 +192,10 @@ const BANDS = [
       // 隐私页是一份静态承诺文案（数据全在页面内的常量数组，无算法）；本轮 globals.css 为正文标题补了
       // 一段样式，④ 涨到把 globals.css 头部切在后窗口外，按 assertWindowFit 的建议由它让位（收录不减）
       "src/app/privacy/page.tsx",
+      // 种子脚本从 ① 让位进折走段末位（2026-11-06，负责人裁断一）：prisma/seed.ts 内联 12 篇已发布日志后由 67 行涨到 507 行，
+      // 其中 18,419 字符是 Markdown 正文文案；留在 ① 会把 ② 段尾部（sensitive-scan/oss/admin-password/auth/proxy）整块顶出前 1500 行，
+      // 而那五个是必须整份可见的核心逻辑。按'折排版不折逻辑'判定让位：D5 摘要算法（src/lib/content-hash.ts）与数据模型仍在前面整份可见。
+      "prisma/seed.ts",
     ],
   },
   {
