@@ -9,14 +9,13 @@
  * - 2026-10-30: 新增 isPublishedLogSlug 供 Proxy 前置判定 404 状态码
  * - 2026-10-30: 追加管理侧查询 listAdminLogs / getAdminLogById（不经过 isPublished 过滤，仅供后台）
  * - 2026-11-04: 删掉零调用的 listAdminLogs（D27）：后台概览与编辑页各有各的取数，这个全表查询自Phase 4后没人引；顺带给前窗口腾出 7 行
+ * - 2026-11-06: 新增 getLatestLogs（首页「最新日志」按发布时间排序，见 D13 修订）；getSafeLogs 的 take 选项随唯一调用方迁走一并删除
  */
 import { db } from "@/lib/db";
 
 export type SafeLogFilter = {
   project?: string;
   tag?: string;
-  // 只要前 N 条时交给数据库取，而不是全表捞回内存再切（首页用）
-  take?: number;
 };
 
 const projectSelect = {
@@ -31,8 +30,19 @@ export async function getSafeLogs(filter: SafeLogFilter = {}) {
       ...(filter.tag ? { tags: { has: filter.tag } } : {}),
     },
     orderBy: { beforeDate: "desc" },
-    // 首页只要最新三条，原先把全部已发布日志取回内存再 slice(0,3)
-    ...(filter.take ? { take: filter.take } : {}),
+    include: { project: projectSelect },
+  });
+}
+
+// 首页「最新日志」口径：beforeDate 是"哪天做的决策"，publishedAt 才是"什么时候写出来的"，
+// 访客在这里要读最新动态，所以按发布时间排——BEFORE 填几天前都不影响它顶到最前（D13 修订）
+export async function getLatestLogs(take: number) {
+  return db.log.findMany({
+    where: { isPublished: true, publishedAt: { not: null } },
+    // 实测 11 篇批量入库里有 10 篇 publishedAt 完全相同（同一秒），
+    // 只按它排序时前三条会退化成不确定子集，再用 beforeDate 兜底成确定顺序
+    orderBy: [{ publishedAt: "desc" }, { beforeDate: "desc" }],
+    take,
     include: { project: projectSelect },
   });
 }

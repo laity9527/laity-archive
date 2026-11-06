@@ -160,6 +160,7 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
   要改成人工挑选再单独走数据库变更。零日志项目 `latest` 用 `null` 表达、界面显示"尚未发布"，
   不拿创建时间冒充更新时间。
 - 影响：`src/app/page.tsx`、`src/components/StatusBoard.tsx` 行为变化，前台隔离铁律不变（封装内强制 `isPublished: true`）。
+- **修订（2026-11-06）**：首页「最新日志」的排序口径由 `beforeDate`（判断时间）改为 `publishedAt`（发布时间）——访客在这一格里要的是“你刚刚写了什么”，不是“你哪一天做的决策”。实现落在 `src/lib/logs.ts` 新增的 `getLatestLogs(take)`：只取 `publishedAt` 非空的已发布日志，同秒并列（实测 11 篇批量入库里有 10 篇 `publishedAt` 完全相同）再按 `beforeDate desc` 兜底成确定顺序，否则前三条会退化成不确定子集。看板与精选规则不变；日志大厅仍按 `beforeDate` 倒序（那里读的本来就是判断时间轴）；`getSafeLogs` 的 `take` 选项随唯一调用方迁走一并删除。
 
 ### D14：下架动作独立存在，SPEC 的错误返回描述按实现改写
 - 背景：SPEC:117 定义了 `unpublishLog` 但代码里从未实现（I028）；SPEC:122 又写"统一 `{ok,code,message}`"与实际不符（I031）。

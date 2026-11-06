@@ -12,6 +12,9 @@
  * - 2026-11-05: 两层筛选的维度名 PROJECT/TAG 改为「项目」「标签」并去 font-mono 与 0.2em 字距；标签值属库里的用户数据，本轮不翻译（筛选参数与 tags: { has } 判定均未动）
  * - 2026-11-06: 空态 NO LOG MATCHED 与 Suspense fallback 的 LOADING… 中文化（没有符合条件的日志 / 加载中…），同批去掉中文行的 font-mono 与宽字距
  * - 2026-11-06: 列表 `<ul>` 加 `@container`，为 Timeline 的容器查询宽度提供承载元素（本页列表满宽 ≥576px，时间轴仍是左侧 200px，视觉与改前一致）
+ * - 2026-11-06: 标签筛选区折叠——注入 11 篇日志后标签累积到 52 个，全量渲染堆成六七行文字墙。默认可见只留 `TAG_LIMIT = 12` 个，
+ *               其余收进原生 `<details>`/`<summary>`（零客户端组件、零新依赖）；`display: contents` 让 summary 与折叠标签仍是同一行 flex 子项，
+ *               三角标记用 `list-none` + `[&::-webkit-details-marker]:hidden` 隐藏；当前选中的标签若落在折叠区则并进可见组，避免筛选态不可见
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -32,6 +35,9 @@ type LogsPageProps = {
     tag?: string | string[];
   }>;
 };
+
+// 标签筛选区默认可见的上限，超出部分收进原生 details 折叠
+const TAG_LIMIT = 12;
 
 function logsHref(params: { project?: string; tag?: string }) {
   const search = new URLSearchParams();
@@ -63,6 +69,27 @@ async function LogBoard({ searchParams }: LogsPageProps) {
     ...new Map(all.map((log) => [log.project.slug, log.project.name])),
   ];
   const tagOptions = [...new Set(all.flatMap((log) => log.tags))];
+  // 标签已有 52 个，全量渲染会堆成六七行文字墙；默认只留前 TAG_LIMIT 个，其余收进原生 details
+  const shownTags = tagOptions.slice(0, TAG_LIMIT);
+  let hiddenTags = tagOptions.slice(TAG_LIMIT);
+  // 选中的标签若落在折叠区里，收起态就看不出"当前筛的是哪一个"，所以并进可见组
+  if (tagFilter && hiddenTags.includes(tagFilter)) {
+    shownTags.push(tagFilter);
+    hiddenTags = hiddenTags.filter((item) => item !== tagFilter);
+  }
+
+  const tagChip = (item: string) => (
+    <Link
+      key={item}
+      href={logsHref({
+        project: projectFilter,
+        tag: tagFilter === item ? undefined : item,
+      })}
+      className={filterClass(tagFilter === item)}
+    >
+      {item}
+    </Link>
+  );
 
   return (
     <>
@@ -91,18 +118,20 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         {tagOptions.length > 0 && (
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 md:ml-auto">
             <span className="font-sans text-[10px] text-ink-soft">标签</span>
-            {tagOptions.map((item) => (
-              <Link
-                key={item}
-                href={logsHref({
-                  project: projectFilter,
-                  tag: tagFilter === item ? undefined : item,
-                })}
-                className={filterClass(tagFilter === item)}
-              >
-                {item}
-              </Link>
-            ))}
+            {shownTags.map(tagChip)}
+            {hiddenTags.length > 0 && (
+              <details className="group contents">
+                <summary
+                  className={`${filterClass(false)} cursor-pointer list-none font-mono text-[11px] [&::-webkit-details-marker]:hidden`}
+                >
+                  <span className="group-open:hidden">[ + 展开全部标签 ]</span>
+                  <span className="hidden group-open:inline">
+                    [ − 收起全部标签 ]
+                  </span>
+                </summary>
+                {hiddenTags.map(tagChip)}
+              </details>
+            )}
           </div>
         )}
       </nav>

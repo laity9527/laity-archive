@@ -17,26 +17,27 @@
  *               改为 `@[36rem]:flex-row @[36rem]:gap-10`。起因是实测：`md:` 判的是视口宽度不是栏宽，1280 视口下 344px 的右栏里
  *               200px 时间轴 + 40px gap 只给标题剩 56px，20px 标题折成 13 行 364px 高。容器查询按栏宽决定横竖排，
  *               BEFORE/AFTER 双段时间轴的表达保留（栏够宽仍横排），不是把时间轴删掉
+ * - 2026-11-06: 「最新日志」口径修正——取数由 `getSafeLogs({ take: 3 })`（按 beforeDate 排）改为 `getLatestLogs(3)`（按 publishedAt 排，
+ *               同秒并列时以 beforeDate 兜底）；原 `logs.slice(0, 3)` 随之外提为查询的 take，渲染部分未改动
  */
 import Link from "next/link";
 import { Suspense } from "react";
 import { StatusBoard } from "@/components/StatusBoard";
 import { Timeline } from "@/components/Timeline";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
-import { getSafeLogs } from "@/lib/logs";
+import { getLatestLogs } from "@/lib/logs";
 import { getArchiveBoard } from "@/lib/projects";
 
 async function ArchiveOverview() {
-  // 首页的最新日志只要 3 条，取数交给数据库的 take，不再全表捞回内存
-  const [board, logs] = await Promise.all([
+  // 首页的最新日志只要 3 条，按发布时间交给数据库取（D13 修订），不再全表捞回内存再切
+  const [board, latestLogs] = await Promise.all([
     getArchiveBoard(),
-    getSafeLogs({ take: 3 }),
+    getLatestLogs(3),
   ]);
 
   // 精选规则（本轮定的，无数据库字段）：有已发布日志的项目按最近更新取前 3；
   // 零日志项目只进下面的状态看板，不进精选
   const featured = board.filter((project) => project.count > 0).slice(0, 3);
-  const latestLogs = logs.slice(0, 3);
 
   return (
     <div className="md:flex md:items-start md:justify-between">
