@@ -15,6 +15,9 @@
  * - 2026-11-06: 标签筛选区折叠——注入 11 篇日志后标签累积到 52 个，全量渲染堆成六七行文字墙。默认可见只留 `TAG_LIMIT = 12` 个，
  *               其余收进原生 `<details>`/`<summary>`（零客户端组件、零新依赖）；`display: contents` 让 summary 与折叠标签仍是同一行 flex 子项，
  *               三角标记用 `list-none` + `[&::-webkit-details-marker]:hidden` 隐藏；当前选中的标签若落在折叠区则并进可见组，避免筛选态不可见
+ * - 2026-11-06: 修正上一条的 `display: contents` 方案——Chrome 把 details 里非 summary 的内容收进 `::details-content` 伪盒，那 40 个标签因此不是外层 flex 容器的子项，`gap-x-4 gap-y-2` 对它们完全失效，退化成首尾相接的 inline 文字流（负责人截图里展开后粘连的成因）。
+ *               现改为 details 自占一行（`basis-full`）、折叠内容由独立的 `flex flex-wrap gap-x-4 gap-y-3` div 承载；两组筛选区的行间距同步由 `gap-y-2` 提到 `gap-y-3`，
+ *               summary 加 `w-fit` 把命中区收窄到文案本身
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -94,7 +97,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
   return (
     <>
       <nav className="mb-12 flex flex-col gap-4 border-y border-hairline py-4 md:flex-row md:items-baseline md:gap-10">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-3">
           <span className="font-sans text-[10px] text-ink-soft">项目</span>
           <Link
             href={logsHref({ tag: tagFilter })}
@@ -116,20 +119,22 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           ))}
         </div>
         {tagOptions.length > 0 && (
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 md:ml-auto">
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-3 md:ml-auto">
             <span className="font-sans text-[10px] text-ink-soft">标签</span>
             {shownTags.map(tagChip)}
             {hiddenTags.length > 0 && (
-              <details className="group contents">
+              <details className="group basis-full">
                 <summary
-                  className={`${filterClass(false)} cursor-pointer list-none font-mono text-[11px] [&::-webkit-details-marker]:hidden`}
+                  className={`${filterClass(false)} w-fit cursor-pointer list-none font-mono text-[11px] [&::-webkit-details-marker]:hidden`}
                 >
                   <span className="group-open:hidden">[ + 展开全部标签 ]</span>
                   <span className="hidden group-open:inline">
                     [ − 收起全部标签 ]
                   </span>
                 </summary>
-                {hiddenTags.map(tagChip)}
+                <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-3">
+                  {hiddenTags.map(tagChip)}
+                </div>
               </details>
             )}
           </div>
