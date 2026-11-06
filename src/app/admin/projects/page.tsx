@@ -12,12 +12,15 @@
  * - 2026-11-04: REPO URL 的 pattern 改取 src/lib/forms.ts 的 REPO_URL_SOURCE：上一轮直接写 JSX 属性字符串，
  * - 2026-11-04: 三条状态横幅补 role=alert（D27）
  *               反斜杠变成两个，真实仓库地址被浏览器静默拒掉（I060）
+ * - 2026-11-05: Select 加一层可选 labelMap：kind/status 下拉的 <option value> 仍是库里的英文原值（写库与校验口径不动），
+ *               显示文案走 src/lib/labels.ts 的中文映射；PROJECT_KINDS / PROJECT_STATUSES 两个常量未改
  */
 import Link from "next/link";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { LIMITS, REPO_URL_SOURCE, SLUG_SOURCE, pickParam } from "@/lib/forms";
+import { kindLabel, statusLabel } from "@/lib/labels";
 import { PROJECT_KINDS, PROJECT_STATUSES, getProjectById, listProjects } from "@/lib/projects";
 
 // 本页查库并读编辑参数，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
@@ -79,11 +82,13 @@ function Select({
   name,
   options,
   defaultValue,
+  labelMap = (value: string) => value,
 }: {
   label: string;
   name: string;
   options: string[];
   defaultValue: string;
+  labelMap?: (value: string) => string;
 }) {
   return (
     <label className="flex flex-col gap-2">
@@ -97,7 +102,7 @@ function Select({
       >
         {options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {labelMap(option)}
           </option>
         ))}
       </select>
@@ -223,12 +228,14 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             label="KIND"
             name="kind"
             options={PROJECT_KINDS}
+            labelMap={kindLabel}
             defaultValue={editing?.kind ?? PROJECT_KINDS[0]}
           />
           <Select
             label="STATUS"
             name="status"
             options={PROJECT_STATUSES}
+            labelMap={statusLabel}
             defaultValue={editing?.status ?? PROJECT_STATUSES[0]}
           />
           <Field

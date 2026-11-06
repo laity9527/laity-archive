@@ -10,6 +10,7 @@
  * - 2026-11-03: 接收 ?deleted=1，删除后回概览时给出结果提示
  * - 2026-11-04: 概览状态横幅补 role=alert（D27）
  * - 2026-11-05: 三项计数、区块标题与列表状态标签中文化（不译数据，isPublished 判定未动）；中文标签去 font-mono 与 0.2em 字距，计数值与带日期的状态格仍用 font-mono
+ * - 2026-11-05: 状态格拆成两层 span——「已发布/草稿」走 font-sans、日期走 font-mono（时间戳强制等宽），外层只留 ml-auto 与字号色
  */
 import Link from "next/link";
 import { pickParam } from "@/lib/forms";
@@ -81,9 +82,9 @@ export default async function AdminHomePage({
                 <span className="font-mono text-[11px] text-ink-soft">
                   {log.project.name}
                 </span>
-                <span className="ml-auto font-mono text-[11px] text-ink-soft">
-                  {log.isPublished ? "已发布" : "草稿"} ·{" "}
-                  {log.updatedAt.toISOString().slice(0, 10)}
+                <span className="ml-auto text-[11px] text-ink-soft">
+                  <span className="font-sans">{`${log.isPublished ? "已发布" : "草稿"} · `}</span>
+                  <span className="font-mono">{log.updatedAt.toISOString().slice(0, 10)}</span>
                 </span>
                 <Link
                   href={`/admin/logs/${log.id}/edit`}
