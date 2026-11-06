@@ -11,6 +11,7 @@
  * - 2026-11-03: 描述改为"附 SHA-256 摘要与发布时间，可核对是否被改动"，去掉"存证"口吻
  * - 2026-11-05: 两层筛选的维度名 PROJECT/TAG 改为「项目」「标签」并去 font-mono 与 0.2em 字距；标签值属库里的用户数据，本轮不翻译（筛选参数与 tags: { has } 判定均未动）
  * - 2026-11-06: 空态 NO LOG MATCHED 与 Suspense fallback 的 LOADING… 中文化（没有符合条件的日志 / 加载中…），同批去掉中文行的 font-mono 与宽字距
+ * - 2026-11-06: 列表 `<ul>` 加 `@container`，为 Timeline 的容器查询宽度提供承载元素（本页列表满宽 ≥576px，时间轴仍是左侧 200px，视觉与改前一致）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -119,7 +120,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           )}
         </div>
       ) : (
-        <ul className="border-t border-ink">
+        <ul className="@container border-t border-ink">
           {logs.map((log) => (
             <li
               key={log.id}

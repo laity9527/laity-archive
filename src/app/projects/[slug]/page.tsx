@@ -13,6 +13,7 @@
  *               同页的 SINCE / REPO / LOGS 三个纯英文标签按分工留在第二批，本轮未动
  * - 2026-11-06: 第四批（负责人裁断一）——SINCE 改「始于」、REPO ↗ 改「仓库 ↗」、区块标题 LOGS 改「开发日志」，
  *               三处标签走 font-sans；日期仍留 font-mono，且「始于 」与日期同处一个 span，避免 flex 的 gap-x-6 在两段间撑出 24px
+ * - 2026-11-06: 日志列表 `<ul>` 加 `@container`，配合 Timeline 的容器查询宽度（本页满宽列表 ≥576px，时间轴仍 200px，视觉不变）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -102,7 +103,7 @@ export default async function ProjectDetailPage({
             该项目暂无已发布日志
           </p>
         ) : (
-          <ul className="border-t border-ink">
+          <ul className="@container border-t border-ink">
             {logs.map((log) => (
               <li
                 key={log.id}

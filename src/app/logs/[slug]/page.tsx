@@ -10,6 +10,8 @@
  * - 2026-11-03: 按日志标题生成页面标题、以经验总结作描述；已发布但缺摘要时改为显式告警而不是静默不画印章
  * - 2026-11-03: 告警文案中性化（"存证缺失"→"摘要缺失"），只说"无法核对是否被改动"，不自称存证或权属凭证
  * - 2026-11-06: 第二批去英文——区块标题 LESSON LEARNED 改「经验总结」并改走 font-sans（去 0.2em 宽字距）；BEFORE / AFTER 作为系统专有术语按负责人裁定保留等宽英文
+ * - 2026-11-06: Timeline 外层 `<div className="mt-6">` 加 `@container`：详情页正文限宽 720px ≥ 576px，时间轴仍取 200px，与改前一致
+ *               （这个调用点此前不在"三处"清单里——实际是四处，本轮一并补上）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -73,7 +75,7 @@ export default async function LogDetailPage({
         <h1 className="mt-3 text-3xl font-medium tracking-tight">
           {log.title}
         </h1>
-        <div className="mt-6">
+        <div className="@container mt-6">
           <Timeline beforeDate={log.beforeDate} afterDate={log.afterDate} />
         </div>
         {log.tags.length > 0 && (
