@@ -65,6 +65,8 @@
  *               折走段 ③——阶段一 logs/projects 涨行 + 阶段二 proxy 涨行累计把 ①+② 顶到 1533 行、proxy.ts 被
  *               前窗口 1500 切口打断；forms.ts 主体是常量表（LIMITS + 三组正则源串）+ 三个纯函数判，与 ③ 的
  *               error-text/licenses 同性质；content-hash.ts（20 行最小）因 D5 摘要唯一实现按铁律不动
+ * - 2026-11-09: 第二十一次登记变更（V2.0 Step 4-A）：src/lib/admin-password.ts 随 Credentials 单口令退役
+ *               从 ② 段摘除（文件已删，tests 同删）；auth.ts 重写为 GitHub OAuth，行数变化另跑窗口判据
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -107,7 +109,6 @@ const BANDS = [
       "src/lib/projects.ts",
       "src/lib/sensitive-scan.ts",
       "src/lib/oss.ts",
-      "src/lib/admin-password.ts",
       "src/auth.ts",
       "src/proxy.ts",
     ],

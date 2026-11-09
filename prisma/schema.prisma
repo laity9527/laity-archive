@@ -9,6 +9,8 @@
 //               slug 由全局唯一改为租户内唯一 @@unique([userId, slug])；
 //               userId 本阶段保持可空，NOT NULL 锁与索引收紧留 Step 4（含回填脚本与校验）；
 //               存量数据回填为独立脚本 prisma/backfill-zhanglei.ts（M1 保持可空，应用不中断）
+// - 2026-11-09: V2.0 Step 4-A：User 加 githubId（nullable + 唯一），GitHub OAuth 认领/建号用；
+//               迁移由本人本地执行 npx prisma migrate dev --name add_github_id
 
 generator client {
   provider = "prisma-client-js"
@@ -23,6 +25,8 @@ model User {
   id        String   @id @default(cuid())
   email     String?  @unique
   handle    String   @unique
+  // GitHub OAuth（V2.0 Step 4-A）：authorize 凭它认领旧账号或建新用户；可空兼容存量行，回填由登录链路自愈
+  githubId  String?  @unique
   name      String?
   // 沿用 V1 会话语义：会话里只带一个布尔位，三处判定共用（D21/D25）
   isAdmin   Boolean  @default(false)

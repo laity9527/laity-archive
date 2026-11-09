@@ -1,6 +1,6 @@
 /**
  * 文件：src/app/login/page.tsx
- * 描述：后台登录页：纸白单列，说明准入规则并给出口令登录入口；承接 NextAuth 回跳的 error 码
+ * 描述：后台登录页：纸白单列，给 GitHub 一键登录入口；承接 NextAuth 回跳的 error 码
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
@@ -17,6 +17,8 @@
  *               管辖里，此前既没有可读出的活区，也没有可跳转的正文地标
  * - 2026-11-04: 删掉第二次 await connection()（I059）：同一个函数连调两次、注释各说一套，
  *               第一处已经在读会话之前声明了请求期渲染，第二处什么都不做
+ * - 2026-11-09: V2.0 Step 4-A：口令登录换回 GitHub OAuth 一键——口令输入框整段退役，页面只剩一个大按钮；
+ *               说明文案改 GitHub 登录口径；会话判定仍走 requireAdminSession（4-B 把 /admin 改个人控制台后退役）
  */
 import Link from "next/link";
 import { connection } from "next/server";
@@ -56,9 +58,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
       <h1 className="mt-10 text-3xl font-medium tracking-tight">后台登录</h1>
       <p className="mt-4 text-lg text-ink-soft">
-        这里只有管理员进得来：登录用后台口令，口令只保存在服务器配置里，
-        <span className="text-ink">不对外公开</span>
-        。
+        使用 GitHub 登录进入档案后台。
       </p>
 
       {errorCode && (

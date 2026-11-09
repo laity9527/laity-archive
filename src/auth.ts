@@ -1,6 +1,6 @@
 /**
  * 文件：src/auth.ts
- * 描述：NextAuth 配置：本地管理员口令（Credentials）+ JWT 会话（不落库），并统一"管理员会话"的判定入口
+ * 描述：NextAuth 配置：GitHub OAuth（V2.0 Step 4-A）+ JWT 会话（不落库），并统一"管理员会话"的判定入口
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
@@ -13,22 +13,19 @@
  *               每进程往服务器日志写一条不含值的提示——否则本机漏配只有一个笼统的 401，
  *               排查的人会先去怀疑自己的口令抄错了
  * - 2026-11-04: 会话寿命显式设为 12 小时（v4 默认 30 天），D25：单口令后台的唯一吊销手段
+ * - 2026-11-09: V2.0 Step 4-A：换回 GitHub OAuth——Credentials 单口令与 admin-password 节流一并退役；
+ *               认领/建号跑在首次登录的 jwt 回调里（v4 的 authorize 是 provider 配置项、不属于 AuthOptions），
+ *               按 githubId → handle → 新建 认领旧账号（zhanglei 保留其 12 篇日志）或建新号；
+ *               jwt 载荷带 userId（4-B 数据归属用）与 isAdmin（/admin 准入，4-B 改个人控制台后退役）；
+ *               配置体检收窄到 NEXTAUTH_SECRET；登录节流由 nginx limit_req（callback 端点）承担
  */
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import {
-  adminPasswordConfigured,
-  attemptsLeft,
-  clearLoginFailures,
-  passwordMatches,
-  registerFailure,
-  throttleKeyOf,
-} from "@/lib/admin-password";
+import GitHubProvider from "next-auth/providers/github";
+import { db } from "@/lib/db";
 
-// 配置体检每个进程只做一次：preflight 那几条只在生产编排里卡，本机漏配或口令过短时，
-// 排查的人原本只看到一个笼统的 401。只报"哪一项不合格"，不回显任何值
+// 配置体检每个进程只做一次：只报"哪一项不合格"，不回显任何值
 let advised = false;
 
 function adviseConfiguration() {
@@ -38,24 +35,14 @@ function adviseConfiguration() {
 
   advised = true;
 
-  const password = (process.env.ADMIN_PASSWORD ?? "").trim();
   const secret = (process.env.NEXTAUTH_SECRET ?? "").trim();
-  const problems: string[] = [];
-
-  if (!password) {
-    problems.push("ADMIN_PASSWORD 未配置，登录一律拒绝");
-  } else if (password.length < 12) {
-    problems.push("ADMIN_PASSWORD 短于 12 位（生产 preflight 会直接拦下整个 up）");
-  }
 
   if (!secret) {
-    problems.push("NEXTAUTH_SECRET 未配置，v4 每次启动随机生成、重启即全员失效");
+    console.warn(
+      "[auth] 配置体检：NEXTAUTH_SECRET 未配置，v4 每次启动随机生成、重启即全员失效（本条不含任何值）",
+    );
   } else if (secret.length < 32) {
-    problems.push("NEXTAUTH_SECRET 短于 32 位");
-  }
-
-  if (problems.length > 0) {
-    console.warn(`[admin] 配置体检：${problems.join("；")}（本条不含任何值）`);
+    console.warn("[auth] 配置体检：NEXTAUTH_SECRET 短于 32 位（本条不含任何值）");
   }
 }
 
@@ -64,53 +51,69 @@ export const authOptions: NextAuthOptions = {
   // pages.signOut 管的是"直接访问 /api/auth/signout"这条 UI 之外的路径——按钮本身已改走 signOut()
   pages: { signIn: "/login", signOut: "/login", error: "/login" },
   providers: [
-    CredentialsProvider({
-      id: "admin",
-      name: "管理员口令",
-      credentials: { password: { label: "口令", type: "password" } },
-      authorize: (credentials, req) => {
-        // 提示只进服务器日志，不进响应：公开页面不该告诉访客"这里没配口令"
-        adviseConfiguration();
-
-        if (!adminPasswordConfigured()) {
-          return null;
-        }
-
-        const key = throttleKeyOf(req?.headers?.["x-forwarded-for"]);
-
-        // 超窗口与口令错给完全一样的结果：不告诉尝试者"现在被限流了"，也不告诉他对不对
-        if (attemptsLeft(key) <= 0) {
-          return null;
-        }
-
-        if (!passwordMatches(credentials?.password)) {
-          registerFailure(key);
-
-          return null;
-        }
-
-        clearLoginFailures(key);
-
-        return { id: "admin", name: "管理员" };
-      },
+    GitHubProvider({
+      // v4 类型要求 string，未配置时回落空串——OAuth 握手会在运行期失败并把错露出来
+      clientId: process.env.GITHUB_ID ?? "",
+      clientSecret: process.env.GITHUB_SECRET ?? "",
     }),
   ],
-  // 会话寿命从 v4 默认的 30 天收到 12 小时：后台只有一把口令，笔记本被拿到就等于一个月的管理员权限；
-  // 代价是要更常输一次口令，而登录只有这一个门，收短是这里唯一能动的吊销手段
+  // 会话寿命从 v4 默认的 30 天收到 12 小时：换 NEXTAUTH_SECRET 仍是唯一的即时吊销手段
   session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
   callbacks: {
-    // 会话里只留一个布尔位：它只在 authorize 通过后写入，没有 NEXTAUTH_SECRET 签不出带它的 token
-    jwt({ token, account }) {
-      if (account?.provider === "admin") {
-        token.isAdmin = true;
+    // 认领/建号跑在首次登录的 jwt 回调里（v4 的 authorize 是 provider 配置项、不属于 AuthOptions；
+    // GitHub 的 profile 会作为 user 并入 token，后续刷新只带 token——这段逻辑天然只在首次登录执行一次）：
+    // 先按 githubId 查（已认领的账号），再按 handle 查（无 githubId 的旧账号），查不到才新建——
+    // zhanglei 的 12 篇存量日志因此保留在旧账号下；查到了但缺 githubId 则当场绑定（幂等）
+    async jwt({ token, user, account }) {
+      if (user && account?.provider === "github") {
+        adviseConfiguration();
+
+        const profile = user as unknown as {
+          id: number;
+          login: string;
+          email?: string | null;
+          name?: string | null;
+        };
+
+        if (profile.id && profile.login) {
+          const githubId = String(profile.id);
+
+          let found = await db.user.findFirst({ where: { githubId } });
+
+          if (!found) {
+            found = await db.user.findFirst({ where: { handle: profile.login } });
+          }
+
+          let row = found;
+
+          if (!row) {
+            row = await db.user.create({
+              data: {
+                handle: profile.login,
+                email: profile.email ?? null,
+                name: profile.name ?? null,
+              },
+            });
+          } else if (!row.githubId) {
+            row = await db.user.update({
+              where: { id: row.id },
+              data: { githubId },
+            });
+          }
+
+          token.userId = row.id;
+          token.isAdmin = row.isAdmin;
+        }
       }
 
       return token;
     },
-    // 把同一个布尔位带到会话对象上，Server Action 才不必再造第二套口径（改对象而不是返回新字面量，
-    // 是为了避开 Session 类型没有 isAdmin 这个键的多余属性检查）
+    // 把同一个 userId 带到会话对象上，Server Action 才不必再造第二套口径
     session({ session, token }) {
-      Object.assign(session, { isAdmin: token.isAdmin === true });
+      Object.assign(session, {
+        userId: token.userId,
+        isAdmin: token.isAdmin === true,
+      });
 
       return session;
     },
@@ -118,6 +121,7 @@ export const authOptions: NextAuthOptions = {
 };
 
 // 写动作与后台布局唯一该用的会话判定：既要会话在，也要它真带管理员标记
+// （4-B 把 /admin 改成个人控制台后，此函数改判 userId 存在性）
 export async function requireAdminSession(): Promise<Session | null> {
   const session = await getServerSession(authOptions);
 
