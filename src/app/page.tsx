@@ -19,6 +19,7 @@
  *               BEFORE/AFTER 双段时间轴的表达保留（栏够宽仍横排），不是把时间轴删掉
  * - 2026-11-06: 「最新日志」口径修正——取数由 `getSafeLogs({ take: 3 })`（按 beforeDate 排）改为 `getLatestLogs(3)`（按 publishedAt 排，
  *               同秒并列时以 beforeDate 兜底）；原 `logs.slice(0, 3)` 随之外提为查询的 take，渲染部分未改动
+ * - 2026-11-06: 「最新日志」每条标题下增两行摘要——取 lessonLearned（实测 12 条已发布日志的经验总结均非空、65–109 字、且 0 条含 Markdown 语法，故直接原文渲染不写剥离器；对照：beforeContent 有 11/12 条含 # 或反引号，直接截断会把语法漏到前台）。行数以 CSS `line-clamp-2` 截两行为准；lessonLearned 在 schema 里可空，为空时整段不渲染，不留空行
  */
 import Link from "next/link";
 import { Suspense } from "react";
@@ -115,6 +116,11 @@ async function ArchiveOverview() {
                         {log.title}
                       </Link>
                     </h3>
+                    {log.lessonLearned ? (
+                      <p className="mt-2 line-clamp-2 text-sm text-ink-soft">
+                        {log.lessonLearned}
+                      </p>
+                    ) : null}
                     <p className="mt-2 font-mono text-[11px] text-ink-soft">
                       {log.project.name}
                       {log.tags.length > 0 ? ` · ${log.tags.join(" · ")}` : ""}
