@@ -7,6 +7,7 @@
  * - 2026-10-30: I012-B 创建。服务端渲染的表单拿不到 csrf-token cookie，v4 的登录必须是带 csrfToken 的 POST，只能由客户端发起
  * - 2026-11-04: GitHub 按钮改为口令输入加提交，提供方 id 由 github 换成 credentials 的 admin
  * - 2026-11-04: 提交期间禁用按钮并换文案——原本连点会并发发多次登录 POST
+ * - 2026-11-09: 口令框旁加纯字符 [显示]/[隐藏] 切换（type=button 不触发提交），Enter 提交不受影响
  */
 "use client";
 
@@ -20,6 +21,7 @@ type SignInButtonProps = {
 
 export function SignInButton({ callbackUrl }: SignInButtonProps) {
   const [pending, setPending] = useState(false);
+  const [revealed, setRevealed] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,13 +56,23 @@ export function SignInButton({ callbackUrl }: SignInButtonProps) {
       >
         管理员口令
       </label>
-      <input
-        id="admin-password"
-        name="password"
-        type="password"
-        autoComplete="current-password"
-        className="mt-3 w-full border border-hairline bg-transparent px-3 py-2 font-mono text-[12px] text-ink"
-      />
+      <div className="mt-3 flex items-center gap-3">
+        <input
+          id="admin-password"
+          name="password"
+          type={revealed ? "text" : "password"}
+          autoComplete="current-password"
+          className="w-full min-w-0 flex-1 border border-hairline bg-transparent px-3 py-2 font-mono text-[12px] text-ink"
+        />
+        <button
+          type="button"
+          aria-pressed={revealed}
+          onClick={() => setRevealed((v) => !v)}
+          className="shrink-0 font-mono text-[11px] text-ink-soft hover:text-ink"
+        >
+          {revealed ? "[隐藏]" : "[显示]"}
+        </button>
+      </div>
       <button
         type="submit"
         disabled={pending}
