@@ -8,6 +8,9 @@
  * - 2026-10-30: 按 D5 口径为种子日志计算 contentHash，供 Phase 2 详情页印章展示
  * - 2026-11-02: 哈希口径改读 src/lib/content-hash.ts，不再自带一份实现
  * - 2026-11-06: 由「1 项目 1 条演示日志」扩为「1 项目 12 条已发布日志」（负责人点名把本地注入的 12 篇写进种子）；正文与经验总结按 slug upsert 且 update 为空，重复执行既不报错也不生成副本；publishedAt 取库中历史真值，contentHash 仍调用 src/lib/content-hash.ts 现算、不自带第二份实现；旧的 earth-mirror / prebuild-index 演示条目退出种子
+ * - 2026-11-09: V2.0 Step 2：复合唯一 @@unique([userId, slug]) 落地后 where: { slug } 不再是合法唯一键，
+ *               开头先 upsert 测试用户（handle zhanglei / email zhanglei@example.com），全部 Project/Log 的
+ *               upsert 改走 userId_slug 复合键、create 带 userId——先有 User 才能写档案（负责人任务 1）
  */
 import { PrismaClient } from "@prisma/client";
 import { computeContentHash } from "../src/lib/content-hash.ts";
@@ -460,20 +463,34 @@ Phase 2 时我在自测表里写：「\`export const instant = false\` 把该段
 ];
 
 async function main() {
-  const created = await prisma.project.upsert({
-    where: { slug: PROJECT.slug },
+  // V2.0 多租户：先建用户再建档案。复合唯一 @@unique([userId, slug]) 下
+  // where: { slug } 不再是合法唯一键，所有 upsert 改走 userId_slug 复合键（负责人 Step 2 任务 1）
+  const user = await prisma.user.upsert({
+    where: { handle: "zhanglei" },
+    create: {
+      handle: "zhanglei",
+      email: "zhanglei@example.com",
+      name: "张磊",
+      isAdmin: true,
+    },
     update: {},
-    create: PROJECT,
+  });
+
+  const created = await prisma.project.upsert({
+    where: { userId_slug: { userId: user.id, slug: PROJECT.slug } },
+    update: {},
+    create: { ...PROJECT, userId: user.id },
   });
 
   for (const log of LOGS) {
     await prisma.log.upsert({
-      where: { slug: log.slug },
+      where: { userId_slug: { userId: user.id, slug: log.slug } },
       update: {},
       create: {
         slug: log.slug,
         title: log.title,
         projectId: created.id,
+        userId: user.id,
         tags: log.tags,
         beforeContent: log.beforeContent,
         afterContent: log.afterContent,
@@ -492,7 +509,9 @@ async function main() {
     });
   }
 
-  console.log(`seed 完成：1 个 Project，${LOGS.length} 条已发布 Log`);
+  console.log(
+    `seed 完成：用户 ${user.id}（handle ${user.handle}）下 1 个 Project，${LOGS.length} 条已发布 Log`,
+  );
 }
 
 main()

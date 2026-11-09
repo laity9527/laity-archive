@@ -1,9 +1,14 @@
 // 文件：prisma/schema.prisma
-// 描述：Laity 项目档案库数据库模型（Project / Log）
+// 描述：Laity 项目档案库数据库模型（User / Project / Log，V2.0 多租户）
 // 作者：张磊
 // 创建日期：2026-10-30
 // 修改记录：
 // - 2026-10-30: 初始创建，按 SPEC.md 建表草案定义 Project 与 Log
+// - 2026-11-09: V2.0 Phase 1：新增 User 模型；Project/Log 加 userId（onDelete: Cascade，
+//               删除用户即连带走其档案，与 C5 不级联的 Log→Project 关系是两件事）；
+//               slug 由全局唯一改为租户内唯一 @@unique([userId, slug])；
+//               userId 本阶段保持可空，NOT NULL 锁与索引收紧留 Step 4（含回填脚本与校验）；
+//               存量数据回填为独立脚本 prisma/backfill-zhanglei.ts（M1 保持可空，应用不中断）
 
 generator client {
   provider = "prisma-client-js"
@@ -14,36 +19,58 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  handle    String   @unique
+  name      String?
+  // 沿用 V1 会话语义：会话里只带一个布尔位，三处判定共用（D21/D25）
+  isAdmin   Boolean  @default(false)
+  projects  Project[]
+  logs      Log[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Project {
   id        String   @id @default(cuid())
-  slug      String   @unique
+  slug      String
   name      String
   kind      String // product | tool | site
   status    String // WIP | LIVE | ARCHIVED
   summary   String?
   repoUrl   String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
   createdAt DateTime @default(now())
   logs      Log[]
+
+  @@unique([userId, slug])
 }
 
 model Log {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   title         String
-  slug          String    @unique
+  slug          String
   projectId     String
-  project       Project   @relation(fields: [projectId], references: [id])
+  project       Project  @relation(fields: [projectId], references: [id])
+  user          User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String?
   tags          String[]
   beforeContent String
   afterContent  String?
   beforeDate    DateTime
   afterDate     DateTime?
-  isPublished   Boolean   @default(false)
+  isPublished   Boolean  @default(false)
   lessonLearned String?
   publishedAt   DateTime?
   contentHash   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  @@index([isPublished, beforeDate])
+  // 复合唯一：租户内 slug 唯一（V2.0 裁定 ②）；V1 的 /logs/[slug] 全局路由由 Step 3 搬进 /u/[handle]/...
+  @@unique([userId, slug])
+  // 为租户视图查询（用户 + 已发布 + 时间）先建复合索引
+  @@index([userId, isPublished, beforeDate])
   @@index([projectId])
 }

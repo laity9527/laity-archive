@@ -8,6 +8,9 @@
  * - 2026-10-30: Phase 5a 补 listPublicProjects / getPublicProjectBySlug，只取可公开展示的字段
  * - 2026-11-02: 补 PROJECT_KINDS / PROJECT_STATUSES 单源常量，替掉散在校验与表单里的字面量
  * - 2026-11-02: 补 getArchiveBoard()：首页看板与精选的统一取数口，强制只统计已发布日志且零日志项目也上榜
+ * - 2026-11-09: V2.0 Step 2：@@unique([userId, slug]) 落地后 where: { slug } 不再是合法唯一键，
+ *               公开查询函数（getPublicProjectBySlug / isProjectSlug）改走 userId_slug 复合键，
+ *               并新增 resolveUserId(handle) 解析口；过渡期默认 handle='zhanglei' 单租户，Step 3 路由落地后移除默认（裁定 ①）
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -138,9 +141,17 @@ export async function getArchiveBoard(): Promise<ArchiveBoardEntry[]> {
   }));
 }
 
-export async function getPublicProjectBySlug(slug: string) {
+export async function getPublicProjectBySlug(slug: string, handle = "zhanglei") {
+  // V2.0 Step 2 过渡口径：公开查询默认单租户 handle='zhanglei'，内部先按 handle 查 userId；
+  // Step 3 的 /u/[handle] 路由落地后，该参数由路由传入、默认值随之移除（裁定 ①）
+  const userId = await resolveUserId(handle);
+
+  if (!userId) {
+    return null;
+  }
+
   return db.project.findUnique({
-    where: { slug },
+    where: { userId_slug: { userId, slug } },
     select: {
       slug: true,
       name: true,
@@ -157,10 +168,26 @@ export async function getProjectById(id: string) {
   return db.project.findUnique({ where: { id } });
 }
 
+// 过渡期公开查询的 userId 解析口：按 handle 取 id（不存在返回 null，调用方自行转 null/false）
+export async function resolveUserId(handle: string) {
+  const user = await db.user.findUnique({
+    where: { handle },
+    select: { id: true },
+  });
+
+  return user?.id ?? null;
+}
+
 // Proxy 前置判定只关心 slug 命中与否，select slug 让这次查询停留在唯一索引层面
-export async function isProjectSlug(slug: string) {
+export async function isProjectSlug(slug: string, handle = "zhanglei") {
+  const userId = await resolveUserId(handle);
+
+  if (!userId) {
+    return false;
+  }
+
   const hit = await db.project.findUnique({
-    where: { slug },
+    where: { userId_slug: { userId, slug } },
     select: { slug: true },
   });
 

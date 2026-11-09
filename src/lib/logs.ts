@@ -10,8 +10,12 @@
  * - 2026-10-30: 追加管理侧查询 listAdminLogs / getAdminLogById（不经过 isPublished 过滤，仅供后台）
  * - 2026-11-04: 删掉零调用的 listAdminLogs（D27）：后台概览与编辑页各有各的取数，这个全表查询自Phase 4后没人引；顺带给前窗口腾出 7 行
  * - 2026-11-06: 新增 getLatestLogs（首页「最新日志」按发布时间排序，见 D13 修订）；getSafeLogs 的 take 选项随唯一调用方迁走一并删除
+ * - 2026-11-09: V2.0 Step 2：getSafeLogBySlug / isPublishedLogSlug 改走 userId_slug 复合键，
+ *               新增 handle 默认参数（'zhanglei'，内部经 projects.ts 的 resolveUserId 解析 userId）；
+ *               过渡期 /logs/[slug] 与 proxy 404 判定只覆盖该租户，Step 3 全局大厅口径随路由改造收口
  */
 import { db } from "@/lib/db";
+import { resolveUserId } from "@/lib/projects";
 
 export type SafeLogFilter = {
   project?: string;
@@ -47,17 +51,32 @@ export async function getLatestLogs(take: number) {
   });
 }
 
-export async function getSafeLogBySlug(slug: string) {
+export async function getSafeLogBySlug(slug: string, handle = "zhanglei") {
+  // V2.0 Step 2 过渡口径同 projects.ts：复合唯一键 + 内部解析 userId（Step 3 路由落地后由路由传 handle）
+  const userId = await resolveUserId(handle);
+
+  if (!userId) {
+    return null;
+  }
+
   return db.log.findFirst({
-    where: { slug, isPublished: true },
+    // findFirst 的 where 只收字面字段：复合唯一键名（userId_slug）在 findUnique/upsert 里可用，
+    // 这里用 userId+slug 两字段同样命中 @@unique 索引（isPublished 只做草稿隔离）
+    where: { userId, slug, isPublished: true },
     include: { project: projectSelect },
   });
 }
 
 // Proxy 前置判定只关心命中与否，Select id 让这次查询停留在索引层面
-export async function isPublishedLogSlug(slug: string) {
+export async function isPublishedLogSlug(slug: string, handle = "zhanglei") {
+  const userId = await resolveUserId(handle);
+
+  if (!userId) {
+    return false;
+  }
+
   const hit = await db.log.findFirst({
-    where: { slug, isPublished: true },
+    where: { userId, slug, isPublished: true },
     select: { id: true },
   });
 

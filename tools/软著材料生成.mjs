@@ -50,6 +50,11 @@
  * 打印时选 A4、边距"无"、缩放 100%，并关掉浏览器的页眉页脚选项。
  * - 2026-11-06: 第十五次窗口配平（负责人裁断一批准）：prisma/seed.ts 内联 12 篇日志正文后从 ① 平移进折走段 ③ 末位；
  *               ①+② 保住整份可见，材料总页数 137 → 150（提交页数仍为前 30 + 后 30）。窗口判据实测：移动前生成器拒绝出件并报五个文件越界
+ * - 2026-11-09: 第十六次登记（V2.0 Step 1，schema 改造伴随改动）：新增 prisma/backfill-zhanglei.ts 存量回填脚本，
+ *               与 seed.ts 同性质登记进折走段 ③ 末位；assertComplete 先行拒件（新文件未登记清单），非窗口容量类拒件
+ * - 2026-11-09: 第十七次窗口配平（V2.0 Step 2，负责人裁断 A 批准）：next.config.ts（73 行，构建配置，不承载业务逻辑）
+ *               自 ① 平移进折走段 ③ 末位——本轮 projects.ts/logs.ts/schema.prisma 共涨约 108 行，把 proxy.ts（1338-1503）
+ *               顶过前窗口 1500 切口；平移后 ①+② 回到 1430 行以内。先例：13 轮 tsconfig/eslint.config.mjs 平移同类
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -80,9 +85,6 @@ const BANDS = [
     name: "数据模型与运行时配置",
     files: [
       "prisma/schema.prisma",
-      // package.json 是依赖清单与脚本表（配置而非程序逻辑，与折走段里的 tsconfig/docker 同类）；
-      // 本轮 next.config.ts 加 CSP 涨行，把 proxy.ts 尾部推过 1500 切口，按 assertWindowFit 的处置由它让位
-      "next.config.ts",
     ],
   },
   {
@@ -196,6 +198,14 @@ const BANDS = [
       // 其中 18,419 字符是 Markdown 正文文案；留在 ① 会把 ② 段尾部（sensitive-scan/oss/admin-password/auth/proxy）整块顶出前 1500 行，
       // 而那五个是必须整份可见的核心逻辑。按'折排版不折逻辑'判定让位：D5 摘要算法（src/lib/content-hash.ts）与数据模型仍在前面整份可见。
       "prisma/seed.ts",
+      // 存量数据回填脚本登记进折走段（2026-11-09，V2.0 Step 1 伴随改动）：与 seed.ts 同属 prisma 侧脚本——
+      // 一次性的迁移期回填工具，D5 摘要算法与数据模型仍整份在前窗口；assertComplete 先拒了它（未登记清单），
+      // 故登记并重跑窗口判据，非窗口容量类拒件，不涉及平移
+      "prisma/backfill-zhanglei.ts",
+      // next.config.ts 自 ① 平移进折走段（2026-11-09 第十六次窗口配平，负责人裁断 A）：构建配置不承载业务逻辑，
+      // 与 13 轮先例的 tsconfig/eslint 同类；本轮 V2.0 Step 2 的 projects.ts/logs.ts/schema.prisma 共涨约 108 行，
+      // 把 proxy.ts（1338-1503）顶过前窗口 1500 切口。平移后 ①+② 回到 1430 行以内，proxy 整份可见
+      "next.config.ts",
     ],
   },
   {
