@@ -55,6 +55,16 @@
  * - 2026-11-09: 第十七次窗口配平（V2.0 Step 2，负责人裁断 A 批准）：next.config.ts（73 行，构建配置，不承载业务逻辑）
  *               自 ① 平移进折走段 ③ 末位——本轮 projects.ts/logs.ts/schema.prisma 共涨约 108 行，把 proxy.ts（1338-1503）
  *               顶过前窗口 1500 切口；平移后 ①+② 回到 1430 行以内。先例：13 轮 tsconfig/eslint.config.mjs 平移同类
+ * - 2026-11-09: 第十八次登记（V2.0 Step 3 阶段二）：两个详情页收录路径随目录迁移至 /u/[handle]/...
+ *               （projects 详情在 ③、logs 详情在 ④），新增租户主页 src/app/u/[handle]/page.tsx 登记进 ④
+ *               （访客可见界面，与首页同类）；assertComplete 先行拒件（新路径未登记），非窗口容量类拒件
+ * - 2026-11-09: 第十九次窗口配平（V2.0 Step 3 阶段三，负责人裁断一批准）：SiteFooter.tsx（79 行，纯排版页脚）与
+ *               src/app/projects/page.tsx（99 行，作品大厅纯列表排版）自 ④ 平移进折走段 ③——租户主页（+190 行）
+ *               把 ④ 顶超后窗口、globals.css 头部被切口切掉；两文件都不承载算法，符合"折排版不折逻辑"判据
+ * - 2026-11-09: 第二十次窗口配平（V2.0 Step 3 阶段三，负责人裁断一批准）：src/lib/forms.ts（61 行）自 ② 平移进
+ *               折走段 ③——阶段一 logs/projects 涨行 + 阶段二 proxy 涨行累计把 ①+② 顶到 1533 行、proxy.ts 被
+ *               前窗口 1500 切口打断；forms.ts 主体是常量表（LIMITS + 三组正则源串）+ 三个纯函数判，与 ③ 的
+ *               error-text/licenses 同性质；content-hash.ts（20 行最小）因 D5 摘要唯一实现按铁律不动
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -89,13 +99,12 @@ const BANDS = [
   },
   {
     mark: "②",
-    name: "核心逻辑：存证口径 → 数据访问 → 输入校验 → 类型嗅探与上传 → 渲染消毒 → 鉴权与前置守卫",
+    name: "核心逻辑：存证口径 → 数据访问 → 类型嗅探与上传 → 渲染消毒 → 鉴权与前置守卫",
     files: [
       "src/lib/content-hash.ts",
       "src/lib/publish.ts",
       "src/lib/logs.ts",
       "src/lib/projects.ts",
-      "src/lib/forms.ts",
       "src/lib/sensitive-scan.ts",
       "src/lib/oss.ts",
       "src/lib/admin-password.ts",
@@ -155,7 +164,8 @@ const BANDS = [
       "src/app/admin/logs/new/page.tsx",
       "src/app/admin/logs/[id]/edit/page.tsx",
       // 项目详情页让位给后窗口的站点外壳：项目列表页仍在 ④ 段，功能面不缺
-      "src/app/projects/[slug]/page.tsx",
+      // V2.0 Step 3 阶段一：路由迁至 /u/[handle]/projects/[slug]，收录路径随目录迁移
+      "src/app/u/[handle]/projects/[slug]/page.tsx",
       "src/components/Editor.tsx",
       "src/components/SignInButton.tsx",
       "src/components/SignOutButton.tsx",
@@ -206,22 +216,35 @@ const BANDS = [
       // 与 13 轮先例的 tsconfig/eslint 同类；本轮 V2.0 Step 2 的 projects.ts/logs.ts/schema.prisma 共涨约 108 行，
       // 把 proxy.ts（1338-1503）顶过前窗口 1500 切口。平移后 ①+② 回到 1430 行以内，proxy 整份可见
       "next.config.ts",
+      // SiteFooter 与作品页自 ④ 平移进折走段（2026-11-09 第十九次窗口配平，负责人裁断一批准）：
+      // 租户主页（+190 行）把 ④ 顶超后窗口、globals.css 头部被切口切掉。SiteFooter 是纯排版页脚、
+      // 作品页是纯列表排版，两者都不承载算法，符合"折排版不折逻辑"判据；访客可见界面仍有
+      // 首页/日志大厅/租户主页/关于在窗口内
+      "src/components/SiteFooter.tsx",
+      "src/app/projects/page.tsx",
+      // forms.ts 自 ② 平移进折走段（2026-11-09 第二十次窗口配平，负责人裁断一批准）：主体是常量表
+      // （LIMITS 上限表 + SLUG/REPO_URL/ID 三组正则源串）+ 三个纯函数判（pickParam/readField/safeCallbackUrl），
+      // 与已在 ③ 的 error-text.ts / licenses.ts 同性质；①+② 因阶段一 logs/projects 涨行 + 阶段二 proxy 涨行
+      // 累计到 1533 行、proxy.ts（1350-1533）被前窗口 1500 切口打断。输入校验口径仍经页面 select/pattern
+      // 属性与 ③ 的 error-text 可见（折的是排版与常量表，不是校验逻辑本身）
+      "src/lib/forms.ts",
     ],
   },
   {
     mark: "④",
-    name: "站点外壳（样式令牌 + 根布局 + 导航页脚）与访客可见界面，末段为对外公示页（开源致谢 / 关于；隐私页与 404 外壳自本轮起进折走段）",
+    name: "站点外壳（样式令牌 + 根布局 + 导航）与访客可见界面，末段为对外公示页（开源致谢 / 关于；隐私页、404 外壳与页脚自本轮起进折走段）",
     files: [
       "src/app/globals.css",
       "src/app/layout.tsx",
       "src/components/SiteNav.tsx",
-      "src/components/SiteFooter.tsx",
       // StatusBoard.tsx 于本轮自 ④ 平移进折走段 ③（2026-11-05，D30 A1，见 ③ 段注释）
       "src/components/Timeline.tsx",
       "src/app/page.tsx",
       "src/app/logs/page.tsx",
-      "src/app/logs/[slug]/page.tsx",
-      "src/app/projects/page.tsx",
+      // V2.0 Step 3 阶段一：日志详情路由迁至 /u/[handle]/logs/[slug]，收录路径随目录迁移
+      "src/app/u/[handle]/logs/[slug]/page.tsx",
+      // V2.0 Step 3 阶段一：新增租户主页（访客可见界面，与首页同类；取该 handle 的看板与最新日志）
+      "src/app/u/[handle]/page.tsx",
       // licenses/page.tsx 于本轮自 ④ 平移进折走段 ③（2026-11-06 第三批开工第一步，负责人预批）：
       // 后窗口余量对总页数敏感（跨页界即从 41 掉到 21），先把这 109 行回血再动代码。
       // 它承载的是许可清单的排版，值来自 ③ 段 licenses.ts 那张静态表，SPEC 未点名本页形态

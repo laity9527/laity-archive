@@ -18,6 +18,8 @@
  * - 2026-11-06: 修正上一条的 `display: contents` 方案——Chrome 把 details 里非 summary 的内容收进 `::details-content` 伪盒，那 40 个标签因此不是外层 flex 容器的子项，`gap-x-4 gap-y-2` 对它们完全失效，退化成首尾相接的 inline 文字流（负责人截图里展开后粘连的成因）。
  *               现改为 details 自占一行（`basis-full`）、折叠内容由独立的 `flex flex-wrap gap-x-4 gap-y-3` div 承载；两组筛选区的行间距同步由 `gap-y-2` 提到 `gap-y-3`，
  *               summary 加 `w-fit` 把命中区收窄到文案本身
+ * - 2026-11-09: V2.0 Step 3 阶段一：大厅仍是全局公共大厅（裁定 ①），列表行标题链接改
+ *               /u/[handle]/logs/[slug]——owner 的 handle 经 getSafeLogs 的 include 白名单带出（公开标识）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -167,7 +169,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 </p>
                 <h2 className="mt-2 text-2xl font-medium">
                   <Link
-                    href={`/logs/${log.slug}`}
+                    href={`/u/${log.user.handle}/logs/${log.slug}`}
                     className="hover:underline hover:decoration-1 hover:underline-offset-4"
                   >
                     {log.title}

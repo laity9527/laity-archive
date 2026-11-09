@@ -12,6 +12,8 @@
  * - 2026-11-06: 第二批去英文——区块标题 LESSON LEARNED 改「经验总结」并改走 font-sans（去 0.2em 宽字距）；BEFORE / AFTER 作为系统专有术语按负责人裁定保留等宽英文
  * - 2026-11-06: Timeline 外层 `<div className="mt-6">` 加 `@container`：详情页正文限宽 720px ≥ 576px，时间轴仍取 200px，与改前一致
  *               （这个调用点此前不在"三处"清单里——实际是四处，本轮一并补上）
+ * - 2026-11-09: V2.0 Step 3 阶段一：路由迁至 /u/[handle]/logs/[slug]，params 提取 handle 传入
+ *               getSafeLogBySlug（默认参数已移除）；页内"← 开发日志"等回跳链接随大厅路由保持 /logs
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -30,9 +32,9 @@ function describeLog(log: { lessonLearned: string | null; beforeContent: string 
 
 export async function generateMetadata({
   params,
-}: PageProps<"/logs/[slug]">): Promise<Metadata> {
-  const { slug } = await params;
-  const log = await getSafeLogBySlug(slug);
+}: PageProps<"/u/[handle]/logs/[slug]">): Promise<Metadata> {
+  const { handle, slug } = await params;
+  const log = await getSafeLogBySlug(slug, handle);
 
   if (!log) {
     return { title: "日志不存在" };
@@ -51,9 +53,9 @@ export const instant = false;
 
 export default async function LogDetailPage({
   params,
-}: PageProps<"/logs/[slug]">) {
-  const { slug } = await params;
-  const log = await getSafeLogBySlug(slug);
+}: PageProps<"/u/[handle]/logs/[slug]">) {
+  const { handle, slug } = await params;
+  const log = await getSafeLogBySlug(slug, handle);
 
   if (!log) {
     notFound();

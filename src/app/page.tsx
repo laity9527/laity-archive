@@ -20,6 +20,9 @@
  * - 2026-11-06: 「最新日志」口径修正——取数由 `getSafeLogs({ take: 3 })`（按 beforeDate 排）改为 `getLatestLogs(3)`（按 publishedAt 排，
  *               同秒并列时以 beforeDate 兜底）；原 `logs.slice(0, 3)` 随之外提为查询的 take，渲染部分未改动
  * - 2026-11-06: 「最新日志」每条标题下增两行摘要——取 lessonLearned（实测 12 条已发布日志的经验总结均非空、65–109 字、且 0 条含 Markdown 语法，故直接原文渲染不写剥离器；对照：beforeContent 有 11/12 条含 # 或反引号，直接截断会把语法漏到前台）。行数以 CSS `line-clamp-2` 截两行为准；lessonLearned 在 schema 里可空，为空时整段不渲染，不留空行
+ * - 2026-11-09: V2.0 Step 3 阶段一：精选项目与最新日志的跳转链接改 /u/[handle]/... 体系——
+ *               看板条目带出 user.handle（getArchiveBoard 的 select 白名单）、日志行带出 log.user.handle（getLatestLogs 同）；
+ *               首页仍展示全站精选（裁定 ①：大厅与首页为全局聚合视图，租户视图在 /u/[handle]）
  */
 import Link from "next/link";
 import { Suspense } from "react";
@@ -58,7 +61,7 @@ async function ArchiveOverview() {
               <li key={project.slug} className="border-b border-hairline py-6">
                 <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
                   <Link
-                    href={`/projects/${project.slug}`}
+                    href={`/u/${project.handle}/projects/${project.slug}`}
                     className="text-lg hover:underline hover:decoration-1 hover:underline-offset-4"
                   >
                     {project.name}
@@ -110,7 +113,7 @@ async function ArchiveOverview() {
                   <article className="flex-1">
                     <h3 className="text-xl font-medium">
                       <Link
-                        href={`/logs/${log.slug}`}
+                        href={`/u/${log.user.handle}/logs/${log.slug}`}
                         className="hover:underline hover:decoration-1 hover:underline-offset-4"
                       >
                         {log.title}

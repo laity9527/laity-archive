@@ -14,6 +14,9 @@
  * - 2026-11-06: 第四批（负责人裁断一）——SINCE 改「始于」、REPO ↗ 改「仓库 ↗」、区块标题 LOGS 改「开发日志」，
  *               三处标签走 font-sans；日期仍留 font-mono，且「始于 」与日期同处一个 span，避免 flex 的 gap-x-6 在两段间撑出 24px
  * - 2026-11-06: 日志列表 `<ul>` 加 `@container`，配合 Timeline 的容器查询宽度（本页满宽列表 ≥576px，时间轴仍 200px，视觉不变）
+ * - 2026-11-09: V2.0 Step 3 阶段一：路由迁至 /u/[handle]/projects/[slug]，params 提取 handle 传入
+ *               getPublicProjectBySlug 与 getSafeLogs（后者带 handle，挡住复合唯一下同名 slug 的跨租户日志）；
+ *               日志行链接改 /u/[handle]/logs/[slug]；「在日志大厅筛选该项目」沿用全局大厅路由 /logs?project=
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -26,9 +29,9 @@ import { getPublicProjectBySlug } from "@/lib/projects";
 // 详情页标题跟着项目名走；项目不存在时给中性标题，页面本身会走 404
 export async function generateMetadata({
   params,
-}: PageProps<"/projects/[slug]">): Promise<Metadata> {
-  const { slug } = await params;
-  const project = await getPublicProjectBySlug(slug);
+}: PageProps<"/u/[handle]/projects/[slug]">): Promise<Metadata> {
+  const { handle, slug } = await params;
+  const project = await getPublicProjectBySlug(slug, handle);
 
   if (!project) {
     return { title: "项目不存在" };
@@ -48,15 +51,16 @@ export const instant = false;
 
 export default async function ProjectDetailPage({
   params,
-}: PageProps<"/projects/[slug]">) {
-  const { slug } = await params;
-  const project = await getPublicProjectBySlug(slug);
+}: PageProps<"/u/[handle]/projects/[slug]">) {
+  const { handle, slug } = await params;
+  const project = await getPublicProjectBySlug(slug, handle);
 
   if (!project) {
     notFound();
   }
 
-  const logs = await getSafeLogs({ project: slug });
+  // 带 handle 取本项目日志：复合唯一下同名 slug 会跨租户撞车，不注入 userId 会漏出别人的日志
+  const logs = await getSafeLogs({ project: slug, handle });
 
   return (
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
@@ -113,7 +117,7 @@ export default async function ProjectDetailPage({
                 <article className="flex-1">
                   <h3 className="text-2xl font-medium">
                     <Link
-                      href={`/logs/${log.slug}`}
+                      href={`/u/${handle}/logs/${log.slug}`}
                       className="hover:underline hover:decoration-1 hover:underline-offset-4"
                     >
                       {log.title}

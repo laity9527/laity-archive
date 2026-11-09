@@ -7,6 +7,9 @@
  * - 2026-11-03: 初始创建
  * - 2026-11-04: 站点 URL 与备案号用例改为自行设定并复原环境变量——原先假设"未配置"，
  *               CI 的作业级 env 设了 NEXTAUTH_URL 就直接红；同时补上已配置分支与尾斜杠归一化的覆盖
+ * - 2026-11-09: V2.0 Step 3：公开路由示例随 /u/[handle] 体系更新——/logs/some-slug 改
+ *               /u/some-handle/logs/some-slug，并补 /u/some-handle（租户主页）与 /u/some-handle/projects/some-slug
+ *               两个正例；分类逻辑（/admin、/login 前缀制）未动，仅示例路径跟随现行路由
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -74,7 +77,9 @@ test("后台与登录页不算前台路径", () => {
 test("前台路径与首页都算公开，空串防御性返回 false", () => {
   assert.equal(isPublicRoute("/"), true);
   assert.equal(isPublicRoute("/logs"), true);
-  assert.equal(isPublicRoute("/logs/some-slug"), true);
+  assert.equal(isPublicRoute("/u/some-handle"), true);
+  assert.equal(isPublicRoute("/u/some-handle/logs/some-slug"), true);
+  assert.equal(isPublicRoute("/u/some-handle/projects/some-slug"), true);
   assert.equal(isPublicRoute("/projects"), true);
   assert.equal(isPublicRoute("/privacy"), true);
   assert.equal(isPublicRoute(""), false);

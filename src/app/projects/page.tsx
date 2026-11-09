@@ -9,6 +9,8 @@
  * - 2026-11-03: 补页面标题与描述；正文容器加 id 供"跳到正文"使用
  * - 2026-11-06: 全站去英文第一批——kind/status 与 LOGS 改走 src/lib/labels.ts 映射、空态 NO PROJECT YET 改「暂无项目」；
  *               按视觉铁律新口径拆字体：slug 留 font-mono（英文标识），中文与量词走 font-sans，日期留 font-mono
+ * - 2026-11-09: V2.0 Step 3 阶段一：作品页仍是全局维度入口（与 /logs 大厅同口径），
+ *               详情链接改 /u/[handle]/projects/[slug]——handle 经 listPublicProjects 的 select 白名单带出（公开标识）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -58,7 +60,7 @@ export default async function ProjectsPage() {
               <div className="flex-1">
                 <h2 className="text-xl font-medium">
                   <Link
-                    href={`/projects/${project.slug}`}
+                    href={`/u/${project.user.handle}/projects/${project.slug}`}
                     className="hover:underline hover:decoration-1 hover:underline-offset-4"
                   >
                     {project.name}

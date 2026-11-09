@@ -9,8 +9,12 @@
  * - 2026-11-03: 公开路由清单加 /licenses（开源许可与致谢页）
  * - 2026-11-05: 公开路由清单加 /about（关于页，SPEC F19 / DESIGN D31；静态页无 lastModified，
  *               与 /privacy、/licenses 同一写法）
+ * - 2026-11-09: V2.0 Step 3 阶段二：先查拥有公开资源的用户（有已发布日志或有项目），再按租户生成
+ *               /u/[handle]、/u/[handle]/logs/[slug]、/u/[handle]/projects/[slug] 清单；
+ *               草稿（isPublished=false）与后台路径一律不进——取数仍走 getSafeLogs/listPublicProjects 的公开白名单
  */
 import { connection } from "next/server";
+import { db } from "@/lib/db";
 import { getSafeLogs } from "@/lib/logs";
 import { listPublicProjects } from "@/lib/projects";
 import { siteUrl } from "@/lib/site";
@@ -26,22 +30,50 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   await connection();
 
   const base = siteUrl();
-  const [logs, projects] = await Promise.all([getSafeLogs(), listPublicProjects()]);
 
-  return [
+  // 有公开资源的用户：至少一条已发布日志，或至少一个项目（项目无发布开关，公开范围由字段白名单控制）
+  const users = await db.user.findMany({
+    where: {
+      OR: [
+        { logs: { some: { isPublished: true } } },
+        { projects: { some: {} } },
+      ],
+    },
+    select: { handle: true, id: true },
+  });
+
+  const entries: SitemapEntry[] = [
     { url: `${base}/` },
     { url: `${base}/logs` },
     { url: `${base}/projects` },
     { url: `${base}/privacy` },
     { url: `${base}/licenses` },
     { url: `${base}/about` },
-    ...logs.map((log) => ({
-      url: `${base}/logs/${log.slug}`,
-      lastModified: log.updatedAt,
-    })),
-    ...projects.map((project) => ({
-      url: `${base}/projects/${project.slug}`,
-      lastModified: project.createdAt,
-    })),
   ];
+
+  for (const user of users) {
+    const { handle, id } = user;
+    const [logs, projects] = await Promise.all([
+      getSafeLogs({ handle }),
+      listPublicProjects(id),
+    ]);
+
+    entries.push({ url: `${base}/u/${handle}` });
+
+    for (const log of logs) {
+      entries.push({
+        url: `${base}/u/${handle}/logs/${log.slug}`,
+        lastModified: log.updatedAt,
+      });
+    }
+
+    for (const project of projects) {
+      entries.push({
+        url: `${base}/u/${handle}/projects/${project.slug}`,
+        lastModified: project.createdAt,
+      });
+    }
+  }
+
+  return entries;
 }
