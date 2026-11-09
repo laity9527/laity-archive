@@ -18,6 +18,8 @@
  *               六个 Field/Select 的 label 中文化（REPO URL 保留 URL 缩写）；Field/Select/h2 三处标签类统一走 font-sans
  * - 2026-11-06: 全站去英文第一批——列表行的 kind/status 与 LOGS 改走 labels 映射、空态 NO PROJECT YET 改「暂无项目」；
  *               slug 仍 font-mono，中文改 font-sans。状态灯的 status === "LIVE" 判定与表单取值未动
+ * - 2026-11-09: 删除按钮由 confirmLabel 两步生效改 confirmMessage 原生弹窗（取消即不提交）；
+ *               服务端 confirmDelete=on 闸门未动，由弹窗分支恒置 on 满足
  */
 import Link from "next/link";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
@@ -190,7 +192,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 <SubmitButton
                   label="删除"
                   pendingLabel="删除中…"
-                  confirmLabel="再点一次确认删除"
+                  confirmMessage="确认要彻底删除吗？此操作不可恢复。"
                   className="border-b border-ink text-ink disabled:text-ink-soft"
                 />
               </form>

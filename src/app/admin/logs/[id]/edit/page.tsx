@@ -17,6 +17,7 @@
  *               标签走 sans、时刻与哈希留 mono。BEFORE/AFTER 术语与 LOG_002 等错误码 chip 未动
  * - 2026-11-06: 第二批去英文（按负责人"全局搜索 LESSON LEARNED 并一并中文化"的指令扩到本页）：
  *               表单标签 LESSON LEARNED 改「经验总结」并走 font-sans；同页的 CONTENT HASH、PUBLISHED/LAST PUBLISHED 等按分工留后续，本轮未动
+ * - 2026-11-09: 彻底删除按钮加 confirmMessage 原生弹窗（取消即不提交）；回填 slug 的服务端判据（LOG_004）未动
  */
 import Link from "next/link";
 import {
@@ -369,6 +370,7 @@ export default async function EditLogPage({
           <SubmitButton
             label="彻底删除"
             pendingLabel="删除中…"
+            confirmMessage="确认要彻底删除吗？此操作不可恢复。"
             className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
           />
         </div>
