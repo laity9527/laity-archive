@@ -114,6 +114,12 @@ JetBrains Mono；中文标签走 Inter（font-sans），并移除大写字母专
 `/api/auth/callback/github`；③「环境变量总表」删 `ADMIN_PASSWORD` 行、补 `GITHUB_ID`/`GITHUB_SECRET`/
 `ENCRYPTION_KEY` 三行，并把"已废弃勿再用"由 GITHUB 两键改回 ADMIN_PASSWORD（GITHUB 两键**不是**废弃项）；
 ④本节本身。**未改**：视觉铁律、数据与存证约定、合规红线、验证命令、软著材料铁律、目录约定与其余各节。
+修订留痕续十六：2026-11-10 由我点名"Step 6 Commit 1 环境变量与 compose 配置"——**授权修改本文件**，「环境变量
+总表」补 `AI_API_KEY`（必须，preflight 硬卡，缺了部署阶段失败）/ `AI_API_BASE_URL`（可选，缺省回落
+DashScope 兼容端点 `https://dashscope.aliyuncs.com/compatible-mode/v1`）/ `AI_MODEL_NAME`（可选，缺省
+回落 `qwen-plus`）三行；其余各节一字未动（登录行、限速层、数据与存证约定、合规红线、验证命令、软著材料
+铁律、目录约定均未改）。同轮另改：换Docker 编排"preflight 硬卡 AI_API_KEY 非空"与"app 环境块补三键透传"，
+以及两份 .env*.example 补同名前缀键，全部分条如实汇报见当轮留痕。
 
 
 ---
@@ -464,6 +470,9 @@ docs/02-测试记录/ 的自测表与人工联调，不能用测试全绿代替�
 | `GITHUB_ID` | GitHub OAuth App 的 Client ID（D33） | 必须 | `src/auth.ts` | 同上 |
 | `GITHUB_SECRET` | GitHub OAuth App 的 Client Secret | 必须 | `src/auth.ts` | 同上 |
 | `ENCRYPTION_KEY` | GitHub access_token 落库加密密钥（64 位 hex，AES-256-GCM，Step 5） | 登录即必须（缺失时认领链路抛错） | `src/lib/token-crypto.ts` | 同上 |
+| `AI_API_KEY` | 国内合规大模型 API Key（OpenAI 兼容协议）；AI 辅助生成草稿正文的凭据 | AI 生成必须（preflight 硬卡；缺了部署阶段就失败） | `src/lib/ai-client.ts` | 同上 |
+| `AI_API_BASE_URL` | OpenAI 兼容接口基址；不填回落默认值 `https://dashscope.aliyuncs.com/compatible-mode/v1` | 可选（缺省回落默认值） | `src/lib/ai-client.ts` | 同上 |
+| `AI_MODEL_NAME` | 模型名；不填回落默认值 `qwen-plus` | 可选（同上） | `src/lib/ai-client.ts` | 同上 |
 | `OSS_REGION` | OSS 地域 ID，必须是 `oss-cn-beijing` 形式（写 `cn-beijing` 会拼出不存在的域名） | 上传功能必须 | `src/lib/oss.ts` | 同上 |
 | `OSS_BUCKET` | OSS 桶名（`laity-archive`） | 上传功能必须 | `src/lib/oss.ts` | 同上 |
 | `OSS_ACCESS_KEY_ID` | RAM 子账号 AK（策略只授 `oss:PutObject`） | 上传功能必须 | `src/lib/oss.ts` | 同上 |

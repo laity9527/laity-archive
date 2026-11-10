@@ -70,6 +70,9 @@
  *               error-text/licenses 同性质；content-hash.ts（20 行最小）因 D5 摘要唯一实现按铁律不动
  * - 2026-11-09: 第二十一次登记变更（V2.0 Step 4-A）：src/lib/admin-password.ts 随 Credentials 单口令退役
  *               从 ② 段摘除（文件已删，tests 同删）；auth.ts 重写为 GitHub OAuth，行数变化另跑窗口判据
+ * - 2026-11-10: 第二十二次登记（V2.0 Step 6 Commit 1）：新增 ai-prompt（纯函数：提交列表→提示词、
+ *               模型返回→BEFORE/AFTER 解析）与 ai-client（OpenAI 兼容协议客户端）登记进折走段 ③，
+ *               与同族 github-sync-filter / token-crypto 相邻；①+② 零余量防线未动（error-text 止于第 1500 行）
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -145,6 +148,12 @@ const BANDS = [
       // logs.ts 是数据访问层（DAL），取数逻辑的调用方（页面/动作）都在 ③④ 可见；
       // 2026-11-10 第十六次配平：与 github-sync 一同让位，确保 auth/proxy/publish/projects/content-hash 整份在前窗口
       "src/lib/logs.ts",
+      // ai-prompt 是 Step 6 的纯函数层（提交列表→提示词、模型返回→BEFORE/AFTER 解析），调用方是后台动作层；
+      // 与 github-sync-filter 同族放 ③，不动 ①+② 的行数（零余量防线下安全）
+      "src/lib/ai-prompt.ts",
+      // ai-client 是 Step 6 的 OpenAI 兼容协议客户端（Bearer 认证 + 30 秒超时），与 token-crypto 同属"一层壳"；
+      // 调用方动作层在 ③，与 github-sync 同族放 ③，①+② 零余量防线不动
+      "src/lib/ai-client.ts",
       // Markdown 出口只是 react-markdown + rehype-sanitize 的一层壳（34 行），消毒规则在调用处（④ 的详情页）与注释里都看得见；
       // 本轮 forms/logs/admin-password 三处各涨几行，①+② 到 1511 把 proxy.ts 切开，由它让位
       "src/lib/markdown.tsx",
