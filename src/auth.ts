@@ -20,6 +20,9 @@
  *               配置体检收窄到 NEXTAUTH_SECRET；登录节流由 nginx limit_req（callback 端点）承担
  * - 2026-11-09: V2.0 Step 4-B：/admin 改个人控制台——requireAdminSession 改判 userId 存在性并返回
  *               带 userId 的会话类型；isAdmin 不再进 jwt 与会话（库字段保留，准入不再读它）
+ * - 2026-11-09: 修登录回调认领静默跳过：v4 的 jwt 回调里 user 是归一化对象（无 login），
+ *               GitHub 原始资料在独立的 profile 参数；认领逻辑改读 profile 并加 try/catch 落日志；
+ *               issuer 显式钉住（4.24.15 默认值同此，RFC 9207 的 iss 校验依赖它）
  */
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
@@ -57,53 +60,66 @@ export const authOptions: NextAuthOptions = {
       // v4 类型要求 string，未配置时回落空串——OAuth 握手会在运行期失败并把错露出来
       clientId: process.env.GITHUB_ID ?? "",
       clientSecret: process.env.GITHUB_SECRET ?? "",
+      // RFC 9207：GitHub 回调带 iss 参数，openid-client 会与 issuer 比对；
+      // 4.24.15 的内置默认值即此，显式钉住防漂移（缺了它 iss 校验抛 TypeError）
+      issuer: "https://github.com/login/oauth",
     }),
   ],
   // 会话寿命从 v4 默认的 30 天收到 12 小时：换 NEXTAUTH_SECRET 仍是唯一的即时吊销手段
   session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
   callbacks: {
     // 认领/建号跑在首次登录的 jwt 回调里（v4 的 authorize 是 provider 配置项、不属于 AuthOptions；
-    // GitHub 的 profile 会作为 user 并入 token，后续刷新只带 token——这段逻辑天然只在首次登录执行一次）：
-    // 先按 githubId 查（已认领的账号），再按 handle 查（无 githubId 的旧账号），查不到才新建——
-    // zhanglei 的 12 篇存量日志因此保留在旧账号下；查到了但缺 githubId 则当场绑定（幂等）
-    async jwt({ token, user, account }) {
+    // 后续刷新只带 token——这段逻辑天然只在首次登录执行一次）：
+    // 先按 githubId 查（已认领的账号），再按 handle 查（无 githubId 的旧账号），查不到才新建；
+    // 查到了但缺 githubId 则当场绑定（幂等）。
+    // 注意：user 是 provider.profile() 归一化后的 {id,name,email,image}，没有 login；
+    // GitHub 原始资料（含 login）在独立的 profile 参数里——读错对象会让认领静默跳过
+    async jwt({ token, user, account, profile }) {
       if (user && account?.provider === "github") {
         adviseConfiguration();
 
-        const profile = user as unknown as {
+        const gh = profile as unknown as {
           id: number;
           login: string;
           email?: string | null;
           name?: string | null;
         };
 
-        if (profile.id && profile.login) {
-          const githubId = String(profile.id);
+        if (gh?.id && gh?.login) {
+          try {
+            const githubId = String(gh.id);
 
-          let found = await db.user.findFirst({ where: { githubId } });
+            let found = await db.user.findFirst({ where: { githubId } });
 
-          if (!found) {
-            found = await db.user.findFirst({ where: { handle: profile.login } });
+            if (!found) {
+              found = await db.user.findFirst({ where: { handle: gh.login } });
+            }
+
+            let row = found;
+
+            if (!row) {
+              row = await db.user.create({
+                data: {
+                  handle: gh.login,
+                  email: gh.email ?? null,
+                  name: gh.name ?? null,
+                },
+              });
+            } else if (!row.githubId) {
+              row = await db.user.update({
+                where: { id: row.id },
+                data: { githubId },
+              });
+            }
+
+            token.userId = row.id;
+          } catch (error) {
+            // 落日志后原样上抛：让 NextAuth 走 error=Callback，而不是静默发一个没有 userId 的会话
+            console.error("[auth] GitHub 认领/建号失败：", error);
+            throw error;
           }
-
-          let row = found;
-
-          if (!row) {
-            row = await db.user.create({
-              data: {
-                handle: profile.login,
-                email: profile.email ?? null,
-                name: profile.name ?? null,
-              },
-            });
-          } else if (!row.githubId) {
-            row = await db.user.update({
-              where: { id: row.id },
-              data: { githubId },
-            });
-          }
-
-          token.userId = row.id;
+        } else {
+          console.error("[auth] GitHub 回调缺少 profile.id/login，认领未执行（本条不含凭据）");
         }
       }
 
