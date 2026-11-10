@@ -16,10 +16,14 @@
  *               而清 dirty 标记又恰好把丢稿拦截在这条路上解除武装
  * - 2026-11-06: 第二批去英文——PREVIEW 改「预览」、空态 EMPTY 改「暂无内容」并走 font-sans；
  *               BEFORE / AFTER 作为系统专有术语保留等宽英文（含 tab.toUpperCase() 的页签回显与两处 aria-label）
+ * - 2026-11-10: Step 6 Commit 2：新增 [ AI 帮我写 ] 按钮——收当前表单里的 title 与两栏正文，调
+ *               generateAiDraftAction；生成中按钮变「生成中…」并禁用防连点；成功回填 BEFORE/AFTER，
+ *               失败只出 role=alert 横幅（正文保持现状）；保存/发布按钮不受任何阻塞
  */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { generateAiDraftAction } from "@/app/admin/ai-actions";
 import { uploadImageAction } from "@/app/admin/upload-action";
 import { errorTextOf } from "@/lib/error-text";
 import { Markdown } from "@/lib/markdown";
@@ -36,6 +40,13 @@ type EditorProps = {
 type Tab = "before" | "after";
 
 type Status =
+  | { kind: "idle" }
+  | { kind: "busy" }
+  | { kind: "done"; text: string }
+  | { kind: "error"; text: string };
+
+// AI 生成的独立状态：与上传用的 Status 分开，两者永不归并（一处在忙不代表另一处也要禁用）
+type AiState =
   | { kind: "idle" }
   | { kind: "busy" }
   | { kind: "done"; text: string }
@@ -84,6 +95,7 @@ export function Editor({
   const [before, setBefore] = useState(recovered?.before ?? initialBefore);
   const [after, setAfter] = useState(recovered?.after ?? initialAfter);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [ai, setAi] = useState<AiState>({ kind: "idle" });
   const beforeRef = useRef<HTMLTextAreaElement>(null);
   const afterRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -167,6 +179,37 @@ export function Editor({
     });
   }
 
+  // 只响应手动点击：读整张表单（title 与两栏正文都在里面），没有自动触发路径——
+  // 生成结果直接 setState 回填 textarea；任何异常都收敛为横幅，不外抛、不阻塞保存
+  async function handleAiWrite(event: React.MouseEvent<HTMLButtonElement>) {
+    if (ai.kind === "busy") return;
+
+    // 按钮在 form 内（新建页与编辑页都这样组装）
+    const form = event.currentTarget.form;
+    if (!form) {
+      setAi({ kind: "error", text: "AI 生成失败：按钮没有挂在表单里。" });
+      return;
+    }
+
+    setAi({ kind: "busy" });
+
+    try {
+      const result = await generateAiDraftAction(new FormData(form));
+
+      if (result.ok) {
+        setBefore(result.data.beforeContent);
+        setAfter(result.data.afterContent);
+        setAi({ kind: "done", text: "AI 生成完成，正文已回填。" });
+        return;
+      }
+
+      // 失败不阻塞：正文保持现状，横幅让用户自己决定重试还是手动补全
+      setAi({ kind: "error", text: errorTextOf(result.code) });
+    } catch {
+      setAi({ kind: "error", text: errorTextOf("AI_001") });
+    }
+  }
+
   async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
@@ -235,6 +278,17 @@ export function Editor({
         />
 
         <div className="mt-4 flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            onClick={handleAiWrite}
+            disabled={ai.kind === "busy"}
+            className="border border-ink px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
+          >
+            {ai.kind === "busy" ? "生成中…" : "AI 帮我写"}
+          </button>
+          <span className="font-mono text-[10px] text-ink-soft">
+            依据正文里的 Commit 列表生成
+          </span>
           <input
             ref={fileRef}
             type="file"
@@ -264,6 +318,16 @@ export function Editor({
             }`}
           >
             {status.text}
+          </p>
+        )}
+        {ai.kind === "error" && (
+          <p role="alert" className="mt-3 border border-ink px-3 py-2 font-mono text-[11px] text-ink">
+            {ai.text}
+          </p>
+        )}
+        {ai.kind === "done" && (
+          <p role="status" className="mt-3 border border-hairline px-3 py-2 font-mono text-[11px] text-ink-soft">
+            {ai.text}
           </p>
         )}
       </div>

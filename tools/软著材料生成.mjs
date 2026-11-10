@@ -73,6 +73,9 @@
  * - 2026-11-10: 第二十二次登记（V2.0 Step 6 Commit 1）：新增 ai-prompt（纯函数：提交列表→提示词、
  *               模型返回→BEFORE/AFTER 解析）与 ai-client（OpenAI 兼容协议客户端）登记进折走段 ③，
  *               与同族 github-sync-filter / token-crypto 相邻；①+② 零余量防线未动（error-text 止于第 1500 行）
+ * - 2026-11-10: 第二十三次登记（V2.0 Step 6 Commit 2）：新增 ai-actions（AI 生成动作层）登记进 ③，
+ *               与 sync-actions/upload-action 等后台动作同段；Editor 按钮为既有 ③ 段文件内改动，
+ *               不出新文件；①+②、④ 均未动，出件看护栏
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -183,6 +186,9 @@ const BANDS = [
       "src/app/admin/layout.tsx",
       "src/app/admin/log-actions.ts",
       "src/app/admin/sync-actions.ts",
+      // ai-actions 是 Step 6 的 AI 动作层（会话校验 → 表单解析 → 调用客户端 + 解析结果），
+      // 与另外三个后台动作同层，放 ③ 不动 ①+② 零余量防线
+      "src/app/admin/ai-actions.ts",
       "src/app/admin/upload-action.ts",
       "src/app/admin/project-actions.ts",
       "src/app/admin/page.tsx",

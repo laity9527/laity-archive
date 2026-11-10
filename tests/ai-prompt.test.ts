@@ -6,10 +6,11 @@
  * 创建日期：2026-11-10
  * 修改记录：
  * - 2026-11-10: 初始创建（Step 6 Commit 1）
+ * - 2026-11-10: Step 6 Commit 2：补 extractCommits 的提取/去重/别名顺序用例
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildPrompt, parseAiResponse } from "../src/lib/ai-prompt.ts";
+import { buildPrompt, extractCommits, parseAiResponse } from "../src/lib/ai-prompt.ts";
 
 const commits = [
   "fix(auth): 修正 GitHub 认领逻辑读取 profile 参数",
@@ -63,4 +64,16 @@ test("parseAiResponse 对非法 JSON 返回 null", () => {
 test("parseAiResponse 缺任一键返回 null", () => {
   assert.equal(parseAiResponse('{"BEFORE":"只有 BEFORE"}'), null);
   assert.equal(parseAiResponse('{"AFTER":"只有 AFTER"}'), null);
+});
+
+test("extractCommits 提取 '- 消息' 列表行，保留顺序、去空、去重", () => {
+  const text = ["- 第一条", "  - 第二条  ", "- 第一条", "", "普通正文", "   ", "-  第三条"].join("\n");
+
+  assert.deepEqual(extractCommits(text), ["第一条", "第二条", "第三条"]);
+});
+
+test("extractCommits 对非列表正文返回空数组", () => {
+  assert.deepEqual(extractCommits("随便一段正文"), []);
+  assert.deepEqual(extractCommits(""), []);
+  assert.deepEqual(extractCommits("\r\n- 首行\r\n残留文字\r\n- 第二条\r\n"), ["首行", "第二条"]);
 });

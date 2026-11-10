@@ -7,6 +7,8 @@
  * 创建日期：2026-11-10
  * 修改记录：
  * - 2026-11-10: 初始创建（Step 6 Commit 1）
+ * - 2026-11-10: Step 6 Commit 2：补 extractCommits（"- 消息"列表行解析、去重去空）与
+ *               AI_MAX_COMMITS（单次 12 条上限，超限动作层返回 AI_002）
  */
 
 export interface AiDraft {
@@ -15,6 +17,31 @@ export interface AiDraft {
 }
 
 const PLACEHOLDER = "（等待补充）";
+
+/** F22 成本边界：单次生成最多处理的 Commit 条数（AI_002 的判定阈值） */
+export const AI_MAX_COMMITS = 12;
+
+/**
+ * 从列表形态正文（github-sync 生成的草稿把提交列表写在 AFTER 里，每行 "- 消息"）中提取提交信息。
+ * 保留出现顺序、剔除空行与重复项；BEFORE 正文里也可能混着 "- " 列表行，动作层会两处都试。
+ */
+export function extractCommits(text: string): string[] {
+  const seen = new Set<string>();
+  const commits: string[] = [];
+
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!/^- /.test(line)) continue;
+
+    const message = line.slice(2).trim();
+    if (message.length === 0 || seen.has(message)) continue;
+
+    seen.add(message);
+    commits.push(message);
+  }
+
+  return commits;
+}
 
 /** 剥掉 markdown 代码块（```json / ```）后返回核心内容，无代码块则原样返回 */
 function stripCodeFence(text: string): string {
