@@ -106,6 +106,14 @@ JetBrains Mono；中文标签走 Inter（font-sans），并移除大写字母专
 `src/proxy.ts` 的 404 内联页 `404 · NOT FOUND` 改 `404 · 页面未找到`（守卫逻辑、matcher 与四组色值字面量未动）；
 文档侧经全局搜索确认 SPEC/说明书引用的 404 文案是 `copy.title`/`heading`（`404 · 日志不存在`、`404 · 项目不存在`），
 与被改的 `.label` 行无关，故无需同步。
+修订留痕续十五：2026-11-10 由我点名"文档口径收口（解决 I077）"——**授权修改本文件**，把 V2.0 四轮改造
+（4-A 恢复 GitHub OAuth、4-B 按 userId 隔离、Step 5 加密落库与同步）的事实同步进事实基座。改动四处：
+①「技术栈锁定」的登录行整段重写——Credentials/ADMIN_PASSWORD → GitHub OAuth + `userId` 判据、
+`githubAccessToken` 加密落库、`public_repo` scope，并标注 `ADMIN_PASSWORD`/`ALLOWED_GITHUB_IDS`/`admin-password.ts`
+已退役；②同节「登录限速」由两层（nginx + 应用内节流）改为**单层 nginx**，端点改
+`/api/auth/callback/github`；③「环境变量总表」删 `ADMIN_PASSWORD` 行、补 `GITHUB_ID`/`GITHUB_SECRET`/
+`ENCRYPTION_KEY` 三行，并把"已废弃勿再用"由 GITHUB 两键改回 ADMIN_PASSWORD（GITHUB 两键**不是**废弃项）；
+④本节本身。**未改**：视觉铁律、数据与存证约定、合规红线、验证命令、软著材料铁律、目录约定与其余各节。
 
 
 ---
@@ -116,20 +124,22 @@ JetBrains Mono；中文标签走 Inter（font-sans），并移除大写字母专
 - 样式：Tailwind CSS（禁止引入其他 UI 组件库、CSS 框架、图标库）
 - ORM：Prisma（provider 固定为 postgresql）
 - 数据库：PostgreSQL 16（Docker 容器，库名 laity）
-- 登录：NextAuth.js v4.24.15（后台 /admin 用，仅此一处），提供方为框架内置的 Credentials（id 固定 `admin`），
-  准入只认环境变量 `ADMIN_PASSWORD` 这一把口令——比对方式为两侧各取 SHA-256 后 `timingSafeEqual`，
-  未配置或输入为空一律拒绝（配置缺失不等于存在空口令），失败回 `/login?error=CredentialsSignin`；
-  登录页自建在 `/login`（I012-B）。2026-11-04 我点名"先取消 github 登录"，GitHub OAuth 与
-  `ALLOWED_GITHUB_IDS` 白名单同时退出，决策、代价与未做项见 DESIGN.md 的 D20（勿再按 OAuth 口径写代码）。
+- 登录：NextAuth.js v4.24.15，提供方为**框架内置 GitHub OAuth**（V2.0 Step 4-A 恢复，取代 D20 的
+  ADMIN_PASSWORD 口令方案；决策见 DESIGN 的 D33）。OAuth 回调地址为 `<NEXTAUTH_URL>/api/auth/callback/github`，
+  scope 为 `read:user user:email public_repo`（public_repo 供 Step 5 同步读取公开仓库 commits）。
+  首次登录在 jwt 回调里按 githubId → handle → 新建 认领/建号，并把 `account.access_token` 经
+  `src/lib/token-crypto.ts` 的 AES-256-GCM 加密后写入 `User.githubAccessToken`（token 不进 JWT/session）。
+  登录页自建在 `/login`（I012-B）。**已废弃勿再用**：`ADMIN_PASSWORD`、`ALLOWED_GITHUB_IDS`、
+  `src/lib/admin-password.ts`——随 D33 一并退役，见到别加回。
   会话判定共三处且**共用同一个入口** `requireAdminSession()`（定义在 `src/auth.ts`）：`src/proxy.ts` 前置守卫
-  （matcher 覆盖 `/admin/:path*`，判 `token.isAdmin === true`）、`src/app/admin/layout.tsx`、各 Server Action
-  （不依赖前端隐藏按钮）。布局与动作判的是 `session` 回调带出的 `isAdmin`——"存在会话"本身不构成放行理由。
-  `src/proxy.ts` 不得 import `src/auth.ts`：口令比较要用 `node:crypto`，不该被拉进前置守卫
-- 登录限速有两层，写登录相关代码不要绕开它们再造第三套：生产 `deploy/nginx.conf` 对
-  `/api/auth/callback/admin` 的 `limit_req`（rate=5r/m、burst=5，超限由代理直接 429、请求不进应用），
-  以及 `src/lib/admin-password.ts` 的进程内节流（10 分钟窗口内同来源 5 次失败即不再建立会话，
-  表现与"口令不正确"完全一致）。应用层计数的来源键取 `X-Forwarded-For` 首跳，
-  这一跳可信是因为 nginx 在边缘**用 `$remote_addr` 覆写**该头（不是 append），直连时该头不存在、落 `local`
+  （matcher 覆盖 `/admin/:path*`，判 `token.userId` 为非空字符串）、`src/app/admin/layout.tsx`、各 Server Action
+  （不依赖前端隐藏按钮）。布局与动作判的是 `session` 回调带出的 `userId`——"存在会话"本身不构成放行理由；
+  数据读写另在 DAL 层强制 `userId` 复合条件（0 行即资源不存在）。`isAdmin` 字段保留在库但不再参与任何判定。
+  `src/proxy.ts` 不得 import `src/auth.ts`：会话判定要保持轻量，不该把整个鉴权栈拉进前置守卫
+- 登录限速：生产 `deploy/nginx.conf` 对 **`/api/auth/callback/github`** 的 `limit_req`
+  （rate=5r/m、burst=5，超限由代理直接 429、请求不进应用）。应用层的 admin-password 进程内节流
+  随 D33 退役，**不要再造一套应用层失败计数**；来源地址由 nginx 在边缘**用 `$remote_addr` 覆写**
+  `X-Forwarded-For`（不是 append），客户端伪造的第一跳不会被采信
 - 包管理：npm（禁止 pnpm/yarn/bun）
 
 ### 版本事实（最高优先级）
@@ -451,7 +461,9 @@ docs/02-测试记录/ 的自测表与人工联调，不能用测试全绿代替�
 | `DATABASE_URL` | Prisma 连库串 | 必须 | `prisma/schema.prisma`、`src/lib/db.ts` | 两份 `.env*.example` |
 | `NEXTAUTH_URL` | 对外站点地址；同时是站点 URL 单源（`src/lib/site.ts` 复用） | 必须 | `src/auth.ts`、`src/lib/site.ts` | 同上 |
 | `NEXTAUTH_SECRET` | JWT 会话签名密钥（≥32 位） | 必须 | `src/auth.ts` | 同上 |
-| `ADMIN_PASSWORD` | 后台唯一准入口令（非空且 ≥12 位） | 必须 | `src/lib/admin-password.ts` | 同上 |
+| `GITHUB_ID` | GitHub OAuth App 的 Client ID（D33） | 必须 | `src/auth.ts` | 同上 |
+| `GITHUB_SECRET` | GitHub OAuth App 的 Client Secret | 必须 | `src/auth.ts` | 同上 |
+| `ENCRYPTION_KEY` | GitHub access_token 落库加密密钥（64 位 hex，AES-256-GCM，Step 5） | 登录即必须（缺失时认领链路抛错） | `src/lib/token-crypto.ts` | 同上 |
 | `OSS_REGION` | OSS 地域 ID，必须是 `oss-cn-beijing` 形式（写 `cn-beijing` 会拼出不存在的域名） | 上传功能必须 | `src/lib/oss.ts` | 同上 |
 | `OSS_BUCKET` | OSS 桶名（`laity-archive`） | 上传功能必须 | `src/lib/oss.ts` | 同上 |
 | `OSS_ACCESS_KEY_ID` | RAM 子账号 AK（策略只授 `oss:PutObject`） | 上传功能必须 | `src/lib/oss.ts` | 同上 |
@@ -463,8 +475,8 @@ docs/02-测试记录/ 的自测表与人工联调，不能用测试全绿代替�
 - 新增一个环境变量的标准动作见「常见变更操作手册 → 新增一个环境变量」；生产要能进容器，必须在
   `docker-compose.prod.yml` 的 `app.environment` 显式列出——`--env-file` 只参与插值、不注入容器（I024 踩过）。
 - 判"未配置是否合法"：合法用 `${VAR:-}`（三个 `SITE_*`），必须配置用 `${VAR:?}` 并进 preflight 清单（D12）。
-- **已废弃，勿再用**：`GITHUB_ID` / `GITHUB_SECRET` / `ALLOWED_GITHUB_IDS`——随 D20 取消 GitHub 登录一并退出，
-  CI 里也已在 `d7959bf` 删除，见到别加回。
+- **已废弃，勿再用**：`ADMIN_PASSWORD`（D33 恢复 OAuth 后退役）、`ALLOWED_GITHUB_IDS`（白名单随 D20 退出）。
+  `GITHUB_ID` / `GITHUB_SECRET` **不是**废弃项——它们是当前登录入口的必需键（见上表）。
 
 ## 已知坑速查（踩过的，别再踩）
 

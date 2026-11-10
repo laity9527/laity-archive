@@ -16,6 +16,10 @@
 补执行档案定位（Phase 1–7 已闭环，清单与判据留档不再作为待办驱动），并新增 D32（本轮文档重构与 V1.0
 冻结口径）。**D1–D31 正文一字未改**（留痕铁律：被取代的决策只加注、不删除），决策索引、风险清单、
 技术债与未验证清单同步补 D32 一行。技术选型（Next.js 16.4.3 / Prisma 6.19.3 / Tailwind CSS 4.3.3）未改动。
+维护留痕续四：2026-11-10 按负责人点名"文档口径收口（解决 I077）"，新增 **D33（V2.0 恢复 GitHub OAuth 多用户
+登录，取代 D20 单口令）**，并以索引行标注 D20 已失效；**D20 及其它既有决策正文一字未删**。同时按实现同步
+SPEC 的范围界定、F04、路由表、追溯矩阵与回归测试数（73→85），并新增 F21（`/u/[handle]` 租户主页，I080）。
+本轮未改任何源码——清理与代码同步在另一批 diff 里单独提交。
 
 
 ---
@@ -546,7 +550,33 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
   ISSUES.md（新增 I071/I072 并同步概览计数）、`docs/archive/README.md`（边界声明改五份受控 + D1–D32 +
   原型过期注）。**本轮未改：任何源码、`next.config.ts`、CI、锁文件、软著材料。**
 
-## 决策索引（D1–D32 一览）
+### D33：V2.0 恢复 GitHub OAuth 多用户登录（取代 D20 的单口令方案）
+
+- 决策（2026-11-10，负责人点名"文档口径收口"）：登录方式从 D20 的 `ADMIN_PASSWORD` 单口令，
+  **改回 GitHub OAuth 多用户登录**。本站对完成登录的账号开放后台，各账号只读写自己的档案。
+- 依据：V2.0 Step 4-A 起代码已是 OAuth（`src/auth.ts` 的 `GitHubProvider` + 首次登录认领/建号），
+  4-B 起准入与数据隔离统一到 `userId`（`requireAdminSession()` 判非空、Proxy 判 `token.userId`、
+  DAL 层 `{ id, userId }` 复合条件）。文档若不改，会引导后来者把口令方案加回来——事实基座优先于历史留痕。
+- 具体口径：
+  1. OAuth App 回调 `<NEXTAUTH_URL>/api/auth/callback/github`；scope `read:user user:email public_repo`
+     （`public_repo` 供 Step 5 同步读取公开仓库 commits，不加完整 `repo`）。
+  2. 首次登录在 jwt 回调按 githubId → handle → 新建 认领/建号（`profile` 参数含 login，`user` 不含——
+     4-A 曾因此静默跳过认领）；`account.access_token` 经 AES-256-GCM 加密写入 `User.githubAccessToken`，
+     **不进 JWT/session**。
+  3. 会话语义沿用 D8/D25：签名 JWT、12 小时、换 `NEXTAUTH_SECRET` 是唯一即时吊销手段。
+  4. 登录限速由 D21/D22 的两层收敛为**单层**：nginx 对 OAuth 回调 `limit_req`（rate=5r/m、burst=5）；
+     应用内 admin-password 节流随口令方案退役。
+  5. `isAdmin` 字段保留在库但不再参与任何判定；`ADMIN_PASSWORD`、`ALLOWED_GITHUB_IDS`、
+     `src/lib/admin-password.ts` 标记废弃，勿加回。
+- 被保留的 D20 遗产：预检门禁的"口令强度"判定退役，改为"GitHub 两键非空 + ENCRYPTION_KEY 64 位 hex"；
+  D20 正文与其实测记录按留痕铁律**不改不删**，只在此处标注已被 D33 取代。
+- 代价与边界：① 存量会话需重登一次才拿到含 `userId` 的新载荷；② 存量账号的 `githubId` 需与 GitHub
+  账号对上（本机 zhanglei 行经一次性 UPDATE 绑定 111046902，生产部署须跑同一条）；③ OAuth 依赖外部服务
+  可用性，GitHub 侧故障期间新登录不可用（既有会话不受影响）。
+- 连带：SPEC（范围界定、F04、路由表、追溯矩阵、回归测试数 73→85）、AGENTS（登录行、限速行、环境变量总表）、
+  `.env.production.example`（4-B 已同步）、`docker-compose.prod.yml`（4-B 已同步）。
+
+## 决策索引（D1–D33 一览）
 
 编号按落定顺序分配，因此在正文里并非按数字排列。下表按编号汇总，便于反查；状态与正文保持同步。
 
@@ -571,7 +601,7 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
 | D17 | 上线基线：测试、健康探针、错误页、合规页 | 有效 |
 | D18 | 把门禁与材料核对交给 CI | 有效 |
 | D19 | 外部合规方案先裁定位、再逐条吸收 | 有效 |
-| D20 | 取消 GitHub 登录，改为管理员口令 | 有效 |
+| D20 | 取消 GitHub 登录，改为管理员口令 | **已被 D33 取代**（历史正文保留不改） |
 | D21 | 可达性、提交反馈、三层判定统一 | 有效 |
 | D22 | 边缘覆写 XFF，未配口令留服务器提示 | 有效 |
 | D23 | 退出不再经框架英文确认页 | 有效 |
@@ -584,6 +614,7 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
 | D30 | 视觉令牌切换裁决：切到 `#f4f1ec` 语义化令牌体系 | **已实施（2026-11-05，A1–A4 + B1 全落地，闭环）** |
 | D31 | 新增 `/about` 关于页（P1），导航扩为三项 | **已实施（2026-11-05）**，见该节实施确认 |
 | D32 | 文档体系重构：SPEC 转 V1.0 冻结（F01–F18）+ 本文件补裁剪说明与执行档案定位 | 有效（本轮即它的落地） |
+| D33 | V2.0 恢复 GitHub OAuth 多用户登录（取代 D20 单口令） | **已实施（2026-11-10，4-A/4-B/Step 5 全部落地）** |
 
 ## 二、分阶段路线图（7 个 Phase，每个都是可运行最小闭环；Phase 8/9 为待裁决备选）
 

@@ -7,6 +7,7 @@
  * - 2026-11-03: 初始创建
  * - 2026-11-04: 登录侧码表随口令登录调整：AccessDenied → CredentialsSignin
  * - 2026-11-04: 补 PRJ_003/PRJ_004、逐字段文案完整性，以及 Configuration 不得念出环境变量名（D26）
+ * - 2026-11-10: I078：口令时代的 CredentialsSignin 已删，登录侧断言改为 OAuth 六个码 + Configuration/Default
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -24,20 +25,31 @@ const SPEC_CODES = [
   "IMG_001",
 ];
 
+const OAUTH_CODES = [
+  "OAuthSignin",
+  "AccessDenied",
+  "OAuthCallback",
+  "OAuthCreateAccount",
+  "OAuthAccountNotLinked",
+  "Callback",
+  "Configuration",
+  "Default",
+];
+
 test("SPEC 里的每个错误码都有文案（除按表单分支的 VAL_001）", () => {
   for (const code of SPEC_CODES.filter((c) => c !== "VAL_001")) {
     assert.ok(ERROR_TEXT[code]?.length, `${code} 缺文案`);
   }
 });
 
-test("登录侧四个码也在同一张表里", () => {
-  for (const code of ["CredentialsSignin", "Verification", "Configuration", "Default"]) {
+test("OAuth 链路的六个码 + Configuration/Default 都在同一张表里", () => {
+  for (const code of OAUTH_CODES) {
     assert.ok(ERROR_TEXT[code]?.length, `${code} 缺文案`);
   }
 });
 
-test("GitHub 白名单时代的码已经不再出现", () => {
-  assert.equal(ERROR_TEXT.AccessDenied, undefined);
+test("口令时代的码已经不再出现", () => {
+  assert.equal(ERROR_TEXT.CredentialsSignin, undefined);
 });
 
 test("VAL_001 按来源表单给不同细则", () => {

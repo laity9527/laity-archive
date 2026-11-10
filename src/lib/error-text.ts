@@ -11,6 +11,9 @@
  *               /login 上，任何人敲 ?error=Configuration 就能看到本站配了哪些密钥变量
  * - 2026-11-10: V2.0 Step 5 Commit 2：补 SYNC_001/002/003（未绑定/授权失效/GitHub 不可达）
  * - 2026-11-10: Step 5 修复轮：SYNC_002 文案改为"授权不足，请重新登录"；scope 补 public_repo
+ * - 2026-11-10: V2.0 文档口径收口（I078）：删口令时代的 CredentialsSignin 与仅 email provider 用的
+ *               Verification（均为死码），按 next-auth v4 源码补 OAuthSignin/AccessDenied/OAuthCallback/
+ *               OAuthCreateAccount/OAuthAccountNotLinked/Callback 六个码
  */
 
 export const ERROR_TEXT: Record<string, string> = {
@@ -28,8 +31,13 @@ export const ERROR_TEXT: Record<string, string> = {
   SYNC_001: "尚未绑定 GitHub 授权：请退出并重新登录一次，再点同步。",
   SYNC_002: "同步失败：GitHub 授权不足，请先退出登录，重新授权以获取仓库读取权限。",
   SYNC_003: "暂时连不上 GitHub，请稍后再试。",
-  CredentialsSignin: "口令不正确。",
-  Verification: "登录链接已过期，请重新发起登录。",
+  // NextAuth v4 OAuth 链路实际会回跳的码（core/routes/signin.js 与 callback.js 实查）
+  OAuthSignin: "发起 GitHub 登录失败，请稍后再试。",
+  AccessDenied: "GitHub 授权被拒绝或已取消。",
+  OAuthCallback: "GitHub 登录回调处理失败，请再试一次。",
+  OAuthCreateAccount: "账号建立失败，请稍后再试或查看服务端日志。",
+  OAuthAccountNotLinked: "该 GitHub 账号与已有账号的绑定发生冲突，请联系站主。",
+  Callback: "登录回调没有完成，可以再试一次。",
   Configuration: "登录没有配好，服务器侧缺少必需的密钥或地址，请查看服务端日志。",
   Default: "登录没有完成，可以再试一次。",
 };

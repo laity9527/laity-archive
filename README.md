@@ -4,8 +4,7 @@
 
 数字档案，记录每一次工程决策。收集项目作品与开发复盘，构建一份可信的数字履历。
 
-当前形态：**V1.0 单人版**（无注册、无多用户、无 UGC；后台 `/admin` 仅一把 `ADMIN_PASSWORD` 口令登录）。
-V2.0 多用户 SaaS 已归档搁置，不在任何对外承诺里——见 [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) 的「历史决策裁剪说明」。
+当前形态：**V2.0 多租户**（GitHub OAuth 一键登录，各账号只读写自己的档案；站内无自建注册、无 UGC；含 GitHub 公开提交自动同步）。决策见 [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) 的 D33。
 
 ## 当前状态快照（2026-11-05）
 
@@ -43,7 +42,7 @@ npx prisma db seed            # 本地种子数据（生产不播种，数据一
 npm run dev                   # http://localhost:3000
 ```
 
-后台入口 `http://localhost:3000/admin`，未登录会跳自建登录页 `/login`，口令取 `.env` 里的 `ADMIN_PASSWORD`。
+后台入口 `http://localhost:3000/admin`，未登录会跳自建登录页 `/login`，点「使用 GitHub 登录」完成授权（OAuth App 的两键填在 `.env` 的 `GITHUB_ID` / `GITHUB_SECRET`，注意不要与生产 App 复用）。
 
 > Windows + Git Bash 三个已踩过的坑见 [AGENTS.md](file:///D:/ZHANGLEI/laity-archive/AGENTS.md)「已知坑速查」：
 > MSYS 会改写容器内路径（命令前加 `MSYS_NO_PATHCONV=1`）、Node 眼里的 `/tmp` 不是 Git Bash 的那个

@@ -17,6 +17,8 @@
  *               不再让脏 id 拼进 redirect 或变成未捕获的外键错
  * - 2026-11-09: V2.0 Step 4-B：四个动作把 session.userId 传给数据层；assertProjectExists 也按
  *               本租户的项目列表校验——别人的 projectId 与不存在的同判 VAL_001(field=project)
+ * - 2026-11-10: I079 修复：refreshLogViews 去掉对已退役 /logs 路径的 revalidate（静默无效的死代码），
+ *               改为无参（租户页是请求期取数，不需按 handle 失效）
  */
 "use server";
 
@@ -131,10 +133,11 @@ function reject(backTo: string, field: LogField): never {
   redirect(`${backTo}?error=VAL_001&field=${field}`);
 }
 
-function refreshLogViews(slug: string) {
+// 页面全部请求期取数（instant=false + 直接查库），revalidate 只对缓存壳有意义；
+// 原 /logs 与 /logs/<slug> 两行是 Step 3 退役的旧路由，对不存在的路径 revalidate 静默无效（I079）。
+// 租户页 /u/[handle]/... 同为请求期取数，不需要按 handle 再失效一遍
+function refreshLogViews() {
   revalidatePath("/");
-  revalidatePath("/logs");
-  revalidatePath(`/logs/${slug}`);
   revalidatePath("/admin");
 }
 
@@ -164,7 +167,7 @@ export async function saveLogAction(formData: FormData) {
     redirect(`${backTo}?error=${result.code}`);
   }
 
-  refreshLogViews(result.slug);
+  refreshLogViews();
   redirect(`/admin/logs/${result.id}/edit?saved=1`);
 }
 
@@ -210,7 +213,7 @@ export async function publishLogAction(formData: FormData) {
     redirect(`${backTo}?error=${result.code}`);
   }
 
-  refreshLogViews(result.slug);
+  refreshLogViews();
   redirect(`${backTo}?published=1`);
 }
 
@@ -234,7 +237,7 @@ export async function unpublishLogAction(formData: FormData) {
     redirect(`${backTo}?error=${result.code}`);
   }
 
-  refreshLogViews(result.slug);
+  refreshLogViews();
   redirect(`${backTo}?unpublished=1`);
 }
 
@@ -259,6 +262,6 @@ export async function deleteLogAction(formData: FormData) {
     redirect(`${backTo}?error=${result.code}`);
   }
 
-  refreshLogViews(result.slug);
+  refreshLogViews();
   redirect(`/admin?deleted=1`);
 }

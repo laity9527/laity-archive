@@ -71,7 +71,7 @@ test("后台与登录页不算前台路径", () => {
   assert.equal(isPublicRoute("/admin/logs/new"), false);
   assert.equal(isPublicRoute("/admin/projects"), false);
   assert.equal(isPublicRoute("/login"), false);
-  assert.equal(isPublicRoute("/login?error=CredentialsSignin"), false);
+  assert.equal(isPublicRoute("/login?error=OAuthCallback"), false);
 });
 
 test("前台路径与首页都算公开，空串防御性返回 false", () => {
