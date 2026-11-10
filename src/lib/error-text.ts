@@ -9,6 +9,7 @@
  * - 2026-11-04: 登录改本地口令：删 AccessDenied（GitHub 白名单专用），补 CredentialsSignin，Configuration 不再指 OAuth
  * - 2026-11-04: 补逐字段文案与 PRJ_003；Configuration 不再念出环境变量名（D26）——这一行会渲染在公开的
  *               /login 上，任何人敲 ?error=Configuration 就能看到本站配了哪些密钥变量
+ * - 2026-11-10: V2.0 Step 5 Commit 2：补 SYNC_001/002/003（未绑定/授权失效/GitHub 不可达）
  */
 
 export const ERROR_TEXT: Record<string, string> = {
@@ -23,6 +24,9 @@ export const ERROR_TEXT: Record<string, string> = {
   PRJ_003: "删除没有执行：请再点一次「确认删除」。",
   PRJ_004: "项目不存在，可能已被删除。",
   IMG_001: "图片不合格：仅支持 jpg / png / webp / gif，且不超过 5MB。",
+  SYNC_001: "尚未绑定 GitHub 授权：请退出并重新登录一次，再点同步。",
+  SYNC_002: "GitHub 拒绝了授权（令牌可能已失效）：请退出并重新登录。",
+  SYNC_003: "暂时连不上 GitHub，请稍后再试。",
   CredentialsSignin: "口令不正确。",
   Verification: "登录链接已过期，请重新发起登录。",
   Configuration: "登录没有配好，服务器侧缺少必需的密钥或地址，请查看服务端日志。",

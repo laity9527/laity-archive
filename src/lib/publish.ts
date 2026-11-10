@@ -9,6 +9,8 @@
  * - 2026-11-03: 发布前加敏感信息扫描门（LOG_003，未确认不放行）；补 deleteLog 彻底删除
  * - 2026-11-09: V2.0 Step 4-B：四个写函数全部加 userId——创建带 userId，查改删一律 {id,userId}
  *               复合条件，updateMany/deleteMany 0 行命中报 LOG_002（跨租户与不存在同表现）
+ * - 2026-11-10: V2.0 Step 5 Commit 2：LogInput 加 sourceCommitSha（同步草稿去重锚点）；
+ *               只在显式提供时写入（条件展开），表单编辑不清掉已同步草稿的锚点
  */
 import { Prisma } from "@prisma/client";
 import { computeContentHash } from "@/lib/content-hash";
@@ -26,6 +28,7 @@ export type LogInput = {
   beforeDate: Date;
   afterDate?: Date;
   lessonLearned?: string;
+  sourceCommitSha?: string;
 };
 
 export type SaveLogResult =
@@ -58,6 +61,10 @@ export async function saveLog(
   input: LogInput,
   userId: string,
 ): Promise<SaveLogResult> {
+  // sourceCommitSha 只在显式提供时写入：表单编辑（未带该字段）不得把它清成 null，
+  // 否则一条已同步草稿被编辑后就失去去重锚点，重跑会重复产草稿
+  const sourceShaData =
+    input.sourceCommitSha !== undefined ? { sourceCommitSha: input.sourceCommitSha } : {};
   const data = {
     projectId: input.projectId,
     slug: input.slug,
@@ -85,7 +92,7 @@ export async function saveLog(
       // 更新仍带 userId：存在性判定与写入之间行不会易主，0 行命中按同一口径报 LOG_002
       const updated = await db.log.updateMany({
         where: { id: input.id, userId },
-        data: { ...data, ...(existing.isPublished ? { isPublished: false } : {}) },
+        data: { ...data, ...sourceShaData, ...(existing.isPublished ? { isPublished: false } : {}) },
       });
 
       if (updated.count === 0) {
@@ -95,7 +102,7 @@ export async function saveLog(
       return { ok: true, id: input.id, slug: input.slug };
     }
 
-    const log = await db.log.create({ data: { ...data, userId } });
+    const log = await db.log.create({ data: { ...data, ...sourceShaData, userId } });
 
     return { ok: true, id: log.id, slug: log.slug };
   } catch (error) {

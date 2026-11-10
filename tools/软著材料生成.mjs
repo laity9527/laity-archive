@@ -44,6 +44,9 @@
  *               与它消费的 licenses.ts 同段。起因是量测算出后窗口余量对总页数敏感——6721 行时余 41 行，
  *               一旦净加行跨过 6750 翻到 136 页，容量由 1471 掉到 1451、余量只剩 21 行。
  *               让位后 ④ 段从 1430 行降到 1321 行，第三批可安全加行。前窗口未受影响（①② 一字未动）。
+ * - 2026-11-10: V2.0 Step 5 Commit 2：登记 github-sync-filter/github-sync 进 ②（Step 5 核心逻辑）、
+ *               sync-actions 进 ③（与 log-actions 同属后台动作层）。前窗口预计顶到 1500 边缘，出件时看护栏。
+ *
  *
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
@@ -105,7 +108,6 @@ const BANDS = [
     files: [
       "src/lib/content-hash.ts",
       "src/lib/publish.ts",
-      "src/lib/logs.ts",
       "src/lib/projects.ts",
       "src/lib/sensitive-scan.ts",
       "src/lib/oss.ts",
@@ -133,6 +135,16 @@ const BANDS = [
       // token 加密是 node:crypto 的一层壳（Step 5），调用方 auth.ts 在 ② 整份可见；
       // 与 object-key 同类放折走段，不动 ①+② 行数（proxy.ts 被前窗口切开过多次）
       "src/lib/token-crypto.ts",
+      // github-sync-filter 是 Step 5 的纯函数过滤（merge/无意义/去重/同日合并 + slug 净化），
+      // 调用方 sync-actions 与 github-sync 都在 ②③ 可见载体；2026-11-10 第十六次窗口配平：
+      // 进 ② 把 ①+② 顶过 1500，oss/auth/proxy 越界，由它让位
+      "src/lib/github-sync-filter.ts",
+      // github-sync 是 Step 5 的网络适配器（API 调用 + 并发限流），相对独立于鉴权/存证核心；
+      // 2026-11-10 第十六次配平：进 ② 仍顶过 1500，auth/proxy 越界，由它让位
+      "src/lib/github-sync.ts",
+      // logs.ts 是数据访问层（DAL），取数逻辑的调用方（页面/动作）都在 ③④ 可见；
+      // 2026-11-10 第十六次配平：与 github-sync 一同让位，确保 auth/proxy/publish/projects/content-hash 整份在前窗口
+      "src/lib/logs.ts",
       // Markdown 出口只是 react-markdown + rehype-sanitize 的一层壳（34 行），消毒规则在调用处（④ 的详情页）与注释里都看得见；
       // 本轮 forms/logs/admin-password 三处各涨几行，①+② 到 1511 把 proxy.ts 切开，由它让位
       "src/lib/markdown.tsx",
@@ -161,6 +173,7 @@ const BANDS = [
       "src/app/robots.ts",
       "src/app/admin/layout.tsx",
       "src/app/admin/log-actions.ts",
+      "src/app/admin/sync-actions.ts",
       "src/app/admin/upload-action.ts",
       "src/app/admin/project-actions.ts",
       "src/app/admin/page.tsx",
