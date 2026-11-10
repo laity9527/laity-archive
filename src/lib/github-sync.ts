@@ -5,9 +5,9 @@
  * 创建日期：2026-11-10
  * 修改记录：
  * - 2026-11-10: 初始创建（V2.0 Step 5 Commit 2）。token 由调用方解好传入，本模块不碰密文与数据库
- * - 2026-11-10: Step 5 调试轮：加 console.log（每仓库 commit 数与失败原因）、RawCommit 提取顶层 author.login；临时代码，上线前移除
  * - 2026-11-10: Step 5 修复轮二：fetchRepoCommits 去掉 encodeURIComponent(repo)（斜杠被编码成 %2F → 404）；
- *               !res.ok 时 console.error 打印完整 URL/状态码/响应体
+ *               !res.ok 时抛 SyncError（动作层映射 SYNC_002/003）
+ * - 2026-11-10: 移除调试日志（[sync-debug] console.log/console.error），代码保持极简
  */
 import type { RawCommit } from "@/lib/github-sync-filter";
 
@@ -119,13 +119,9 @@ export async function fetchRepoCommits(
 ): Promise<RawCommit[]> {
   // repo 形如 "owner/name"：encodeURIComponent 会把斜杠编码成 %2F，GitHub API 不认 %2F 为路径分隔符 → 404。
   // owner/name 只含字母数字连字符与一个斜杠，直接拼路径即可
-  const url = `${API}/repos/${repo}/commits?per_page=50`;
   const res = await ghFetch(`/repos/${repo}/commits?per_page=50`, token);
 
   if (!res.ok) {
-    const errorBody = await res.text();
-    console.error(`[sync-debug] API Error: ${url} status=${res.status} body=${errorBody.slice(0, 200)}`);
-
     if (res.status === 404 || classifyStatus(res.status)) {
       throw new SyncError("auth", `GitHub 拒绝授权：GET /repos/${repo}/commits 返回 ${res.status}`);
     }
@@ -184,14 +180,12 @@ export async function fetchAllCommits(
   await mapLimit(repos, concurrency, async (repo) => {
     try {
       const repoCommits = await fetchRepoCommits(token, repo.fullName);
-      console.log(`[sync-debug] repo ${repo.fullName}: ${repoCommits.length} commits`);
       results.push(repoCommits);
     } catch (error) {
       if (error instanceof SyncError && error.kind === "auth") {
         throw error; // 授权失败是全局问题，整批抛出让动作层统一出错
       }
 
-      console.log(`[sync-debug] repo ${repo.fullName}: FAILED (${error instanceof Error ? error.message : String(error)})`);
       failedRepos.push(repo.fullName); // 网络类单仓库失败降级，继续拉其余
     }
   });

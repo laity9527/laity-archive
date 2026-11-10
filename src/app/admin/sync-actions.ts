@@ -5,7 +5,7 @@
  * 创建日期：2026-11-10
  * 修改记录：
  * - 2026-11-10: 初始创建（V2.0 Step 5 Commit 2）。全部写路径带 session.userId；token 只在服务端解密，不回传
- * - 2026-11-10: Step 5 调试轮：加 console.log 调试信息（login/repos/commits/filter 各步计数）；临时代码，上线前移除
+ * - 2026-11-10: 移除调试日志（[sync-debug] console.log），代码保持极简
  */
 "use server";
 
@@ -110,9 +110,7 @@ export async function syncGithubAction() {
 
   try {
     const repos = await fetchSyncRepos(token);
-    console.log(`[sync-debug] fetchSyncRepos: ${repos.length} repos, names=${JSON.stringify(repos.map(r => r.fullName).slice(0, 5))}`);
     commits = await fetchAllCommits(token, repos);
-    console.log(`[sync-debug] fetchAllCommits: ${commits.commits.length} commits, ${commits.failedRepos.length} failed repos`);
   } catch (error) {
     if (error instanceof SyncError && error.kind === "auth") {
       redirect("/admin?error=SYNC_002");

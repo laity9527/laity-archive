@@ -5,7 +5,7 @@
  * 创建日期：2026-11-10
  * 修改记录：
  * - 2026-11-10: 初始创建（V2.0 Step 5 Commit 2）。全部为纯函数，不碰数据库与网络，供 node --test 直接覆盖
- * - 2026-11-10: Step 5 调试轮：filterCommits 加 console.log（各过滤步计数 + 前 3 条 commit 的 author 样本）；临时代码，上线前移除
+ * - 2026-11-10: 移除调试日志（[sync-debug] console.log），代码保持极简
  */
 import { LIMITS } from "./forms.ts";
 
@@ -116,37 +116,24 @@ export function filterCommits(
 ): RawCommit[] {
   const seen = new Set<string>();
   const kept: RawCommit[] = [];
-  let mergeCount = 0;
-  let meaninglessCount = 0;
-  let dedupCount = 0;
 
   for (const commit of commits) {
     if (isMergeCommit(commit.message)) {
-      mergeCount = mergeCount + 1;
       continue;
     }
 
     const line = firstLine(commit.message);
 
     if (line.length < 10 || isMeaningless(commit.message)) {
-      meaninglessCount = meaninglessCount + 1;
       continue;
     }
 
     if (existingShas.has(commit.sha) || seen.has(commit.sha)) {
-      dedupCount = dedupCount + 1;
       continue;
     }
 
     seen.add(commit.sha);
     kept.push(commit);
-  }
-
-  console.log(`[sync-debug] filterCommits: input=${commits.length}, merge=${mergeCount}, meaningless=${meaninglessCount}, dedup=${dedupCount}, kept=${kept.length}`);
-
-  if (commits.length > 0) {
-    const samples = commits.slice(0, 3).map((c) => `${c.sha.slice(0, 8)} author=${c.author ?? "(null)"} msg="${firstLine(c.message).slice(0, 40)}"`);
-    console.log(`[sync-debug] sample commits: ${JSON.stringify(samples)}`);
   }
 
   return kept;
