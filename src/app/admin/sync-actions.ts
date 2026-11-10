@@ -14,7 +14,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdminSession } from "@/auth";
 import { db } from "@/lib/db";
 import { decryptToken } from "@/lib/token-crypto";
-import { fetchAllCommits, fetchUserLogin, fetchSyncRepos, SyncError } from "@/lib/github-sync";
+import { fetchAllCommits, fetchSyncRepos, SyncError } from "@/lib/github-sync";
 import { buildDraft, filterCommits, groupByRepoDay } from "@/lib/github-sync-filter";
 import { saveLog } from "@/lib/publish";
 
@@ -109,11 +109,9 @@ export async function syncGithubAction() {
   let commits;
 
   try {
-    const login = await fetchUserLogin(token);
-    console.log(`[sync-debug] fetchUserLogin: login=${JSON.stringify(login)}`);
     const repos = await fetchSyncRepos(token);
     console.log(`[sync-debug] fetchSyncRepos: ${repos.length} repos, names=${JSON.stringify(repos.map(r => r.fullName).slice(0, 5))}`);
-    commits = await fetchAllCommits(token, repos, login);
+    commits = await fetchAllCommits(token, repos);
     console.log(`[sync-debug] fetchAllCommits: ${commits.commits.length} commits, ${commits.failedRepos.length} failed repos`);
   } catch (error) {
     if (error instanceof SyncError && error.kind === "auth") {

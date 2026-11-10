@@ -109,19 +109,21 @@ export async function fetchSyncRepos(token: string, limit = 30): Promise<RepoSum
     .map((row) => ({ fullName: row.full_name, private: row.private }));
 }
 
-// 拉某仓库最近 commits，按作者过滤且只要本人；TTL 30 天前的 commit 一并取回（per_page=50 的覆盖范围）
+// 拉某仓库最近 commits（不去 author 过滤——GitHub commits 的 author 参数匹配 git author 信息而非 login，
+// 邮箱不一致时全灭；去重由 sourceCommitSha 兜底，不依赖客户端过滤）
 export async function fetchRepoCommits(
   token: string,
   repo: string,
-  author: string,
 ): Promise<RawCommit[]> {
   const res = await ghFetch(
-    `/repos/${encodeURIComponent(repo)}/commits?author=${encodeURIComponent(author)}&per_page=50`,
+    `/repos/${encodeURIComponent(repo)}/commits?per_page=50`,
     token,
   );
 
   if (!res.ok) {
-    if (classifyStatus(res.status)) {
+    // 404 = 权限不足（scope 没有 public_repo）或仓库不存在；统一按鉴权类处理，
+    // 动作层映射为 SYNC_002，提示用户重新登录授权
+    if (res.status === 404 || classifyStatus(res.status)) {
       throw new SyncError("auth", `GitHub 拒绝授权：GET /repos/${repo}/commits 返回 ${res.status}`);
     }
 
@@ -167,11 +169,10 @@ export async function fetchUserLogin(token: string): Promise<string> {
 }
 
 // 并发拉全部仓库的 commits；单仓库失败记录后继续，不整批失败。
-// author 用 GitHub login（不是站内 handle）：这一步对齐真实身份，私有 scope 未授予时 commits 只回落公开项
+// 不去 author 过滤（邮箱不一致会导致全灭），去重由 sourceCommitSha 兜底
 export async function fetchAllCommits(
   token: string,
   repos: RepoSummary[],
-  author: string,
   concurrency = 5,
 ): Promise<{ commits: RawCommit[]; failedRepos: string[] }> {
   const results: RawCommit[][] = [];
@@ -179,8 +180,8 @@ export async function fetchAllCommits(
 
   await mapLimit(repos, concurrency, async (repo) => {
     try {
-      const repoCommits = await fetchRepoCommits(token, repo.fullName, author);
-      console.log(`[sync-debug] repo ${repo.fullName}: ${repoCommits.length} commits (author=${author})`);
+      const repoCommits = await fetchRepoCommits(token, repo.fullName);
+      console.log(`[sync-debug] repo ${repo.fullName}: ${repoCommits.length} commits`);
       results.push(repoCommits);
     } catch (error) {
       if (error instanceof SyncError && error.kind === "auth") {

@@ -25,6 +25,8 @@
  *               issuer 显式钉住（4.24.15 默认值同此，RFC 9207 的 iss 校验依赖它）
  * - 2026-11-10: V2.0 Step 5 Commit 1：jwt 回调截获 account.access_token，encryptToken 加密后
  *               随认领/建号落库（新建即带 githubId，不再等二次登录补绑）；token 不进 JWT/session
+ * - 2026-11-10: Step 5 修复轮：authorization.params.scope 补 public_repo（默认只有 read:user user:email，
+ *               读 commits 接口全部 404）；用户需重新登录一次以获得新 scope
  */
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
@@ -66,6 +68,11 @@ export const authOptions: NextAuthOptions = {
       // RFC 9207：GitHub 回调带 iss 参数，openid-client 会与 issuer 比对；
       // 4.24.15 的内置默认值即此，显式钉住防漂移（缺了它 iss 校验抛 TypeError）
       issuer: "https://github.com/login/oauth",
+      // Step 5 修复：补 public_repo scope——默认只有 read:user user:email，
+      // 读 commits 接口全部 404。public_repo 足以读公开仓库所有数据，不需要完整 repo 权限
+      authorization: {
+        params: { scope: "read:user user:email public_repo" },
+      },
     }),
   ],
   // 会话寿命从 v4 默认的 30 天收到 12 小时：换 NEXTAUTH_SECRET 仍是唯一的即时吊销手段
