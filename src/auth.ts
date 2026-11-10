@@ -23,12 +23,15 @@
  * - 2026-11-09: 修登录回调认领静默跳过：v4 的 jwt 回调里 user 是归一化对象（无 login），
  *               GitHub 原始资料在独立的 profile 参数；认领逻辑改读 profile 并加 try/catch 落日志；
  *               issuer 显式钉住（4.24.15 默认值同此，RFC 9207 的 iss 校验依赖它）
+ * - 2026-11-10: V2.0 Step 5 Commit 1：jwt 回调截获 account.access_token，encryptToken 加密后
+ *               随认领/建号落库（新建即带 githubId，不再等二次登录补绑）；token 不进 JWT/session
  */
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
 import { db } from "@/lib/db";
+import { encryptToken } from "@/lib/token-crypto";
 
 // 配置体检每个进程只做一次：只报"哪一项不合格"，不回显任何值
 let advised = false;
@@ -88,6 +91,12 @@ export const authOptions: NextAuthOptions = {
         if (gh?.id && gh?.login) {
           try {
             const githubId = String(gh.id);
+            // Step 5：截获 access_token 加密落库（v4 把 tokens 展开进 account）。
+            // ENCRYPTION_KEY 缺失时 encryptToken 抛错，整条认领失败走 error=Callback——
+            // 配置缺失宁可登录不了，也不静默发一个没有同步能力的会话
+            const accessToken =
+              typeof account.access_token === "string" ? account.access_token : "";
+            const encryptedToken = accessToken ? encryptToken(accessToken) : null;
 
             let found = await db.user.findFirst({ where: { githubId } });
 
@@ -101,14 +110,20 @@ export const authOptions: NextAuthOptions = {
               row = await db.user.create({
                 data: {
                   handle: gh.login,
+                  githubId,
                   email: gh.email ?? null,
                   name: gh.name ?? null,
+                  githubAccessToken: encryptedToken,
                 },
               });
-            } else if (!row.githubId) {
+            } else if (!row.githubId || encryptedToken) {
+              // 缺 githubId 要绑定；带了新 token 要刷新（GitHub 每次授权可能换发）
               row = await db.user.update({
                 where: { id: row.id },
-                data: { githubId },
+                data: {
+                  ...(!row.githubId ? { githubId } : {}),
+                  ...(encryptedToken ? { githubAccessToken: encryptedToken } : {}),
+                },
               });
             }
 

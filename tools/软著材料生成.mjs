@@ -130,6 +130,9 @@ const BANDS = [
       // 对象键生成与断言是从 oss.ts 拆出的纯计算（I061），与嗅探函数同类，放折走段；
       // 它的调用方 oss.ts 与 upload-action.ts 都已在窗口内可见
       "src/lib/object-key.ts",
+      // token 加密是 node:crypto 的一层壳（Step 5），调用方 auth.ts 在 ② 整份可见；
+      // 与 object-key 同类放折走段，不动 ①+② 行数（proxy.ts 被前窗口切开过多次）
+      "src/lib/token-crypto.ts",
       // Markdown 出口只是 react-markdown + rehype-sanitize 的一层壳（34 行），消毒规则在调用处（④ 的详情页）与注释里都看得见；
       // 本轮 forms/logs/admin-password 三处各涨几行，①+② 到 1511 把 proxy.ts 切开，由它让位
       "src/lib/markdown.tsx",

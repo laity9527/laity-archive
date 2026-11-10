@@ -23,6 +23,8 @@
 # - 2026-11-09: V2.0 Step 4-B：ADMIN_PASSWORD 随口令登录退役，preflight 与 app 改透传
 #               GITHUB_ID / GITHUB_SECRET（GitHub OAuth App 凭据）；门禁改为两键非空，
 #               通过行不再报后台口令长度。白名单 ALLOWED_GITHUB_IDS 不回来——多租户下每个注册用户独立
+# - 2026-11-10: V2.0 Step 5 Commit 1：preflight 与 app 补 ENCRYPTION_KEY 透传（GitHub token 落库加密）；
+#               门禁硬卡 64 位 hex 形态，通过行只报"形态合格"不报值
 #
 # 用前必读：
 #   1. cp .env.production.example .env.production，填真实值：数据库口令不要与开发环境复用，
@@ -65,11 +67,12 @@ services:
         [ "$${#NEXTAUTH_SECRET}" -lt 32 ] && fail "NEXTAUTH_SECRET 短于 32 位"
         [ -z "$${GITHUB_ID:-}" ] && fail "GITHUB_ID 为空，GitHub 登录不可用"
         [ -z "$${GITHUB_SECRET:-}" ] && fail "GITHUB_SECRET 为空，GitHub 登录不可用"
+        echo "$${ENCRYPTION_KEY:-}" | grep -Eq '^[0-9a-fA-F]{64}$$' || fail "ENCRYPTION_KEY 必须是 64 位 hex（32 字节），生成命令见 .env.production.example"
         [ -z "$${OSS_REGION:-}" ] && fail "OSS_REGION 为空，正文插图无法上传"
         [ -z "$${OSS_BUCKET:-}" ] && fail "OSS_BUCKET 为空，正文插图无法上传"
         [ -z "$${OSS_ACCESS_KEY_ID:-}" ] && fail "OSS_ACCESS_KEY_ID 为空，正文插图无法上传"
         [ -z "$${OSS_ACCESS_KEY_SECRET:-}" ] && fail "OSS_ACCESS_KEY_SECRET 为空，正文插图无法上传"
-        echo "上线门禁通过：数据库用户 $${POSTGRES_USER}、口令长度 $${#POSTGRES_PASSWORD}、GitHub 两键非空、$${NEXTAUTH_URL}、OSS $${OSS_REGION}/$${OSS_BUCKET}（前缀 logs/）"
+        echo "上线门禁通过：数据库用户 $${POSTGRES_USER}、口令长度 $${#POSTGRES_PASSWORD}、GitHub 两键非空、ENCRYPTION_KEY 形态合格、$${NEXTAUTH_URL}、OSS $${OSS_REGION}/$${OSS_BUCKET}（前缀 logs/）"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?必须在 .env.production 里指定非 root 用户}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?必须在 .env.production 里指定强口令}
@@ -77,6 +80,7 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?生产密钥，不得与开发环境复用}
       GITHUB_ID: ${GITHUB_ID:?GitHub OAuth App Client ID，登录入口必需}
       GITHUB_SECRET: ${GITHUB_SECRET:?GitHub OAuth App Client Secret，登录入口必需}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?GitHub token 落库加密密钥，64 位 hex，生成命令见 .env.production.example}
       # OSS 四项与 app 服务同源；写在这里是为了让 preflight 的门禁清单自身是完整的一份
       OSS_REGION: ${OSS_REGION:?OSS Bucket 所在地域，例如 oss-cn-beijing}
       OSS_BUCKET: ${OSS_BUCKET:?OSS Bucket 名称}
@@ -123,6 +127,8 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?生产密钥，不得与开发环境复用}
       GITHUB_ID: ${GITHUB_ID:?GitHub OAuth App Client ID，登录入口必需}
       GITHUB_SECRET: ${GITHUB_SECRET:?GitHub OAuth App Client Secret，登录入口必需}
+      # Step 5：GitHub token 落库加密密钥；缺失时登录认领在运行期抛错，用 :? 提前到部署阶段
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?GitHub token 落库加密密钥，64 位 hex，生成命令见 .env.production.example}
       # I024：Phase 5b 的 OSS 传图。这四个键缺失时 src/lib/oss.ts 的 requireEnv 会在上传那一刻才抛错，
       # 用 ${VAR:?} 提前到部署阶段失败；值一律来自 .env.production，不落仓库
       OSS_REGION: ${OSS_REGION:?OSS Bucket 所在地域，例如 oss-cn-beijing}
