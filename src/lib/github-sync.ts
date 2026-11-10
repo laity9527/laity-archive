@@ -5,6 +5,7 @@
  * 创建日期：2026-11-10
  * 修改记录：
  * - 2026-11-10: 初始创建（V2.0 Step 5 Commit 2）。token 由调用方解好传入，本模块不碰密文与数据库
+ * - 2026-11-10: Step 5 调试轮：加 console.log（每仓库 commit 数与失败原因）、RawCommit 提取顶层 author.login；临时代码，上线前移除
  */
 import type { RawCommit } from "@/lib/github-sync-filter";
 
@@ -131,6 +132,7 @@ export async function fetchRepoCommits(
     sha: string;
     commit: { message: string; author?: { date?: string }; committer?: { date?: string } };
     html_url?: string;
+    author?: { login?: string };
   }>;
 
   return rows.map((row) => {
@@ -142,6 +144,7 @@ export async function fetchRepoCommits(
       message: row.commit.message,
       date,
       repo,
+      author: row.author?.login ?? "(null)",
     };
   });
 }
@@ -176,12 +179,15 @@ export async function fetchAllCommits(
 
   await mapLimit(repos, concurrency, async (repo) => {
     try {
-      results.push(await fetchRepoCommits(token, repo.fullName, author));
+      const repoCommits = await fetchRepoCommits(token, repo.fullName, author);
+      console.log(`[sync-debug] repo ${repo.fullName}: ${repoCommits.length} commits (author=${author})`);
+      results.push(repoCommits);
     } catch (error) {
       if (error instanceof SyncError && error.kind === "auth") {
         throw error; // 授权失败是全局问题，整批抛出让动作层统一出错
       }
 
+      console.log(`[sync-debug] repo ${repo.fullName}: FAILED (${error instanceof Error ? error.message : String(error)})`);
       failedRepos.push(repo.fullName); // 网络类单仓库失败降级，继续拉其余
     }
   });
