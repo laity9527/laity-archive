@@ -280,6 +280,7 @@ export default async function EditLogPage({
             initialAfter={log.afterContent ?? ""}
             draftKey={log.id}
             restoreDraft={Boolean(errorCode)}
+            initialAiAssisted={log.isAiAssisted}
           />
         </div>
 

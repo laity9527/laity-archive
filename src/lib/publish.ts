@@ -11,6 +11,8 @@
  *               复合条件，updateMany/deleteMany 0 行命中报 LOG_002（跨租户与不存在同表现）
  * - 2026-11-10: V2.0 Step 5 Commit 2：LogInput 加 sourceCommitSha（同步草稿去重锚点）；
  *               只在显式提供时写入（条件展开），表单编辑不清掉已同步草稿的锚点
+ * - 2026-11-10: V2.0 Step 6 Commit 3：LogInput 加 isAiAssisted（AI 辅助生成标记）；
+ *               仅当显式为 true 时落库，缺省（未点过 AI 按钮的表单）保持默认 false
  */
 import { Prisma } from "@prisma/client";
 import { computeContentHash } from "@/lib/content-hash";
@@ -29,6 +31,9 @@ export type LogInput = {
   afterDate?: Date;
   lessonLearned?: string;
   sourceCommitSha?: string;
+  // AI 辅助生成标记（V2.0 Step 6）：只有表单里带 isAiAssisted=true 的提交才会置真；
+  // 编辑器未点过 [ AI 帮我写 ] 时表单不带该字段，落库走模型默认 false
+  isAiAssisted?: boolean;
 };
 
 export type SaveLogResult =
@@ -75,6 +80,7 @@ export async function saveLog(
     beforeDate: input.beforeDate,
     afterDate: input.afterDate ?? null,
     lessonLearned: input.lessonLearned || null,
+    isAiAssisted: input.isAiAssisted === true,
   };
 
   try {

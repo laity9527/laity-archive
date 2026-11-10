@@ -19,6 +19,8 @@
  *               本租户的项目列表校验——别人的 projectId 与不存在的同判 VAL_001(field=project)
  * - 2026-11-10: I079 修复：refreshLogViews 去掉对已退役 /logs 路径的 revalidate（静默无效的死代码），
  *               改为无参（租户页是请求期取数，不需按 handle 失效）
+ * - 2026-11-10: V2.0 Step 6 Commit 3：parseInput 收 isAiAssisted（表单带隐藏域才为 true），
+ *               随 LogInput 落库（详情页据此打「AI 辅助生成」标签）
  */
 "use server";
 
@@ -85,6 +87,7 @@ function parseInput(formData: FormData): ParseResult {
     beforeDate,
     afterDate: afterDate ?? undefined,
     lessonLearned: readField(formData, "lessonLearned"),
+    isAiAssisted: readField(formData, "isAiAssisted") === "true",
   };
 
   if (!SLUG_PATTERN.test(input.slug)) {

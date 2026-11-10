@@ -15,6 +15,9 @@
 // - 2026-11-10: V2.0 Step 5 Commit 1：User 加 githubAccessToken（AES-256-GCM 密文，可空）；
 //               Log 加 sourceCommitSha + @@unique([userId, sourceCommitSha])（同步草稿幂等去重锚点）；
 //               迁移由本人本地执行 npx prisma migrate dev --name step5_sync_foundation
+// - 2026-11-10: V2.0 Step 6 Commit 3：Log 加 isAiAssisted（AI 辅助生成标记，默认 false）；
+//               详情页据此在正文末尾打「[ AI 辅助生成 · 作者审校 ]」标签；
+//               迁移由本人本地执行 npx prisma migrate dev --name add_is_ai_assisted
 
 generator client {
   provider = "prisma-client-js"
@@ -79,6 +82,9 @@ model Log {
   // 同步草稿的来源 commit sha（V2.0 Step 5）：幂等去重锚点，重复点同步不产重复行；
   // 手写日志为 null，Postgres 唯一索引视多个 null 互不相同，不影响存量
   sourceCommitSha String?
+  // AI 辅助生成标记（V2.0 Step 6）：编辑器点过 [ AI 帮我写 ] 且正文来自模型输出时置 true；
+  // 详情页据此在正文末尾打「[ AI 辅助生成 · 作者审校 ]」，提醒读者内容经过作者审校
+  isAiAssisted Boolean @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -19,6 +19,8 @@
  * - 2026-11-10: Step 6 Commit 2：新增 [ AI 帮我写 ] 按钮——收当前表单里的 title 与两栏正文，调
  *               generateAiDraftAction；生成中按钮变「生成中…」并禁用防连点；成功回填 BEFORE/AFTER，
  *               失败只出 role=alert 横幅（正文保持现状）；保存/发布按钮不受任何阻塞
+ * - 2026-11-10: Step 6 Commit 3：AI 成功后在表单内渲染隐藏域 isAiAssisted=true（随保存落库）；
+ *               编辑页传 initialAiAssisted 保持既有标记；暂存同步带该位（服务端打回时不丢）
  */
 "use client";
 
@@ -35,6 +37,8 @@ type EditorProps = {
   draftKey: string;
   // 只有服务端打回（页面带 ?error=）才回填，正常保存/发布成功不复活旧稿
   restoreDraft?: boolean;
+  // 既有日志的 AI 标记：编辑页传进来后，表单里带隐藏域，保存不会把它清掉
+  initialAiAssisted?: boolean;
 };
 
 type Tab = "before" | "after";
@@ -71,11 +75,12 @@ function readStash(draftKey: string) {
   try {
     const parsed = JSON.parse(
       window.sessionStorage.getItem(stashKey(draftKey)) ?? "",
-    ) as { before?: unknown; after?: unknown };
+    ) as { before?: unknown; after?: unknown; aiAssisted?: unknown };
 
     return {
       before: typeof parsed.before === "string" ? parsed.before : undefined,
       after: typeof parsed.after === "string" ? parsed.after : undefined,
+      aiAssisted: parsed.aiAssisted === true,
     };
   } catch {
     return null;
@@ -87,6 +92,7 @@ export function Editor({
   initialAfter,
   draftKey,
   restoreDraft = false,
+  initialAiAssisted,
 }: EditorProps) {
   const [tab, setTab] = useState<Tab>("before");
   // 服务端打回时（页面带 ?error=）把提交前留下的正文捡回来。放在 useState 的初始函数里，
@@ -96,6 +102,9 @@ export function Editor({
   const [after, setAfter] = useState(recovered?.after ?? initialAfter);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [ai, setAi] = useState<AiState>({ kind: "idle" });
+  const [aiAssisted, setAiAssisted] = useState(
+    recovered?.aiAssisted ?? initialAiAssisted ?? false,
+  );
   const beforeRef = useRef<HTMLTextAreaElement>(null);
   const afterRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -134,6 +143,7 @@ export function Editor({
           JSON.stringify({
             before: beforeRef.current?.value ?? before,
             after: afterRef.current?.value ?? after,
+            aiAssisted,
           }),
         );
       }
@@ -148,7 +158,7 @@ export function Editor({
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("submit", onSubmit, true);
     };
-  }, [draftKey, before, after]);
+  }, [draftKey, before, after, aiAssisted]);
 
   const tabClass = (value: Tab) =>
     `border-b pb-1 font-mono text-[10px] tracking-[0.2em] ${
@@ -199,6 +209,8 @@ export function Editor({
       if (result.ok) {
         setBefore(result.data.beforeContent);
         setAfter(result.data.afterContent);
+        // 生成即标记：这次提交的正文将带 isAiAssisted=true 落库，详情页据此打标签
+        setAiAssisted(true);
         setAi({ kind: "done", text: "AI 生成完成，正文已回填。" });
         return;
       }
@@ -242,6 +254,8 @@ export function Editor({
   return (
     <div className="grid gap-8 md:grid-cols-2">
       <div>
+        {/* AI 标记：点击 [ AI 帮我写 ] 成功后渲染；随整张表单提交，保存/发布动作据此落库 */}
+        {aiAssisted && <input type="hidden" name="isAiAssisted" value="true" />}
         <div className="flex items-center gap-6">
           <button type="button" onClick={() => setTab("before")} className={tabClass("before")}>
             BEFORE

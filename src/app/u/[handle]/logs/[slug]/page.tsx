@@ -1,5 +1,5 @@
 /**
- * 文件：src/app/logs/[slug]/page.tsx
+ * 文件：src/app/u/[handle]/logs/[slug]/page.tsx
  * 描述：日志详情：720px 宋体正文、BEFORE/AFTER 双段 Markdown、底部防伪印章
  * 作者：张磊
  * 创建日期：2026-10-30
@@ -14,6 +14,8 @@
  *               （这个调用点此前不在"三处"清单里——实际是四处，本轮一并补上）
  * - 2026-11-09: V2.0 Step 3 阶段一：路由迁至 /u/[handle]/logs/[slug]，params 提取 handle 传入
  *               getSafeLogBySlug（默认参数已移除）；页内"← 开发日志"等回跳链接随大厅路由保持 /logs
+ * - 2026-11-10: V2.0 Step 6 Commit 3：正文末尾（印章上方）按 log.isAiAssisted 打「[ AI 辅助生成 · 作者审校 ]」
+ *               纯文本标签；另把文件头里的路径行从退役的 src/app/logs/[slug] 校正为当前路径
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -114,6 +116,12 @@ export default async function LogDetailPage({
             <Markdown source={log.lessonLearned} />
           </div>
         </section>
+      )}
+
+      {log.isAiAssisted && (
+        <p className="mt-10 font-mono text-[10px] text-ink-soft">
+          [ AI 辅助生成 · 作者审校 ]
+        </p>
       )}
 
       {log.contentHash && log.publishedAt ? (
