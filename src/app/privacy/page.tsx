@@ -12,6 +12,7 @@
  * - 2026-11-09: V2.0 Step 4-B 配套：登录口径改 GitHub OAuth（多租户，各账号读写自己的档案）；
  *               删掉"不接入第三方账号体系/只有一名管理员/无用户内容"三处已失实的承诺；
  *               OSS 前缀改记 logs/<账号>/；访问令牌不落地一句按 next-auth v4 源码核实（默认 JWT 不带 access_token）
+ * - 2026-11-10: V2.0 Step 5 Commit 3：Token 段改口径——现在访问令牌经 AES-256-GCM 加密落库（仅用于拉取公开提交），不写入会话
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -33,7 +34,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "账号登录",
     body: [
-      "后台对每个完成 GitHub 登录的账号开放，各账号只能读写自己的档案，互相隔离。登录走 GitHub OAuth：本站只向 GitHub 索取公开资料（用户名、昵称、公开邮箱）用于建立或认领账号，不接触你的 GitHub 口令；GitHub 返回的访问令牌不写入会话、也不落库。首次登录会自动建立账号，站内用户名即你的 GitHub 用户名。",
+      "后台对每个完成 GitHub 登录的账号开放，各账号只能读写自己的档案，互相隔离。登录走 GitHub OAuth：本站只向 GitHub 索取公开资料（用户名、昵称、公开邮箱）用于建立或认领账号，不接触你的 GitHub 口令。GitHub 返回的访问令牌通过 AES-256-GCM 加密后落库，仅用于拉取该账号的公开提交，不写入会话、不进 JWT。首次登录会自动建立账号，站内用户名即你的 GitHub 用户名。",
       "会话以签名 JWT 的形式存在浏览器 Cookie 中，有效期 12 小时，签名密钥只保存在服务器环境变量里；Cookie 里带的是基本资料与账号标识，除会话必需的 Cookie 外，登录后不再放置其他 Cookie。已签发的会话在过期前一直有效，需要立刻使全部登录态失效时，更换签名密钥即可让它们一起失效。",
     ],
   },

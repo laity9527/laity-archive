@@ -15,19 +15,28 @@
  * - 2026-11-06: 第三批去英文——DELETED 横幅去掉英文前缀，中文句自解释；?deleted= 参数名与 errorCodeChip 未动
  * - 2026-11-09: V2.0 Step 4-B：概览取数带 session.userId（布局的会话检查不阻塞页面并行渲染，
  *               本页自查会话后再查库），三项计数与最近动态只统计本租户
+ * - 2026-11-10: V2.0 Step 5 Commit 3：概览加 [ 从 GitHub 同步 ] 按钮与结果横幅（?synced/skipped/SYNC_001）
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
+import { SubmitButton } from "@/components/SubmitButton";
+import { errorTextOf } from "@/lib/error-text";
 import { pickParam } from "@/lib/forms";
 import { getAdminOverview } from "@/lib/projects";
+import { syncGithubAction } from "@/app/admin/sync-actions";
 
 // 概览统计走未缓存查询，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
 
 type AdminHomePageProps = {
-  searchParams: Promise<{ deleted?: string | string[] }>;
+  searchParams: Promise<{
+    deleted?: string | string[];
+    synced?: string | string[];
+    skipped?: string | string[];
+    error?: string | string[];
+  }>;
 };
 
 export default async function AdminHomePage({
@@ -35,6 +44,9 @@ export default async function AdminHomePage({
 }: AdminHomePageProps) {
   const query = await searchParams;
   const deleted = pickParam(query.deleted);
+  const synced = pickParam(query.synced);
+  const skipped = pickParam(query.skipped);
+  const errorCode = pickParam(query.error);
   const session = await requireAdminSession();
 
   if (!session) {
@@ -57,6 +69,24 @@ export default async function AdminHomePage({
       {deleted && (
         <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
           该条日志已彻底删除，正文与摘要都不再保留
+        </p>
+      )}
+
+      {synced !== undefined && (
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+          成功同步 {synced} 条，跳过 {skipped ?? 0} 条
+        </p>
+      )}
+
+      {errorCode === "SYNC_001" && (
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+          请先退出并重新登录以绑定 GitHub 授权
+        </p>
+      )}
+
+      {errorCode && errorCode !== "SYNC_001" && (
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+          {errorCode} · {errorTextOf(errorCode, "log")}
         </p>
       )}
 
@@ -114,6 +144,17 @@ export default async function AdminHomePage({
           </Link>
           <span className="ml-4">草稿对外不可见，发布后前台立即可见</span>
         </p>
+
+        <form action={syncGithubAction} className="mt-6 inline">
+          <SubmitButton
+            label="[ 从 GitHub 同步 ]"
+            pendingLabel="同步中…"
+            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
+          />
+          <span className="ml-4 font-mono text-[10px] text-ink-soft">
+            拉取公开仓库的提交，生成草稿挂在 github-sync 项目下
+          </span>
+        </form>
       </section>
 
       <p className="mt-16">
