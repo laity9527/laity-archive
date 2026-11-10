@@ -6,12 +6,14 @@
  * 修改记录：
  * - 2026-11-04: 从 src/lib/oss.ts 拆出（I061）：断言原先只允许小写，而时间戳来自 toISOString()
  *               必然带大写 T 与 Z，自己生成的每个键都被判死；断言与生成器分居两处，没人发现
+ * - 2026-11-09: V2.0 Step 4-B：键加租户段，logs/<userId>/<YYYY-MM>/…；userId 来自服务端会话
+ *               （cuid），逐段断言不变——恶意值拼出 .. 段照样被拒，RAM 策略 logs/* 仍覆盖
  */
 
 // 允许大写是必要的：ISO 时间戳里的 T 与 Z 就是大写
 const SAFE_CHARS = /^[a-zA-Z0-9./-]+$/;
 
-export function buildObjectKey(now: Date, ext: string, rand: string) {
+export function buildObjectKey(now: Date, userId: string, ext: string, rand: string) {
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   const stamp = now
@@ -19,7 +21,7 @@ export function buildObjectKey(now: Date, ext: string, rand: string) {
     .replace(/[-:]/g, "")
     .replace(/\.\d{3}Z$/, "Z");
 
-  return `logs/${year}-${month}/${stamp}-${rand}.${ext}`;
+  return `logs/${userId}/${year}-${month}/${stamp}-${rand}.${ext}`;
 }
 
 // 单看字符集挡不住穿越：`.` 与 `/` 都在白名单里，`logs/../etc/passwd` 照样通过

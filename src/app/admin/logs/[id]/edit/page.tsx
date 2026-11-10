@@ -18,14 +18,18 @@
  * - 2026-11-06: 第二批去英文（按负责人"全局搜索 LESSON LEARNED 并一并中文化"的指令扩到本页）：
  *               表单标签 LESSON LEARNED 改「经验总结」并走 font-sans；同页的 CONTENT HASH、PUBLISHED/LAST PUBLISHED 等按分工留后续，本轮未动
  * - 2026-11-09: 彻底删除按钮加 confirmMessage 原生弹窗（取消即不提交）；回填 slug 的服务端判据（LOG_004）未动
+ * - 2026-11-09: V2.0 Step 4-B：取数带 session.userId（别人的日志与不存在同判 LOG_002）；
+ *               项目下拉只列本租户；「看前台」链接补 Step 3 遗留——/logs/<slug> 改 /u/<handle>/logs/<slug>
  */
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   deleteLogAction,
   publishLogAction,
   saveLogAction,
   unpublishLogAction,
 } from "@/app/admin/log-actions";
+import { requireAdminSession } from "@/auth";
 import { Editor } from "@/components/Editor";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
@@ -56,7 +60,13 @@ export default async function EditLogPage({
 }: EditLogPageProps) {
   const { id } = await params;
   const query = await searchParams;
-  const log = await getAdminLogById(id);
+  const session = await requireAdminSession();
+
+  if (!session) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(`/admin/logs/${id}/edit`)}`);
+  }
+
+  const log = await getAdminLogById(id, session.userId);
 
   // 记录不在库里时不走 notFound()：那会落到公共 404 页，那页只给 /logs 与 /projects 两个出口，
   // 从后台点进一条已删除的日志就回不了后台。这里在后台外壳内给一块同口径的提示面板。
@@ -96,7 +106,7 @@ export default async function EditLogPage({
     );
   }
 
-  const projects = await listProjects();
+  const projects = await listProjects(session.userId);
   const errorCode = pickParam(query.error);
   const errorField = pickParam(query.field);
   const errorText = errorCode ? errorTextOf(errorCode, "log", errorField) : null;
@@ -129,11 +139,18 @@ export default async function EditLogPage({
 
       <p className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-[11px] text-ink-soft">
         <span className="text-ink">{log.isPublished ? "● 已发布" : "○ 草稿"}</span>
-        <span>/logs/{log.slug}</span>
-        {log.isPublished && (
-          <Link href={`/logs/${log.slug}`} className="border-b border-ink text-ink">
-            看前台
-          </Link>
+        {log.user && (
+          <>
+            <span>/u/{log.user.handle}/logs/{log.slug}</span>
+            {log.isPublished && (
+              <Link
+                href={`/u/${log.user.handle}/logs/${log.slug}`}
+                className="border-b border-ink text-ink"
+              >
+                看前台
+              </Link>
+            )}
+          </>
         )}
       </p>
 

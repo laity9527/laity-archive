@@ -15,6 +15,8 @@
  * - 2026-11-04: parseInput 改成 {ok, input} | {ok:false, field}（D26）：原先 9 条规则共用一句 VAL_001，
  *               用户看到的是一整张表单的规则而非错在哪；id/projectId 也在此处按形状与存在性挡下，
  *               不再让脏 id 拼进 redirect 或变成未捕获的外键错
+ * - 2026-11-09: V2.0 Step 4-B：四个动作把 session.userId 传给数据层；assertProjectExists 也按
+ *               本租户的项目列表校验——别人的 projectId 与不存在的同判 VAL_001(field=project)
  */
 "use server";
 
@@ -115,9 +117,9 @@ function parseInput(formData: FormData): ParseResult {
 }
 
 // 表单里的 projectId 是客户端可控值：不存在的外键值会一路走到 write 并抛 P2003（500），
-// 所以在挡一道"确实是本项目里的项目"，比让数据库报错更好读
-async function assertProjectExists(projectId: string, backTo: string) {
-  const ids = await listProjectIds();
+// 所以在挡一道"确实是本租户名下的项目"，比让数据库报错更好读；别人的项目与不存在同判
+async function assertProjectExists(projectId: string, userId: string, backTo: string) {
+  const ids = await listProjectIds(userId);
 
   if (!ids.includes(projectId)) {
     redirect(`${backTo}?error=VAL_001&field=project`);
@@ -154,9 +156,9 @@ export async function saveLogAction(formData: FormData) {
 
   const { input } = parsed;
 
-  await assertProjectExists(input.projectId, backTo);
+  await assertProjectExists(input.projectId, session.userId, backTo);
 
-  const result = await saveLog(input);
+  const result = await saveLog(input, session.userId);
 
   if (!result.ok) {
     redirect(`${backTo}?error=${result.code}`);
@@ -191,15 +193,15 @@ export async function publishLogAction(formData: FormData) {
 
   const { input } = parsed;
 
-  await assertProjectExists(input.projectId, backTo);
+  await assertProjectExists(input.projectId, session.userId, backTo);
 
-  const saved = await saveLog({ ...input, id });
+  const saved = await saveLog({ ...input, id }, session.userId);
 
   if (!saved.ok) {
     redirect(`${backTo}?error=${saved.code}`);
   }
 
-  const result = await publishLog(saved.id, {
+  const result = await publishLog(saved.id, session.userId, {
     // 确认标记只影响"要不要放行"，扫描本身在服务端读刚存进库的正文，客户端伪造不了内容
     sensitiveConfirmed: readField(formData, "sensitiveConfirmed") === "on",
   });
@@ -226,7 +228,7 @@ export async function unpublishLogAction(formData: FormData) {
     reject(backTo, "id");
   }
 
-  const result = await unpublishLog(id);
+  const result = await unpublishLog(id, session.userId);
 
   if (!result.ok) {
     redirect(`${backTo}?error=${result.code}`);
@@ -251,7 +253,7 @@ export async function deleteLogAction(formData: FormData) {
     reject(backTo, "id");
   }
 
-  const result = await deleteLog(id, readField(formData, "confirmSlug"));
+  const result = await deleteLog(id, session.userId, readField(formData, "confirmSlug"));
 
   if (!result.ok) {
     redirect(`${backTo}?error=${result.code}`);

@@ -13,8 +13,12 @@
  * - 2026-11-05: 状态格拆成两层 span——「已发布/草稿」走 font-sans、日期走 font-mono（时间戳强制等宽），外层只留 ml-auto 与字号色
  * - 2026-11-06: 空态 NO LOG YET 改「暂无日志」并去 font-mono（中文标签走 Inter）
  * - 2026-11-06: 第三批去英文——DELETED 横幅去掉英文前缀，中文句自解释；?deleted= 参数名与 errorCodeChip 未动
+ * - 2026-11-09: V2.0 Step 4-B：概览取数带 session.userId（布局的会话检查不阻塞页面并行渲染，
+ *               本页自查会话后再查库），三项计数与最近动态只统计本租户
  */
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { requireAdminSession } from "@/auth";
 import { pickParam } from "@/lib/forms";
 import { getAdminOverview } from "@/lib/projects";
 
@@ -31,8 +35,14 @@ export default async function AdminHomePage({
 }: AdminHomePageProps) {
   const query = await searchParams;
   const deleted = pickParam(query.deleted);
+  const session = await requireAdminSession();
+
+  if (!session) {
+    redirect("/login?callbackUrl=%2Fadmin");
+  }
+
   const { projectCount, publishedCount, draftCount, recentLogs } =
-    await getAdminOverview();
+    await getAdminOverview(session.userId);
 
   const stats = [
     { label: "项目总数", value: projectCount },

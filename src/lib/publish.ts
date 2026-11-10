@@ -7,6 +7,8 @@
  * - 2026-10-30: 初始创建
  * - 2026-11-02: 哈希口径改从 src/lib/content-hash.ts 引入，本文件不再自带一份
  * - 2026-11-03: 发布前加敏感信息扫描门（LOG_003，未确认不放行）；补 deleteLog 彻底删除
+ * - 2026-11-09: V2.0 Step 4-B：四个写函数全部加 userId——创建带 userId，查改删一律 {id,userId}
+ *               复合条件，updateMany/deleteMany 0 行命中报 LOG_002（跨租户与不存在同表现）
  */
 import { Prisma } from "@prisma/client";
 import { computeContentHash } from "@/lib/content-hash";
@@ -52,7 +54,10 @@ export function toDateTimeLocal(value: Date | null | undefined) {
   )}:${pad(d.getMinutes())}`;
 }
 
-export async function saveLog(input: LogInput): Promise<SaveLogResult> {
+export async function saveLog(
+  input: LogInput,
+  userId: string,
+): Promise<SaveLogResult> {
   const data = {
     projectId: input.projectId,
     slug: input.slug,
@@ -67,8 +72,8 @@ export async function saveLog(input: LogInput): Promise<SaveLogResult> {
 
   try {
     if (input.id) {
-      const existing = await db.log.findUnique({
-        where: { id: input.id },
+      const existing = await db.log.findFirst({
+        where: { id: input.id, userId },
         select: { isPublished: true },
       });
 
@@ -76,16 +81,21 @@ export async function saveLog(input: LogInput): Promise<SaveLogResult> {
         return { ok: false, code: "LOG_002" };
       }
 
-      // 已发布的日志一改内容，印章就对不上正文；按既定规则退回草稿，等重新发布
-      const log = await db.log.update({
-        where: { id: input.id },
+      // 已发布的日志一改内容，印章就对不上正文；按既定规则退回草稿，等重新发布。
+      // 更新仍带 userId：存在性判定与写入之间行不会易主，0 行命中按同一口径报 LOG_002
+      const updated = await db.log.updateMany({
+        where: { id: input.id, userId },
         data: { ...data, ...(existing.isPublished ? { isPublished: false } : {}) },
       });
 
-      return { ok: true, id: log.id, slug: log.slug };
+      if (updated.count === 0) {
+        return { ok: false, code: "LOG_002" };
+      }
+
+      return { ok: true, id: input.id, slug: input.slug };
     }
 
-    const log = await db.log.create({ data });
+    const log = await db.log.create({ data: { ...data, userId } });
 
     return { ok: true, id: log.id, slug: log.slug };
   } catch (error) {
@@ -102,10 +112,11 @@ export async function saveLog(input: LogInput): Promise<SaveLogResult> {
 
 export async function publishLog(
   id: string,
+  userId: string,
   opts: { sensitiveConfirmed?: boolean } = {},
 ): Promise<PublishLogResult> {
-  const log = await db.log.findUnique({
-    where: { id },
+  const log = await db.log.findFirst({
+    where: { id, userId },
     select: {
       title: true,
       beforeContent: true,
@@ -139,18 +150,25 @@ export async function publishLog(
     log.afterContent,
   );
 
-  await db.log.update({
-    where: { id },
+  const published = await db.log.updateMany({
+    where: { id, userId },
     data: { contentHash, publishedAt: new Date(), isPublished: true },
   });
+
+  if (published.count === 0) {
+    return { ok: false, code: "LOG_002" };
+  }
 
   return { ok: true, contentHash, slug: log.slug };
 }
 
 // 下架只翻 isPublished；历史 contentHash 与 publishedAt 保留，与 D9 退回草稿的口径一致
-export async function unpublishLog(id: string): Promise<UnpublishLogResult> {
+export async function unpublishLog(
+  id: string,
+  userId: string,
+): Promise<UnpublishLogResult> {
   const updated = await db.log.updateMany({
-    where: { id },
+    where: { id, userId },
     data: { isPublished: false },
   });
 
@@ -158,7 +176,7 @@ export async function unpublishLog(id: string): Promise<UnpublishLogResult> {
     return { ok: false, code: "LOG_002" };
   }
 
-  const log = await db.log.findUnique({ where: { id }, select: { slug: true } });
+  const log = await db.log.findFirst({ where: { id, userId }, select: { slug: true } });
 
   return { ok: true, slug: log?.slug ?? "" };
 }
@@ -173,9 +191,13 @@ export type DeleteLogResult =
 // 刻意不扩权限，遗留对象交给存储桶的生命周期规则清理。
 export async function deleteLog(
   id: string,
+  userId: string,
   confirmSlug: string,
 ): Promise<DeleteLogResult> {
-  const log = await db.log.findUnique({ where: { id }, select: { slug: true } });
+  const log = await db.log.findFirst({
+    where: { id, userId },
+    select: { slug: true },
+  });
 
   if (!log) {
     return { ok: false, code: "LOG_002" };
@@ -185,7 +207,11 @@ export async function deleteLog(
     return { ok: false, code: "LOG_004" };
   }
 
-  await db.log.delete({ where: { id } });
+  const deleted = await db.log.deleteMany({ where: { id, userId } });
+
+  if (deleted.count === 0) {
+    return { ok: false, code: "LOG_002" };
+  }
 
   return { ok: true, slug: log.slug };
 }

@@ -20,9 +20,13 @@
 # - 2026-11-04: 按我点名"先取消 github 登录"：GITHUB_ID / GITHUB_SECRET / ALLOWED_GITHUB_IDS 三行换成
 #               ADMIN_PASSWORD；preflight 的门禁从"白名单非空"改为"口令非空且不短于 12 位"，
 #               通过行只报长度不报值
+# - 2026-11-09: V2.0 Step 4-B：ADMIN_PASSWORD 随口令登录退役，preflight 与 app 改透传
+#               GITHUB_ID / GITHUB_SECRET（GitHub OAuth App 凭据）；门禁改为两键非空，
+#               通过行不再报后台口令长度。白名单 ALLOWED_GITHUB_IDS 不回来——多租户下每个注册用户独立
 #
 # 用前必读：
-#   1. cp .env.production.example .env.production，填真实值，两个口令不要与开发环境复用；
+#   1. cp .env.production.example .env.production，填真实值：数据库口令不要与开发环境复用，
+#      GITHUB_ID / GITHUB_SECRET 用生产域名对应的 OAuth App（回调地址 <NEXTAUTH_URL>/api/auth/callback/github）；
 #   2. 证书放到 deploy/certs/laity.crt 与 laity.key（文件名要和 nginx.conf 里一致）；
 #   3. 首次部署（--env-file 必须带，compose 默认只读 .env，不会自动读 .env.production）：
 #      docker compose --env-file .env.production -f docker-compose.prod.yml build
@@ -59,19 +63,20 @@ services:
           *localhost*|*127.0.0.1*) fail "NEXTAUTH_URL 还指向开发环境" ;;
         esac
         [ "$${#NEXTAUTH_SECRET}" -lt 32 ] && fail "NEXTAUTH_SECRET 短于 32 位"
-        [ -z "$${ADMIN_PASSWORD:-}" ] && fail "ADMIN_PASSWORD 为空，后台进不去"
-        [ "$${#ADMIN_PASSWORD}" -lt 12 ] && fail "ADMIN_PASSWORD 短于 12 位（后台只认这一把口令，短了等于没设）"
+        [ -z "$${GITHUB_ID:-}" ] && fail "GITHUB_ID 为空，GitHub 登录不可用"
+        [ -z "$${GITHUB_SECRET:-}" ] && fail "GITHUB_SECRET 为空，GitHub 登录不可用"
         [ -z "$${OSS_REGION:-}" ] && fail "OSS_REGION 为空，正文插图无法上传"
         [ -z "$${OSS_BUCKET:-}" ] && fail "OSS_BUCKET 为空，正文插图无法上传"
         [ -z "$${OSS_ACCESS_KEY_ID:-}" ] && fail "OSS_ACCESS_KEY_ID 为空，正文插图无法上传"
         [ -z "$${OSS_ACCESS_KEY_SECRET:-}" ] && fail "OSS_ACCESS_KEY_SECRET 为空，正文插图无法上传"
-        echo "上线门禁通过：数据库用户 $${POSTGRES_USER}、口令长度 $${#POSTGRES_PASSWORD}、后台口令长度 $${#ADMIN_PASSWORD}、$${NEXTAUTH_URL}、OSS $${OSS_REGION}/$${OSS_BUCKET}（前缀 logs/）"
+        echo "上线门禁通过：数据库用户 $${POSTGRES_USER}、口令长度 $${#POSTGRES_PASSWORD}、GitHub 两键非空、$${NEXTAUTH_URL}、OSS $${OSS_REGION}/$${OSS_BUCKET}（前缀 logs/）"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?必须在 .env.production 里指定非 root 用户}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?必须在 .env.production 里指定强口令}
       NEXTAUTH_URL: ${NEXTAUTH_URL:?必须填正式域名，例如 https://laity.example}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?生产密钥，不得与开发环境复用}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?后台登录口令，非空且不短于 12 位}
+      GITHUB_ID: ${GITHUB_ID:?GitHub OAuth App Client ID，登录入口必需}
+      GITHUB_SECRET: ${GITHUB_SECRET:?GitHub OAuth App Client Secret，登录入口必需}
       # OSS 四项与 app 服务同源；写在这里是为了让 preflight 的门禁清单自身是完整的一份
       OSS_REGION: ${OSS_REGION:?OSS Bucket 所在地域，例如 oss-cn-beijing}
       OSS_BUCKET: ${OSS_BUCKET:?OSS Bucket 名称}
@@ -116,7 +121,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-laity}?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL:?必须填正式域名，例如 https://laity.example}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?生产密钥，不得与开发环境复用}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?后台登录口令，非空且不短于 12 位}
+      GITHUB_ID: ${GITHUB_ID:?GitHub OAuth App Client ID，登录入口必需}
+      GITHUB_SECRET: ${GITHUB_SECRET:?GitHub OAuth App Client Secret，登录入口必需}
       # I024：Phase 5b 的 OSS 传图。这四个键缺失时 src/lib/oss.ts 的 requireEnv 会在上传那一刻才抛错，
       # 用 ${VAR:?} 提前到部署阶段失败；值一律来自 .env.production，不落仓库
       OSS_REGION: ${OSS_REGION:?OSS Bucket 所在地域，例如 oss-cn-beijing}

@@ -1,6 +1,6 @@
 /**
  * 文件：src/lib/oss.ts
- * 描述：阿里云 OSS 图片上传封装：校验类型与大小后以 PutObject 写入 logs/ 前缀，返回公共读直链
+ * 描述：阿里云 OSS 图片上传封装：校验类型与大小后以 PutObject 写入 logs/<userId>/ 前缀，返回公共读直链
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
@@ -15,6 +15,8 @@
  *               原来的 [a-z0-9./-] 把自己生成的每个键都判死，上传从来没有过一次成功
  * - 2026-11-04: 键生成与断言拆到 src/lib/object-key.ts，本文件不再自带这两段——拆前它们都在
  *               ali-oss 的模块里，node --test 覆盖不到，所以这条"生成器比断言更宽松"的矛盾活了很久
+ * - 2026-11-09: V2.0 Step 4-B：uploadImage 加 userId 入参（来自会话），对象键落 logs/<userId>/，
+ *               租户间图片在存储层分目录；RAM 策略 logs/* 无需变更
  */
 import { randomBytes } from "node:crypto";
 import OSS from "ali-oss";
@@ -38,12 +40,13 @@ function requireEnv(name: string) {
   return value;
 }
 
-// 对象键只用服务端生成的字符集，避免把用户文件名拼进路径（防目录穿越与奇字符）
-function buildObjectKey(ext: string) {
-  return objectKeyOf(new Date(), ext, randomBytes(6).toString("hex"));
+// 对象键只用服务端生成的字符集，避免把用户文件名拼进路径（防目录穿越与奇字符）；
+// userId 段同样来自服务端会话，断言在下方逐段把关
+function buildObjectKey(userId: string, ext: string) {
+  return objectKeyOf(new Date(), userId, ext, randomBytes(6).toString("hex"));
 }
 
-export async function uploadImage(file: Blob): Promise<UploadImageResult> {
+export async function uploadImage(file: Blob, userId: string): Promise<UploadImageResult> {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   if (buffer.byteLength === 0 || buffer.byteLength > MAX_BYTES) {
@@ -66,7 +69,7 @@ export async function uploadImage(file: Blob): Promise<UploadImageResult> {
     secure: true,
   });
 
-  const key = buildObjectKey(image.ext);
+  const key = buildObjectKey(userId, image.ext);
 
   if (!isObjectKeySafe(key)) {
     return { ok: false, code: "IMG_001" };

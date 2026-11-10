@@ -9,6 +9,7 @@
  * - 2026-11-04: 会话判定改走 requireAdminSession，与前置守卫同一口径
  * - 2026-11-04: 上传的文件参数改按 Blob 判定并显式拒零字节：原先写 instanceof File，
  *               反序列化后的实体不是 File，真实上传一律 IMG_001（I061，这是那条"未实测分支"第一次跑通）
+ * - 2026-11-09: V2.0 Step 4-B：把 session.userId 传给 uploadImage，对象键落 logs/<userId>/ 前缀
  */
 "use server";
 
@@ -37,5 +38,5 @@ export async function uploadImageAction(
   }
 
   // OSS 侧异常不吞：让它冒到调用方，页面显示"上传失败"，服务端日志留真错
-  return uploadImage(file);
+  return uploadImage(file, session.userId);
 }

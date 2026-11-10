@@ -1,6 +1,6 @@
 /**
  * 文件：src/auth.ts
- * 描述：NextAuth 配置：GitHub OAuth（V2.0 Step 4-A）+ JWT 会话（不落库），并统一"管理员会话"的判定入口
+ * 描述：NextAuth 配置：GitHub OAuth（V2.0 Step 4-A）+ JWT 会话（不落库），并统一后台会话的判定入口
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
@@ -18,6 +18,8 @@
  *               按 githubId → handle → 新建 认领旧账号（zhanglei 保留其 12 篇日志）或建新号；
  *               jwt 载荷带 userId（4-B 数据归属用）与 isAdmin（/admin 准入，4-B 改个人控制台后退役）；
  *               配置体检收窄到 NEXTAUTH_SECRET；登录节流由 nginx limit_req（callback 端点）承担
+ * - 2026-11-09: V2.0 Step 4-B：/admin 改个人控制台——requireAdminSession 改判 userId 存在性并返回
+ *               带 userId 的会话类型；isAdmin 不再进 jwt 与会话（库字段保留，准入不再读它）
  */
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
@@ -102,7 +104,6 @@ export const authOptions: NextAuthOptions = {
           }
 
           token.userId = row.id;
-          token.isAdmin = row.isAdmin;
         }
       }
 
@@ -110,24 +111,29 @@ export const authOptions: NextAuthOptions = {
     },
     // 把同一个 userId 带到会话对象上，Server Action 才不必再造第二套口径
     session({ session, token }) {
-      Object.assign(session, {
-        userId: token.userId,
-        isAdmin: token.isAdmin === true,
-      });
+      Object.assign(session, { userId: token.userId });
 
       return session;
     },
   },
 };
 
-// 写动作与后台布局唯一该用的会话判定：既要会话在，也要它真带管理员标记
-// （4-B 把 /admin 改成个人控制台后，此函数改判 userId 存在性）
-export async function requireAdminSession(): Promise<Session | null> {
+// 写动作与后台布局唯一该用的会话判定：4-B 起 /admin 是个人控制台，
+// 判据从管理员标记改为 userId 存在性——完成 GitHub 登录的账号进自己的后台
+export type ConsoleSession = Session & { userId: string };
+
+export async function requireAdminSession(): Promise<ConsoleSession | null> {
   const session = await getServerSession(authOptions);
 
   if (!session) {
     return null;
   }
 
-  return (session as { isAdmin?: unknown }).isAdmin === true ? session : null;
+  const userId = (session as { userId?: unknown }).userId;
+
+  if (typeof userId !== "string" || userId.length === 0) {
+    return null;
+  }
+
+  return session as ConsoleSession;
 }

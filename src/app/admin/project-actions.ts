@@ -9,6 +9,8 @@
  * - 2026-11-04: 两个动作的会话判定改走 requireAdminSession（带管理员标记的会话），与前置守卫同一口径
  * - 2026-11-04: 校验拆到具体字段、删除要求二次确认位、成功也带 ?saved=1/?deleted=1（D26）——
  *               原先删除一击生效且成功后跳回裸列表页，既没有确认步也没有任何结果反馈
+ * - 2026-11-09: V2.0 Step 4-B：两个动作把 session.userId 传给数据层——写入按租户落 userId，
+ *               更新/删除按 {id,userId} 复合条件执行，0 行命中报资源不存在（跨租户与不存在同表现）
  */
 "use server";
 
@@ -100,7 +102,7 @@ export async function saveProjectAction(formData: FormData) {
     backToProjects("VAL_001", parsed.field);
   }
 
-  const result = await saveProject(parsed.input);
+  const result = await saveProject(parsed.input, session.userId);
 
   if (!result.ok) {
     backToProjects(result.code);
@@ -129,7 +131,7 @@ export async function deleteProjectAction(formData: FormData) {
     backToProjects("PRJ_003");
   }
 
-  const result = await deleteProject(id);
+  const result = await deleteProject(id, session.userId);
 
   if (!result.ok) {
     backToProjects(result.code);

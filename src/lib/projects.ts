@@ -16,6 +16,9 @@
  *               user.handle（列表行与精选行拼 /u/[handle]/... 链接用，handle 属公开标识）
  * - 2026-11-09: V2.0 Step 3 阶段二：listPublicProjects 新增 userId 可选参数（sitemap 按租户取项目清单用），
  *               不给维持全局口径（作品页与大厅仍全局）
+ * - 2026-11-09: V2.0 Step 4-B：管理侧读写全部按 userId 隔离——listProjectIds/listProjects/getProjectById/
+ *               getAdminOverview 加 userId 过滤；saveProject 创建带 userId、更新改 updateMany({id,userId})，
+ *               deleteProject 改 deleteMany({id,userId})，0 行命中一律 PRJ_004（跨租户与不存在同表现）
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -43,15 +46,17 @@ export type DeleteProjectResult =
   | { ok: false; code: "PRJ_001" | "PRJ_004" };
 
 // 日志表单里的 projectId 是客户端可控值：不存在的外键会一路走到写入并抛 P2003（500），
-// 所以动作层先取一次 id 集合做存在性判定，只取 id 一列
-export async function listProjectIds(): Promise<string[]> {
-  const rows = await db.project.findMany({ select: { id: true } });
+// 所以动作层先取一次 id 集合做存在性判定，只取 id 一列；4-B 起只取本租户的——
+// 别家的项目 id 在这里就不命中，跨租户挂日志被挡在 VAL_001
+export async function listProjectIds(userId: string): Promise<string[]> {
+  const rows = await db.project.findMany({ where: { userId }, select: { id: true } });
 
   return rows.map((row) => row.id);
 }
 
-export async function listProjects() {
+export async function listProjects(userId: string) {
   return db.project.findMany({
+    where: { userId },
     orderBy: { createdAt: "asc" },
     include: { _count: { select: { logs: true } } },
   });
@@ -206,8 +211,9 @@ export async function getPublicProjectBySlug(slug: string, handle: string) {
   });
 }
 
-export async function getProjectById(id: string) {
-  return db.project.findUnique({ where: { id } });
+// 后台编辑回填用：id 来自 URL，带上 userId 后别家的项目查不到（回落新建表单，不泄露存在性）
+export async function getProjectById(id: string, userId: string) {
+  return db.project.findFirst({ where: { id, userId } });
 }
 
 // 过渡期公开查询的 userId 解析口：按 handle 取 id（不存在返回 null，调用方自行转 null/false）
@@ -236,12 +242,13 @@ export async function isProjectSlug(slug: string, handle: string) {
   return hit !== null;
 }
 
-export async function getAdminOverview() {
+export async function getAdminOverview(userId: string) {
   const [projectCount, publishedCount, draftCount, recentLogs] = await Promise.all([
-    db.project.count(),
-    db.log.count({ where: { isPublished: true } }),
-    db.log.count({ where: { isPublished: false } }),
+    db.project.count({ where: { userId } }),
+    db.log.count({ where: { userId, isPublished: true } }),
+    db.log.count({ where: { userId, isPublished: false } }),
     db.log.findMany({
+      where: { userId },
       orderBy: { updatedAt: "desc" },
       take: 5,
       select: {
@@ -258,7 +265,10 @@ export async function getAdminOverview() {
   return { projectCount, publishedCount, draftCount, recentLogs };
 }
 
-export async function saveProject(input: ProjectInput): Promise<SaveProjectResult> {
+export async function saveProject(
+  input: ProjectInput,
+  userId: string,
+): Promise<SaveProjectResult> {
   const data = {
     slug: input.slug,
     name: input.name,
@@ -269,31 +279,47 @@ export async function saveProject(input: ProjectInput): Promise<SaveProjectResul
   };
 
   try {
-    const project = input.id
-      ? await db.project.update({ where: { id: input.id }, data })
-      : await db.project.create({ data });
+    if (input.id) {
+      // 复合条件把跨租户编辑转成 0 行命中：updateMany 不抛 P2025，计数即判据，
+      // "不存在"与"不是你的"同报 PRJ_004，不泄露别家项目的存在性
+      const updated = await db.project.updateMany({
+        where: { id: input.id, userId },
+        data,
+      });
+
+      if (updated.count === 0) {
+        return { ok: false, code: "PRJ_004" };
+      }
+
+      return { ok: true, id: input.id };
+    }
+
+    const project = await db.project.create({ data: { ...data, userId } });
 
     return { ok: true, id: project.id };
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === "P2002") {
-        return { ok: false, code: "PRJ_002" };
-      }
-
-      // 带着 id 更新却命中 0 行：编辑表单是在别的标签页/更早时刻打开的，那行已经不在了。
-      // 原先这里不捕，P2025 直接抛出去变成 500
-      if (error.code === "P2025") {
-        return { ok: false, code: "PRJ_004" };
-      }
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { ok: false, code: "PRJ_002" };
     }
 
     throw error;
   }
 }
 
-export async function deleteProject(id: string): Promise<DeleteProjectResult> {
+export async function deleteProject(
+  id: string,
+  userId: string,
+): Promise<DeleteProjectResult> {
   try {
-    await db.project.delete({ where: { id } });
+    const deleted = await db.project.deleteMany({ where: { id, userId } });
+
+    // 0 行 = 不存在或不是自己的，都报资源不存在（与 saveProject 同一口径）
+    if (deleted.count === 0) {
+      return { ok: false, code: "PRJ_004" };
+    }
 
     return { ok: true };
   } catch (error) {
@@ -301,12 +327,6 @@ export async function deleteProject(id: string): Promise<DeleteProjectResult> {
       // P2003 外键约束：项目下还有日志
       if (error.code === "P2003") {
         return { ok: false, code: "PRJ_001" };
-      }
-
-      // P2025 是"没删掉任何行"，不是"已经是删除状态"。返回 ok:true 会让页面显示删除成功，
-      // 而列表里那一行可能只是还没刷新——报实错
-      if (error.code === "P2025") {
-        return { ok: false, code: "PRJ_004" };
       }
     }
 

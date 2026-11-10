@@ -21,6 +21,8 @@
  *               已把详情路由迁进租户前缀）；从 URL 提取 handle 与 slug 传入 isPublishedLogSlug/isProjectSlug 做
  *               双层判定——层一 handle 在库里存在（lib 内 resolveUserId 不过即 false），层二 slug 命中且已发布；
  *               未知 handle 与缺日志/项目都回同一页 404，文案不泄露缺的是哪一层
+ * - 2026-11-09: V2.0 Step 4-B：guardAdmin 判据由 token.isAdmin 改 token.userId 非空字符串——
+ *               多租户下每个注册用户都是自己的管理员，isAdmin 布尔位随口令登录退役（数据隔离在数据层做）
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -124,7 +126,8 @@ function readTenantSegment(pathname: string, kind: "logs" | "projects") {
 async function guardAdmin(request: NextRequest) {
   const token = await getToken({ req: request });
 
-  if (token?.isAdmin !== true) {
+  // 判据与 requireAdminSession 同源：会话里带非空 userId 才放行（isAdmin 已退役）
+  if (typeof token?.userId !== "string" || token.userId.length === 0) {
     // 直接去自建登录页；再走 /api/auth/signin 会因为 pages.signIn 多一次 307
     const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
     return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));

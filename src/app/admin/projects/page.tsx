@@ -20,9 +20,13 @@
  *               slug 仍 font-mono，中文改 font-sans。状态灯的 status === "LIVE" 判定与表单取值未动
  * - 2026-11-09: 删除按钮由 confirmLabel 两步生效改 confirmMessage 原生弹窗（取消即不提交）；
  *               服务端 confirmDelete=on 闸门未动，由弹窗分支恒置 on 满足
+ * - 2026-11-09: V2.0 Step 4-B：列表与编辑回填都带 session.userId——别人的项目不出现在列表里，
+ *               ?edit= 传别人的 id 回填不到（getProjectById 按 {id,userId} 查），与不存在同表现
  */
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
+import { requireAdminSession } from "@/auth";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { LIMITS, REPO_URL_SOURCE, SLUG_SOURCE, pickParam } from "@/lib/forms";
@@ -123,9 +127,14 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const editId = pickParam(params.edit);
   const saved = pickParam(params.saved);
   const deleted = pickParam(params.deleted);
+  const session = await requireAdminSession();
 
-  const projects = await listProjects();
-  const editing = editId ? await getProjectById(editId) : null;
+  if (!session) {
+    redirect("/login?callbackUrl=%2Fadmin%2Fprojects");
+  }
+
+  const projects = await listProjects(session.userId);
+  const editing = editId ? await getProjectById(editId, session.userId) : null;
   const errorText = errorCode
     ? errorTextOf(errorCode, "project", errorField)
     : null;

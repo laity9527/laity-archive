@@ -17,6 +17,8 @@
  *               （详情页用它挡住同名 slug 的跨租户日志，不给维持全局大厅口径）；
  *               getSafeLogs/getLatestLogs 的 include 补 user.handle（大厅行拼 /u/[handle]/... 链接用）；
  *               getLatestLogs 新增 userId 第二参数供租户主页取该租户最新日志
+ * - 2026-11-09: V2.0 Step 4-B：getAdminLogById 加 userId 条件（findFirst 复合键），
+ *               include 补 user.handle——编辑页「看前台」链接拼 /u/[handle]/logs/[slug] 要用
  */
 import { db } from "@/lib/db";
 import { resolveUserId } from "@/lib/projects";
@@ -128,10 +130,13 @@ export async function isPublishedLogSlug(slug: string, handle: string) {
   return hit !== null;
 }
 
-export async function getAdminLogById(id: string) {
-  return db.log.findUnique({
-    where: { id },
-    include: { project: { select: { name: true } } },
+export async function getAdminLogById(id: string, userId: string) {
+  return db.log.findFirst({
+    where: { id, userId },
+    include: {
+      project: { select: { name: true } },
+      user: { select: { handle: true } },
+    },
   });
 }
 

@@ -12,9 +12,13 @@
  *               BEFORE/AFTER 术语保留；placeholder 的示例值（prebuild-index / search, prisma）是格式样例，不译
  * - 2026-11-06: 第二批去英文（按负责人"全局搜索 LESSON LEARNED 并一并中文化"的指令扩到本页）：
  *               表单标签 LESSON LEARNED 改「经验总结」并走 font-sans；BEFORE/AFTER 术语与 name="lessonLearned" 字段名未动
+ * - 2026-11-09: V2.0 Step 4-B：项目下拉只列本租户的项目（listProjects 带 session.userId），
+ *               自查会话后再查库（布局检查不阻塞页面并行渲染）
  */
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { saveLogAction } from "@/app/admin/log-actions";
+import { requireAdminSession } from "@/auth";
 import { Editor } from "@/components/Editor";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
@@ -38,7 +42,13 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
   const errorCode = pickParam(params.error);
   const errorField = pickParam(params.field);
   const errorText = errorCode ? errorTextOf(errorCode, "log", errorField) : null;
-  const projects = await listProjects();
+  const session = await requireAdminSession();
+
+  if (!session) {
+    redirect("/login?callbackUrl=%2Fadmin%2Flogs%2Fnew");
+  }
+
+  const projects = await listProjects(session.userId);
   const bad = (field: string) => errorCode === "VAL_001" && errorField === field;
 
   return (
