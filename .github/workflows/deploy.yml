@@ -1,0 +1,172 @@
+# 文件：.github/workflows/deploy.yml
+# 描述：生产部署：「发版门禁」在 main 的 push 上通过后，SSH 到服务器执行 备份→构建→迁移→切换→健康门→失败回滚
+# 作者：张磊
+# 创建日期：2026-11-11
+# 修改记录：
+# - 2026-11-11: 初始创建（DevOps Phase 1，依据 docs/00-开发方法论/GitHub-Actions自动部署方案大纲.md，待负责人审查）
+#
+# 说明：
+#   1. ci.yml 一字不动（AGENTS 红线：CI 改动逐条批准；本文件是负责人点名批准的新建项）。
+#      触发只认「门禁 success + main + push」三重守卫；PR 与手动 dispatch 都不部署。
+#   2. checkout 钉到 workflow_run.head_sha——门禁跑完后 main 可能又前进了，
+#      不钉 SHA 就会部署一个没过门禁的提交（workflow_run 模式最容易踩的正确性坑）。
+#   3. Secrets（建议挂 production Environment，真实值永不落仓库）：
+#      DEPLOY_HOST / DEPLOY_PORT（可选，默认 22）/ DEPLOY_USER / DEPLOY_SSH_KEY（ed25519 私钥全文）/
+#      DEPLOY_SSH_FINGERPRINT（服务器 host key 的 SHA256 指纹）/ DEPLOY_PATH（可选，默认 /opt/laity-archive）。
+#      指纹取法（负责人在可信网络里执行一次）：ssh-keyscan -t ed25519 <host> | ssh-keygen -lf -
+#      appleboy/ssh-action 的 fingerprint 非空时严格校验 host key（等价 StrictHostKeyChecking=yes），
+#      为空会静默退化为不校验——所以部署前有一步硬卡指纹非空，缺了直接拒绝。
+#   4. 已查 appleboy/ssh-action 的 action.yml 核实：新版移除了 script_stop 输入，
+#      脚本首行 set -euo pipefail 承担"任一步失败即停"的职责；envs 负责把 step env 注入远端会话。
+#   5. 服务器前置（Phase 0，负责人手动）：deploy 用户在 docker 组、登录 shell 为 bash、
+#      仓库克隆在 DEPLOY_PATH、.env.production 与 deploy/certs 就位（两者是未跟踪文件，
+#      git reset --hard 不会碰）、生产栈已手动跑通一次（备份步用 compose exec db，要求 db 在跑）、
+#      curl/git/docker 可用、基础镜像已经镜像源预拉（Docker Hub 不通时用 BASE_IMAGE build-arg 换源）。
+#   6. 数据库只走 migrate deploy（前向、幂等、无自动 down）；restore 是人工决策，
+#      自动流程只留 pg_dump 备份并在失败时把备份路径大声报出来。
+
+name: 生产部署
+
+on:
+  workflow_run:
+    workflows: ["发版门禁"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+# 同一时刻只允许一个部署；不取消在途的，避免半个部署被掐断
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: SSH 部署到生产服务器
+    # 三重守卫：门禁成功 + main 分支 + push 事件（PR / workflow_dispatch 一律不部署）
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+
+    steps:
+      - name: 检出通过门禁的那个提交（不是 main 的当前 HEAD）
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      # fingerprint 为空时 ssh-action 会退化为不校验 host key（MITM 大门敞开），
+      # 这一步把"必须校验"变成硬门禁：缺指纹直接失败，不允许静默降级
+      - name: 校验 host key 指纹已配置
+        env:
+          FINGERPRINT: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
+        run: |
+          if [ -z "$FINGERPRINT" ]; then
+            echo "DEPLOY_SSH_FINGERPRINT 未配置：拒绝以不校验 host key 的方式部署" >&2
+            exit 1
+          fi
+
+      - name: SSH 执行部署（备份 → 构建 → 迁移 → 切换 → 健康门 → 失败回滚）
+        uses: appleboy/ssh-action@v1
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/laity-archive' }}
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT || '22' }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
+          # 默认 10m 不够服务器侧 build + migrate + 健康门用，放宽到 30m（job 级 40m 兜底）
+          command_timeout: 30m
+          envs: DEPLOY_PATH,DEPLOY_SHA
+          script: |
+            set -euo pipefail
+
+            cd "$DEPLOY_PATH"
+            COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
+            echo "==> 部署提交：$DEPLOY_SHA"
+
+            # 1) 拉代码：浅拉 + 三次重试 + 指数退避；lowSpeed 让卡住的连接 30s 内快速失败
+            #    （方案大纲第四节：服务器连 GitHub 经常 443 超时，网络抗性是必选项）
+            fetch_ok=0
+            for attempt in 1 2 3; do
+              if git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=30 fetch --depth 1 origin "$DEPLOY_SHA"; then
+                fetch_ok=1
+                break
+              fi
+              echo "git fetch 第 ${attempt}/3 次失败，退避后重试"
+              sleep $((attempt * 5))
+            done
+            if [ "$fetch_ok" != 1 ]; then
+              echo "git fetch 三次均失败：中止部署，旧服务不动" >&2
+              exit 1
+            fi
+            # 只移动已跟踪文件；.env.production 与 deploy/certs 是未跟踪文件，不受影响
+            git reset --hard "$DEPLOY_SHA"
+
+            # 2) 迁移前备份：失败即中止——没有兜底就不许动库（pipefail 保证 pg_dump 失败穿透 gzip）
+            mkdir -p /opt/laity-backups
+            BACKUP_FILE="/opt/laity-backups/laity-$(date -u +%Y%m%d-%H%M%S)-${DEPLOY_SHA:0:12}.sql.gz"
+            $COMPOSE exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' | gzip > "$BACKUP_FILE"
+            if [ ! -s "$BACKUP_FILE" ]; then
+              echo "数据库备份为空：中止部署" >&2
+              exit 1
+            fi
+            echo "==> 备份完成：$BACKUP_FILE"
+
+            # 3) 保留上一版镜像作回滚锚点（首次部署没有旧镜像，跳过）
+            if docker image inspect laity-archive:prod >/dev/null 2>&1; then
+              docker tag laity-archive:prod laity-archive:prod-prev
+            fi
+
+            # 4) 构建：npm 走 npmmirror（Dockerfile 现成的 NPM_REGISTRY build-arg）；
+            #    基础镜像由 Phase 0 预拉，Docker Hub 不通时改传 BASE_IMAGE 换阿里云镜像源
+            $COMPOSE build --build-arg NPM_REGISTRY=https://registry.npmmirror.com
+            docker tag laity-archive:prod "laity-archive:sha-${DEPLOY_SHA:0:12}"
+
+            # 5) 先迁移后切换：失败/超时不碰 app，旧镜像继续跑；
+            #    Prisma 无自动 down，是否人工 restore 由负责人裁定（备份路径大声报出）
+            if ! timeout 120 $COMPOSE run --rm migrate; then
+              echo "迁移失败或超时：app 不切换。备份在 $BACKUP_FILE，请负责人查 _prisma_migrations 裁定是否人工 restore" >&2
+              exit 1
+            fi
+
+            # 6) 切换：preflight 门禁自动先跑，env 不合格整栈拒起
+            $COMPOSE up -d
+
+            # 7) 健康门：10 次 × 5s，要求 HTTP 200 且响应体含 "db":true
+            #    （/api/health 的 JSON 无空格，db 不可达时返回 503，curl -f 直接判失败）
+            healthy=0
+            for i in $(seq 1 10); do
+              sleep 5
+              body=""
+              if body=$(curl -fsS --max-time 5 http://127.0.0.1:3000/api/health); then
+                case "$body" in
+                  *'"db":true'*) healthy=1; break ;;
+                esac
+              fi
+              echo "健康检查第 ${i}/10 次未通过"
+            done
+
+            if [ "$healthy" = 1 ]; then
+              echo "==> 部署成功：$DEPLOY_SHA"
+              # 备份保留最近 7 份（方案大纲第三节）
+              ls -1t /opt/laity-backups/laity-*.sql.gz 2>/dev/null | tail -n +8 | xargs -r rm -f || true
+              exit 0
+            fi
+
+            # 8) 回滚：只回滚镜像；迁移是前向的，若新 schema 与旧镜像不兼容，
+            #    由负责人用备份人工恢复数据库（自动 restore 会抹掉迁移间隙的新写入，不做）
+            echo "健康检查未通过：回滚 app 镜像到 prod-prev" >&2
+            if docker image inspect laity-archive:prod-prev >/dev/null 2>&1; then
+              docker tag laity-archive:prod-prev laity-archive:prod
+              $COMPOSE up -d app
+              echo "镜像已回滚。若本轮迁移改了 schema 且与旧镜像不兼容，需人工恢复数据库：$BACKUP_FILE" >&2
+            else
+              echo "首次部署无 prod-prev 可回滚，请负责人介入。备份：$BACKUP_FILE" >&2
+            fi
+            exit 1
