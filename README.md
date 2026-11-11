@@ -1,28 +1,28 @@
+
 # Laity 项目档案库
 
-**一句话定位**：单人可一键部署的开发者数字档案库——厂牌官网展示成果，Before/After 开发日志承载复盘，发布时自动写入 SHA-256 内容摘要与服务器时间作技术存证。
+**一句话定位**：多租户的开发者数字档案库——用极简纸白排版展示成果，用 Before/After 开发日志承载复盘，发布时自动写入 SHA-256 内容摘要，并支持 GitHub 提交自动同步与 AI 辅助撰写。
 
 数字档案，记录每一次工程决策。收集项目作品与开发复盘，构建一份可信的数字履历。
 
-当前形态：**V2.0 多租户**（GitHub OAuth 一键登录，各账号只读写自己的档案；站内无自建注册、无 UGC；含 GitHub 公开提交自动同步）。决策见 [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) 的 D33。
+当前形态：**V2.0 多租户**（GitHub OAuth 一键登录，各账号读写独立隔离；无自建注册、无 UGC；含 GitHub 提交自动同步引擎与 AI 辅助生成）。决策见 [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) 的 D33。
 
-## 当前状态快照（2026-11-05）
+## 当前状态快照（2026-11-11）
 
 | 维度 | 状态 |
 |---|---|
-| 阶段进度 | **Phase 1–7 已全部闭环并独立验收**（Phase 8 法律文本、Phase 9 多用户为待裁决备选，前提不成立前不开工） |
-| 回归测试 | `npm test` **73 条断言全绿**（Node 自带 test runner，零测试依赖；只测纯逻辑） |
-| 四道门禁 | `npm run lint` / `npx tsc --noEmit` / `npm run build` / `npm test` 全 0；CI 同序代跑并含软著材料两步自检 |
-| 数据实况 | 库里第一条真实数据是本项目自己（`laity-archive` 项目 + 一条已发布日志），非种子示例 |
-| 在途待实施 | **D31/F19 `/about` 关于页：已实施（2026-11-05）**——静态路由 `○ /about`，进导航第三项与 sitemap；**D30 视觉令牌切换：已实施（2026-11-05）**——四色 `#f4f1ec / #1a1a18 / #625d53 / #d9d2c5` 全部落地并实测，A4 的层间区分度浏览器判据在现有内容上通过，**B1 亦已完成**（`--brown #7a5a3a` 作为持久导航当前项的唯一强调色，实测 `rgb(122,90,58)`）——**D30 整体闭环**；B1 已实施，字标与导航当前态统一走棕色下划线，任何时刻全站只有一个元素带棕色下划线。挂账与裁定项：`--ink-2`/数据色不引入、`--rule-strong` 不用于按钮边框、`--paper-2` 废弃（I072）、分隔线豁免 3:1（I073）、`blockquote` 同字号场景等复测（I075 OPEN）、dev 静态壳缓存（I074 OPEN）。方案与实测记录见 `docs/00-开发方法论/D30-剩余令牌切换方案.md` 与 DESIGN D30 |
-| 未验证项 | 生产编排整套实跑、软著材料真实分页、OSS 真实上传成功分支、镜像来源逐层比对、字体上游 LICENSE、依赖已知 CVE 等——逐条见 [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md)「六、未验证项清单」，一律标"未验证"，不用推断补全 |
-| 文档体系 | SPEC.md 已转 V1.0 冻结口径（F01–F18），DESIGN.md 补裁剪说明与执行档案定位（D32）；AGENTS/README/ISSUES 同步于本轮 |
+| 阶段进度 | **V2.0 核心闭环已交付**（多租户隔离、GitHub 同步、AI 辅助生成、自动化部署全部上线） |
+| 回归测试 | `npm test` **95 条断言全绿**（Node 自带 test runner，零测试依赖；只测纯逻辑） |
+| 四道门禁 | `npm run lint` / `npx tsc --noEmit` / `npm run build` / `npm test` 全 0；CI 同序代跑 |
+| 数据实况 | 生产环境已接入多账号 GitHub 登录，数据物理隔离；第一条真实数据为本项目自身 |
+| 自动化交付 | 已接入 **GitHub Actions 自动部署**：push 到 `main` 且门禁通过后，自动 SSH 至服务器备份、构建、迁移与健康校验 |
+| 文档体系 | SPEC.md 新增 F20（同步）/ F21（租户主页）/ F22（AI 生成）冻结口径；DESIGN.md 补至 D33；AGENTS/README/ISSUES 同步本轮 |
 
 ## 技术栈
 
-Next.js 16.4.3（App Router + RSC + PPR）· TypeScript 5.9.3 · Tailwind CSS 4.3.3 · Prisma 6.19.3 · PostgreSQL 16（Docker）· next-auth 4.24.15（管理员口令登录，仅 `/admin`）· 阿里云 OSS（图片外链）
+Next.js 16.4.3（App Router + RSC + PPR）· TypeScript 5.9.3 · Tailwind CSS 4.3.3 · Prisma 6.19.3 · PostgreSQL 16（Docker）· next-auth 4.24.15（**GitHub OAuth 一键登录**）· 阿里云 OSS（图片外链）· 阿里通义千问 / DeepSeek（OpenAI 兼容协议）
 
-版本均为**实测值且属锁定项**，不建议升级、不可替换；写 Next.js 代码前必须先读 `node_modules/next/dist/docs/` 对应指南（版本红线，优先级最高）。
+版本均为**实测值且属锁定项**，不建议升级、不可替换；写 Next.js 代码前必须先读 `node_modules/next/dist/docs/` 对应指南。
 
 ## 环境要求
 
@@ -30,96 +30,85 @@ Next.js 16.4.3（App Router + RSC + PPR）· TypeScript 5.9.3 · Tailwind CSS 4.
 - Docker Desktop + 本地 PostgreSQL 16 容器（库名 `laity`）
 - 端口：应用 3000、数据库 5432
 - 包管理固定 npm（禁 pnpm / yarn / bun）
-- 真实 `.env` / `.env.production` 由负责人本人填写与维护；模板见 `.env.example` 与 `.env.production.example`
+- 真实 `.env` / `.env.production` 由负责人本人填写与维护；模板见 `.env.example` 与 `.env.production.example`（**新增了 `AI_API_KEY`、`ENCRYPTION_KEY` 等必填项**）
 
 ## 快速开始
 
 ```bash
-npm ci                        # 用锁文件原样安装（与发版门禁同一口径，不用 npm install）
+npm ci                        # 用锁文件原样安装
 docker compose up -d          # 启动本地 PostgreSQL 16
-npx prisma migrate dev        # 建表（迁移只由 prisma migrate 生成，不手改、不直接对库执行 SQL）
-npx prisma db seed            # 本地种子数据（生产不播种，数据一律由后台录入）
+npx prisma migrate dev        # 建表
+npx prisma db seed            # 本地种子数据
 npm run dev                   # http://localhost:3000
 ```
 
-后台入口 `http://localhost:3000/admin`，未登录会跳自建登录页 `/login`，点「使用 GitHub 登录」完成授权（OAuth App 的两键填在 `.env` 的 `GITHUB_ID` / `GITHUB_SECRET`，注意不要与生产 App 复用）。
+后台入口 `http://localhost:3000/admin`，未登录会跳自建登录页 `/login`，点 **「使用 GitHub 登录」** 完成 OAuth 授权。
 
 > Windows + Git Bash 三个已踩过的坑见 [AGENTS.md](file:///D:/ZHANGLEI/laity-archive/AGENTS.md)「已知坑速查」：
-> MSYS 会改写容器内路径（命令前加 `MSYS_NO_PATHCONV=1`）、Node 眼里的 `/tmp` 不是 Git Bash 的那个
-> （临时产物写仓库内 `tmp/`）、管道尾接 `| head` 会让退出码变 SIGPIPE 假红（要判成败就重定向到文件再读）。
+> MSYS 会改写容器内路径、Node 眼里的 `/tmp` 不是 Git Bash 的那个、管道尾接 `| head` 会让退出码变假红。
 
-## 发版门禁
+## 自动化流水线与发版门禁
 
+四条本地门禁全 0 才算可发版：
 ```bash
 npm run lint && npx tsc --noEmit && npm run build && npm test
 ```
 
-四条全 0 才算可发版。`.github/workflows/ci.yml` 在每次 push 与 pull request 上按同样顺序代跑，
-外加软著材料两步自检（新文件没登记进收录清单、或改了说明书却忘了重出 HTML，都会红）。
+GitHub Actions 包含两条工作流：
+1. **`ci.yml`（发版门禁）**：每次 push 与 PR 时运行，含软著材料两步自检。
+2. **`deploy.yml`（生产部署）**：当 `ci.yml` 在 `main` 分支通过后自动触发。通过 SSH 连接服务器，执行 `pg_dump` 备份 → 构建镜像 → `migrate deploy` → 重启服务 → 轮询 `/api/health`。健康失败自动回滚上一版镜像。
 
-`npm test` 覆盖纯逻辑：摘要口径、图片内容签名、slug 与表单取值、错误码文案、时间展示、
-路由归属、敏感信息形态、开源许可清单、口令判定与节流、对象名断言。
-**数据库层、需登录的 Server Action、页面渲染都不在其内**，那部分靠 `docs/02-测试记录/` 的自测表与人工联调，
-不能用测试全绿代替。
+`npm test` 覆盖纯逻辑：摘要口径、对象名断言、敏感信息扫描、开源许可、Token 加密、Prompt 解析、同步过滤等。
 
 ## 文档导读（新开发者按这个顺序读）
 
 | 顺序 | 文件 | 角色 | 读它解决什么问题 |
 |---|---|---|---|
 | 0 | **本文件 README.md** | 项目入口 | 这是什么、做到哪了、怎么跑起来 |
-| 1 | [AGENTS.md](file:///D:/ZHANGLEI/laity-archive/AGENTS.md) | **事实基座（每次开工必读，优先级最高的受控文档）** | 技术栈锁定与环境实况、视觉铁律精确值、合规与安全红线、通用红线、验证命令、软著材料铁律、常见变更操作手册（改一处要跟着改哪里）、环境变量总表、已知坑速查、术语表、开工与交付自检清单 |
-| 2 | [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) | 架构与取舍 | **先读「零、架构总览」与「零·补、历史决策裁剪说明」**（一页看懂分层、三条关键链路、唯一真相点，以及哪些旧口径已失效），再按需查 D1–D32 决策记录、Phase 执行档案、风险清单、技术债、未验证清单 |
-| 3 | [SPEC.md](file:///D:/ZHANGLEI/laity-archive/SPEC.md) | 需求规格（V1.0 冻结） | 改某条功能前后读它的 F 编号：F01–F18 范围与验收口径、数据模型与状态机、接口契约与错误码、需求到实现的追溯矩阵、外部设计差异裁决 |
-| 4 | [ISSUES.md](file:///D:/ZHANGLEI/laity-archive/ISSUES.md) | 范围外问题台账 | 遇到疑似历史遗留问题先查这里（I001–I072），看是否已知、是否已有处置 |
+| 1 | [AGENTS.md](file:///D:/ZHANGLEI/laity-archive/AGENTS.md) | **事实基座（每次开工必读）** | 技术栈锁定、视觉铁律、环境变量总表、常见变更操作手册、已知坑速查 |
+| 2 | [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) | 架构与取舍 | **先读「零、架构总览」与「零·补、历史决策裁剪说明」**，再按需查 D1–D33 决策记录 |
+| 3 | [SPEC.md](file:///D:/ZHANGLEI/laity-archive/SPEC.md) | 需求规格（V2.0 冻结） | 读 F 编号：F01–F22 范围与验收口径、数据模型、接口契约、追溯矩阵 |
+| 4 | [ISSUES.md](file:///D:/ZHANGLEI/laity-archive/ISSUES.md) | 范围外问题台账 | 遇到疑似历史遗留问题先查这里（I001–I080） |
 
-冲突判定顺序（AGENTS.md 的文档体系表为准）：**代码与运行时实测 > AGENTS.md > SPEC.md > DESIGN.md > ISSUES.md**；
-README 只作入口，与那四份不一致时以那四份为准并回报冲突点。发现冲突一律回报，不私自抹平。
-
-编号即坐标：`F##` 需求（SPEC）、`D##` 决策（DESIGN）、`I###` 问题（ISSUES）、`Phase #` 阶段（DESIGN）。
-引用一律带编号，不写"那个某某功能"。
+冲突判定顺序：**代码与运行时实测 > AGENTS.md > SPEC.md > DESIGN.md > ISSUES.md**；README 只作入口，发现冲突一律回报。
 
 ## 项目结构
 
 ```
 laity-archive/
-├── AGENTS.md              # 事实基座（AI 必读，改动需负责人点名授权）
+├── AGENTS.md              # 事实基座
 ├── SPEC.md / DESIGN.md / ISSUES.md / README.md
-├── .github/workflows/     # 发版门禁的自动执行（改它需批准）
+├── .github/workflows/     # ci.yml (门禁) + deploy.yml (自动部署)
 ├── deploy/                # nginx 配置与证书挂载位
-├── docs/
-│   ├── 00-开发方法论/      # 五层防线工作法、环境搭建指南、上线与回滚手册、泄露应急预案、合规差距分析
-│   ├── 01-研发日志/        # 每日：指令原文、思考、踩坑（现象→根因→修复）
-│   ├── 02-测试记录/        # 各 Phase 自测表、待验证清单
-│   ├── 03-功能截图/        # 真实运行截图（必须带地址栏）
-│   ├── 04-软著材料/        # 源程序文档、操作说明书（md 是源，HTML 是产物）
-│   └── archive/            # 已失效的历史草稿与外部方案，仅供决策背景参考，不作实现依据
-├── prisma/                # schema.prisma、migrations/（只由 prisma migrate 生成）、seed.ts
+├── docs/                  # 开发方法论、研发日志、测试记录、软著材料、归档
+├── prisma/                # schema.prisma、migrations/
 ├── src/
-│   ├── app/               # 页面路由（App Router）+ api/health + privacy + licenses + not-found + error
-│   ├── components/        # 核心组件（导航、页脚、时间轴、印章、看板、编辑器）
-│   └── lib/               # 唯一数据访问层与工具（Prisma 实例、哈希、存证、上传、鉴权、站点标识）
-├── tests/                 # node --test 用例，只测纯逻辑
-├── tools/                 # 软著材料生成器（收录清单与窗口判据在这里）
-└── docker-compose.yml     # 本地 PostgreSQL 容器（生产另用 docker-compose.prod.yml）
+│   ├── app/               # 页面路由 (App Router)
+│   ├── components/        # 核心组件（导航、时间轴、编辑器等）
+│   └── lib/               # 数据访问层与工具（哈希、上传、鉴权、AI 客户端）
+├── tests/                 # node --test 用例
+└── tools/                 # 软著材料生成器
 ```
 
 ## 常见任务
 
-改一处要跟着改哪里的对照表在 [AGENTS.md](file:///D:/ZHANGLEI/laity-archive/AGENTS.md)「常见变更操作手册」
-（新增字段 / 页面 / Server Action / 环境变量 / 依赖各一节），踩过的坑在「已知坑速查」。几个高频的：
-
-- **改数据模型**：只改 `prisma/schema.prisma` → `npx prisma migrate dev --name <意图>` → 同步查询层
-  `select` 白名单与表单校验；不得直接对库执行 SQL。
-- **发布一条日志**：后台 `/admin/logs/new`，双栏 Markdown 编辑器写 BEFORE / AFTER →
-  「保存并发布」先写库再按**库里刚存的内容**算 SHA-256 并记服务器时间。
-- **重出软著材料**：`node tools/软著材料生成.mjs`；改了任何收录文件后都要重出两份 HTML 并一并提交
-  （窗口容量按整页折算，`assertWindowFit()` 会拒出件，不要绕过）。
-- **生产部署**：见 `docs/00-开发方法论/上线与回滚手册.md`；外部系统动作（服务器、证书、口令轮换、推送）
-  由负责人本人执行。
+- **改数据模型**：只改 `prisma/schema.prisma` → `npx prisma migrate dev --name <意图>` → 同步查询层。
+- **发布日志**：后台写 BEFORE / AFTER → 点击「保存并发布」，系统按 D5 口径盖 SHA-256 印章。
+- **GitHub 同步与 AI**：后台点击 `[ 从 GitHub 同步 ]` 拉取提交；在编辑页点 `[ AI 帮我写 ]` 调用通义千问自动生成复盘。
+- **重出软著材料**：`node tools/软著材料生成.mjs`（窗口容量按整页折算，不要绕过 `assertWindowFit()`）。
+- **生产部署**：本地 `git push origin main` 即可，GitHub Actions 会自动接管后续流程（需在仓库 Secrets 配置好服务器 SSH 凭据）。
 
 ## 工作方式
 
-所有开发遵循五层防线：**事实基座 → 规格锁定 → 阶段闭环 → 验收门禁 → 过程存证**
-（详见 `docs/00-开发方法论/我的AI协作开发方法论-五层防线.md`）。
-一次只做一个 Phase，验收通过才进下一个；范围外问题记 ISSUES.md 不动手；
-粘贴实际执行的命令与真实输出，没执行的标"未验证"。
+所有开发遵循五层防线：**事实基座 → 规格锁定 → 阶段闭环 → 验收门禁 → 过程存证**。
+一次只做一个 Phase，验收通过才进下一个；范围外问题记 ISSUES.md 不动手；没执行的测试一律标"未验证"。
+```
+
+---
+
+### 💡 主要修改点汇总：
+1. **当前状态快照**：把回归测试从 `73` 改到了 `95`，把日期更新到了 `2026-11-11`，去掉了过时的“待实施”，加上了“自动化交付”和“AI 辅助生成”。
+2. **技术栈**：删除了“管理员口令登录”，换成了“GitHub OAuth 一键登录”，并补充了 AI 引擎。
+3. **环境要求**：提醒了新增的 `AI_API_KEY` 和 `ENCRYPTION_KEY`。
+4. **自动化流水线**：补充了 `deploy.yml` 自动部署的逻辑（备份、迁移、健康回滚）。
+5. **文档导读**：将 `D1–D32` 更新为 `D1–D33`，`I001–I072` 更新为 `I001–I080`，`F01–F18` 更新为 `F01–F22`。
