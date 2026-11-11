@@ -79,6 +79,13 @@
  * - 2026-11-11: V2.1 全局搜索：新增 src/lib/log-search.ts（matchLog 匹配纯函数：四字段子串匹配）
  *               登记进折走段 ③，与 logs.ts 相邻；调用方 searchLogs 在 ③ 内、页面在 ④，
  *               ①+② 零余量防线不动，出件看护栏
+ * - 2026-11-11: F23/D34 阅读目录与进度条：新增 src/lib/toc.ts（extractToc 纯函数）登记进折走段 ③，
+ *               与 log-search/ai-prompt 同族（调用方详情页在 ④、markdown.tsx 在 ③）；新增
+ *               src/components/ArticleToc.tsx 登记进 ④（访客可见界面）。④ 因 ArticleToc + 详情页接线 +
+ *               globals.css 进度条/rail/面板样式涨行，出件看 assertWindowFit
+ * - 2026-11-11: F23/D34 窗口配平（负责人裁定 Option 2）：assertWindowFit 拒件（④ 1879 > 后窗口 1498，缺口 381），
+ *               预案1（拆移动面板约 30–70 行）单独不够；按裁定把租户主页(190)/关于页(158)/登录页(92)自 ④ 平移进 ③
+ *               （合计 440），④ 回到 1439 行装进后窗口，ArticleToc 整份留 ④ 不拆。三者皆排版/交互外壳，逻辑在 ②③ 可见
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -157,6 +164,9 @@ const BANDS = [
       // log-search 是 V2.1 全局搜索的匹配纯函数（四字段大小写不敏感子串匹配），
       // 调用方 searchLogs 在 logs.ts 内、页面在 ④；与 ai-prompt/object-key 同类放 ③，不动 ①+② 行数
       "src/lib/log-search.ts",
+      // toc.ts 是 F23/D34 的阅读目录抽取纯函数（ATX/setext、围栏与缩进代码跳过、行内剥离），
+      // 调用方详情页在 ④、markdown.tsx 在 ③；与 log-search/ai-prompt 同族放 ③，不动 ①+② 零余量防线
+      "src/lib/toc.ts",
       // ai-prompt 是 Step 6 的纯函数层（提交列表→提示词、模型返回→BEFORE/AFTER 解析），调用方是后台动作层；
       // 与 github-sync-filter 同族放 ③，不动 ①+② 的行数（零余量防线下安全）
       "src/lib/ai-prompt.ts",
@@ -260,6 +270,12 @@ const BANDS = [
       // 首页/日志大厅/租户主页/关于在窗口内
       "src/components/SiteFooter.tsx",
       "src/app/projects/page.tsx",
+      // 租户主页 / 关于页 / 登录页自 ④ 平移进来（F23/D34，负责人裁定 Option 2，见 ④ 段注释）：
+      // 与 projects 大厅同类——租户主页复用看板取数（②）、关于页静态文案、登录页是后台交互层外壳，
+      // 折走的是排版与外壳，不是逻辑；移入后 ④ 从 1879 回到 1439 行，装进后窗口 1498
+      "src/app/u/[handle]/page.tsx",
+      "src/app/about/page.tsx",
+      "src/app/login/page.tsx",
       // forms.ts 自 ② 平移进折走段（2026-11-09 第二十次窗口配平，负责人裁断一批准）：主体是常量表
       // （LIMITS 上限表 + SLUG/REPO_URL/ID 三组正则源串）+ 三个纯函数判（pickParam/readField/safeCallbackUrl），
       // 与已在 ③ 的 error-text.ts / licenses.ts 同性质；①+② 因阶段一 logs/projects 涨行 + 阶段二 proxy 涨行
@@ -281,15 +297,13 @@ const BANDS = [
       "src/app/logs/page.tsx",
       // V2.0 Step 3 阶段一：日志详情路由迁至 /u/[handle]/logs/[slug]，收录路径随目录迁移
       "src/app/u/[handle]/logs/[slug]/page.tsx",
-      // V2.0 Step 3 阶段一：新增租户主页（访客可见界面，与首页同类；取该 handle 的看板与最新日志）
-      "src/app/u/[handle]/page.tsx",
-      // licenses/page.tsx 于本轮自 ④ 平移进折走段 ③（2026-11-06 第三批开工第一步，负责人预批）：
-      // 后窗口余量对总页数敏感（跨页界即从 41 掉到 21），先把这 109 行回血再动代码。
-      // 它承载的是许可清单的排版，值来自 ③ 段 licenses.ts 那张静态表，SPEC 未点名本页形态
-      // 关于页（SPEC F19 / DESIGN D31，2026-11-05 新增）：三段静态文案 + 环境变量联系方式，
-      // 属访客可见界面，与 /licenses、/privacy 同一类公示页
-      "src/app/about/page.tsx",
-      "src/app/login/page.tsx",
+      // ArticleToc 是 F23/D34 的阅读目录客户端岛（桌面 sticky 右栏 + 移动折叠面板 + scrollspy），
+      // 访客可见界面，与详情页同类放 ④
+      "src/components/ArticleToc.tsx",
+      // 租户主页 / 关于页 / 登录页于本轮（F23/D34，负责人裁定 Option 2）自 ④ 平移进折走段 ③：
+      // ArticleToc + 详情页接线 + globals.css 进度条/rail/面板样式把 ④ 顶到 1879 行（后窗口仅 1498），
+      // 移出这三页（190+158+92=440）后 ④ 回到 1439 行。三者皆排版/交互外壳——租户主页复用 getArchiveBoard（②）、
+      // 关于页是静态文案、登录页是 SignInButton（③）的外壳，逻辑均在别处可见；搜索大厅与首页/详情/目录右栏保留可见
       // not-found.tsx 本轮起进折走段（2026-11-05，第八轮）：新增 /about 页让 ④ 涨了 155 行，
       // 后窗口切口把 globals.css 的头部（令牌定义处）切了出去；按 assertWindowFit 的处置建议，
       // 由这份只有一句文案与两个出口链接的 404 外壳让位——与它上面的 error.tsx 同类，

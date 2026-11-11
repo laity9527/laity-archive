@@ -70,13 +70,18 @@ OAuth 码缺失，测试钉住旧口径）、**I079**（refreshLogViews 仍在�
 licenses.ts 补复核记录行（FONT_LICENSES 值本就与上游一致，未改值）、/licenses 页移除"本次未联网复核"免责提示。
 概览按脚本实算改为 **80 个编号 / FIXED 60 / OPEN 9**（83 明细行 = 82 状态行 + I034 指针行），
 未结项速览移除 I040 行。既有其它明细与「经验归纳」未改动。
+维护留痕续十五：2026-11-11 阅读目录与进度条（F23/D34）实施轮，按"范围外问题记台账不动手"新增
+**I081**（.gitignore 第 2 行 logs 规则误伤租户日志详情页路径 u/[handle]/logs/[slug]，Tailwind v4 自动探测跳过该页致桌面 grid 类不生成；本轮按负责人裁定用 globals.css 的 @source inline 绕过，根治需 .gitignore 否定规则，**OPEN 等点名**）与
+**I082**（SPEC 追溯矩阵只到 F19，F20–F23 增补需求均未入矩阵，与该表"新增需求同步维护"的引言不符，**OPEN 等裁定是否补行**）。
+概览按脚本实算改为 **82 个编号 / OPEN 11**（85 明细行 = 84 状态行 + I034 指针行），未结项速览加两行。
+既有 80 条明细与「经验归纳」未改动；本轮任务内的配套同步（SPEC F23、DESIGN D34、说明书 4.3、globals.css @source inline）不入台账，随 F23 commit 留痕。
 
 
 ## 台账概览（每次开工先看这里）
 
-- 规模：已登记 80 个编号（I001–I080），其中 I034 含 4 行多轮续记。状态分布：FIXED 60、WONTFIX 9、OPEN 9、PLANNED 4。
-  （本行计数由脚本按明细表实算得：**83 明细行 = 82 条状态行（FIXED 60 + WONTFIX 9 + OPEN 9 + PLANNED 4）
-  + I034 首行指针行**，对应 80 个编号；2026-11-05 起按 AGENTS「已知坑速查 → 文档数据与代码实际不符」的口径，
+- 规模：已登记 82 个编号（I001–I082），其中 I034 含 4 行多轮续记。状态分布：FIXED 60、WONTFIX 9、OPEN 11、PLANNED 4。
+  （本行计数由脚本按明细表实算得：**85 明细行 = 84 条状态行（FIXED 60 + WONTFIX 9 + OPEN 11 + PLANNED 4）
+  + I034 首行指针行**，对应 82 个编号；2026-11-05 起按 AGENTS「已知坑速查 → 文档数据与代码实际不符」的口径，
   台账数字一律当场重算，不凭印象填、不沿用上一版。）
 - 编号规则：按发现顺序分配，**不复用、不重排**——所以正文里编号并非严格升序（I013–I016 排在 I021 之后、I023/I024 排在 I025/I026 之后、I042/I043 颠倒），这是留痕不是错误。引用一律用编号，不写"上次那条"。
 - 同一条的多轮记录共用编号前缀（I034 / I034 / I034-补 / I034-补2），顺次读即该问题的完整演进，不视为重复登记。
@@ -97,6 +102,8 @@ licenses.ts 补复核记录行（FONT_LICENSES 值本就与上游一致，未改
 | I068 | OPEN | 依赖有无已知 CVE 无数据，待批准换源跑一次审计 |
 | I074 | OPEN | dev SSR 壳缺 /about 导航项，疑 `.next/dev` 缓存；清缓存复现一次才可定性 |
 | I075 | OPEN | A4 实测：现有内容层间可辨（字号始终同向变化）；唯 `.log-body blockquote` 是同字号只靠 2.66:1 分级的场景，当前无内容触发 |
+| I081 | OPEN | .gitignore 的 logs 规则误伤 u/[handle]/logs 详情页路径，Tailwind v4 跳过该页致桌面 grid 类不生成；本轮 @source inline 绕过，根治需否定规则待点名 |
+| I082 | OPEN | SPEC 追溯矩阵只到 F19，F20–F23 增补需求未入矩阵，与引言"同步维护"不符，等裁定是否补行 |
 
 | 编号 | 发现日期 | 问题描述 | 影响 | 状态 | 处置 |
 |---|---|---|---|---|---|
@@ -195,6 +202,9 @@ A3/A4 与 B1 仍待逐步执行，故本条维持 PLANNED ｜ **同日 A2 也已
 | I078 | 2026-11-09 | `src/lib/error-text.ts:26` 仍收录 `CredentialsSignin: "口令不正确。"`——4-A 换回 GitHub OAuth 后该码不再产生，成死码；`tests/error-text.test.ts:34` 把它钉在必测清单、`:40` 断言 `AccessDenied === undefined`（那是白名单时代的删除决定）。而 OAuth 链路真实会产生的 AccessDenied / OAuthCallback / OAuthSignin 等码未收录，`src/app/login/page.tsx:69` 一律落 `ERROR_TEXT.Default` 兜底 | 不是安全洞（未知码不泄露信息、兜底可用），是文案与测试口径漂移：用户授权失败只能看到笼统的默认文案；测试钉住死码会让"删死码"这步必须先改测试，属同一批变更 | **FIXED**（2026-11-10） | 已删 `CredentialsSignin`，另删同样死掉的 `Verification`（仅 email provider 产生，本站无该 provider）；按 next-auth v4 源码补 `OAuthSignin`/`AccessDenied`/`OAuthCallback`/`OAuthCreateAccount`/`OAuthAccountNotLinked`/`Callback` 六个码；`tests/error-text.test.ts` 断言改为 OAuth 码表 + `CredentialsSignin === undefined` | 本轮未动 error-text 与测试（超出 4-B 点名范围）。处置建议：删 CredentialsSignin、按 OAuth 实际会回跳的码补文案（先实测一次授权失败回跳取码，不凭记忆列）、同步改 tests/error-text.test.ts 两处断言；改完重出软著材料（error-text 在收录清单内） |
 | I079 | 2026-11-09 | `src/app/admin/log-actions.ts:134-138` 的 `refreshLogViews()` 仍调 `revalidatePath("/logs")` 与 `revalidatePath(\`/logs/${slug}\`)`——Step 3 路由迁移后这两个路径已不存在（前台改 `/u/<handle>/logs/<slug>`），函数签名只拿 slug 不拿 handle，也没有失效任何 `/u/` 路径；租户页是 ◐ PPR，发布/下架后前台缓存如何刷新未定义、未实测 | `revalidatePath` 对不存在的路径不报错，静默无效；若租户动态段依赖缓存，可能出现"已发布但前台仍见旧壳/旧列表"或"已下架仍可见"的窗口，方向与时长都未量测 | **FIXED**（2026-11-10，确认全部页面请求期取数后删除死路径） | 实测：所有前台/后台页均 `instant=false` + 请求期直查 Prisma（构建路由表为 ƒ/◐），revalidate 对不存在的 `/logs` 路径本就静默无效。`refreshLogViews()` 改为无参，保留 `/` 与 `/admin`，删掉两行死路径；租户页 `/u/...` 同属请求期取数，不需要按 handle 再失效 | 4-B 只改动作的数据隔离，未动 refreshLogViews。处置建议：先在生产构建做一次"发布→立即访问前台、下架→立即访问前台"实测，再定改法——要么把 handle 传进来按 `/u/<handle>/…` 失效，要么实测确认 PPR 请求期取数不依赖这些 revalidate 后删掉死调用；不凭推断改缓存代码 |
 | I080 | 2026-11-09 | 软著说明书第四章访客端功能只写了首页、日志大厅、日志详情、项目档案、导航与站点级页面；Step 2/3 新增的租户主页 `/u/[handle]`（账号资料 + 其日志与项目入口）没有对应功能描述。4.3/4.4 的详情路径本轮已同步为 `/u/<用户名>/…`，但入口页本身在材料里缺失 | 材料对实现覆盖不全：按说明书操作的人找不到租户主页的说明；软著审查若对照路由清单可能指出功能描述缺项 | **FIXED**（2026-11-10） | SPEC 侧新增 **F21（`/u/[handle]` 租户主页）** 进「已实施增补」；说明书侧在 4.4 节末尾并入一段租户主页描述（不新增小节编号，遵守既有约束）并重出材料 | 本轮 4-B 的说明书同步只改了登录/隔离/编排相关既有小节，未新增小节。处置建议：获点名后在 4.1 或 4.4 既有小节内并入租户主页描述（不新增编号），改完重出两份 HTML 并核 MD5 幂等 |
+
+| I081 | 2026-11-11 | .gitignore 第 2 行 Node 模板 `logs` 规则匹配租户日志详情页路径 `src/app/u/[handle]/logs/[slug]/page.tsx`（`git check-ignore --no-index -v` 命中 `.gitignore:2:logs`）。git 因文件已跟踪不受影响，但 Tailwind v4 自动内容探测按 gitignore 模式跳过该页，致本页独有的 `lg:grid / lg:grid-cols-[minmax(0,720px)_minmax(0,1fr)] / lg:gap-10 / lg:mx-0` 工具类不生成、F23 桌面右栏 grid 失效（产物 CSS 实测零生成，浏览器实测 gridDisplay=block、rail 整宽）。这是 I006/I014「logs 规则误伤源码目录」第三次复发，落在 V2.0 租户路径 | 该目录下任何文件独有的 Tailwind 类都会被静默跳过，布局类改动尤其危险（lint/tsc/build 全绿也照样不生效）；未来在 u/[handle]/logs/ 下新增文件会再踩 | **OPEN**（等点名根治） | 本轮按负责人裁定（选「globals.css 加 @source」）用 `@source inline(...)` 在 globals.css 强制生成这几个类绕过（实测 `@source` 登记目录仍受 gitignore 过滤，故用 inline 直接生成候选），桌面三档几何已复测通过。根治需 .gitignore 末尾补 `!src/app/u/[handle]/logs/` 与 `!src/app/u/[handle]/logs/**`（I006/I014 同例），属配置改动需点名；inline 列表须与本页布局类同步，是 workaround 非根治 |
+| I082 | 2026-11-11 | SPEC 第六节追溯矩阵只列到 F19，V2.0/V2.1 增补需求 F20（GitHub 同步）、F21（租户主页）、F22（AI 辅助生成）与本轮 F23（阅读目录）均未入矩阵，而该表引言写明「新增或变更需求时同步维护」 | 矩阵作为「防实现缺项」的常备对照对增补需求失效；按矩阵反查 F20–F23 会误判为无落点 | **OPEN**（等裁定是否补行） | 本轮 F23 沿 F20–F22 先例只登记进「已实施增补」表、不增矩阵行，避免造成只补 F23 的新的不一致。处置建议：获点名后一次性把 F20–F23 四行补进矩阵（关键决策/主要落点/验收证据各栏可从对应 D 决策与增补表状态列摘取），或裁定矩阵仅覆盖 V1.0 冻结范围 + F19、增补需求由增补表自带状态列承载并改写引言 |
 
 ## 经验归纳（按主题分类的教训）
 

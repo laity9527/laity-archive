@@ -16,14 +16,23 @@
  *               getSafeLogBySlug（默认参数已移除）；页内"← 开发日志"等回跳链接随大厅路由保持 /logs
  * - 2026-11-10: V2.0 Step 6 Commit 3：正文末尾（印章上方）按 log.isAiAssisted 打「[ AI 辅助生成 · 作者审校 ]」
  *               纯文本标签；另把文件头里的路径行从退役的 src/app/logs/[slug] 校正为当前路径
+ * - 2026-11-11: F23/D34 接线阅读目录与进度条：≥1024px 正文左 + 目录右栏（grid+sticky），<1024px 折叠面板
+ *               在正文头部；BEFORE/AFTER 经 extractToc 抽锚点、总标题数 ≥2 才画；进度条为整页口径 CSS 滚动驱动动画（零 JS）；
+ *               经验总结段不索引；无目录时 main 放宽到 1080px 但正文仍 mx-auto 限宽 720px，与改前观感一致
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  ArticleTocPanel,
+  ArticleTocRail,
+  type TocGroup,
+} from "@/components/ArticleToc";
 import { Seal } from "@/components/Seal";
 import { Timeline } from "@/components/Timeline";
 import { getSafeLogBySlug } from "@/lib/logs";
 import { Markdown } from "@/lib/markdown";
+import { extractToc } from "@/lib/toc";
 
 // 列表页与搜索引擎要的摘要：优先用"经验总结"字段，它本身就是这条复盘的结论
 function describeLog(log: { lessonLearned: string | null; beforeContent: string }) {
@@ -63,79 +72,115 @@ export default async function LogDetailPage({
     notFound();
   }
 
+  // F23：BEFORE/AFTER 各抽一组锚点（经验总结是短结论，不索引）；总标题数 ≥2 才画目录——
+  // 单标题文章没有导航价值。两组前缀独立从 0 起，与 Markdown 的 tocIdPrefix 一一对应
+  const tocGroups: TocGroup[] = [
+    { key: "before", label: "BEFORE", items: extractToc(log.beforeContent, "before") },
+    ...(log.afterContent
+      ? [{ key: "after", label: "AFTER", items: extractToc(log.afterContent, "after") }]
+      : []),
+  ].filter((group) => group.items.length > 0);
+  const showToc = tocGroups.reduce((sum, group) => sum + group.items.length, 0) >= 2;
+
   return (
-    <main id="main" className="mx-auto max-w-[720px] px-6 py-24">
-      <Link
-        href="/logs"
-        className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
+    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
+      <div className="reading-progress" aria-hidden="true" />
+      <div
+        className={
+          showToc
+            ? "lg:grid lg:grid-cols-[minmax(0,720px)_minmax(0,1fr)] lg:gap-10"
+            : undefined
+        }
       >
-        ← 开发日志
-      </Link>
+        <article
+          className={
+            showToc
+              ? "mx-auto w-full max-w-[720px] lg:mx-0"
+              : "mx-auto w-full max-w-[720px]"
+          }
+        >
+          <Link
+            href="/logs"
+            className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
+          >
+            ← 开发日志
+          </Link>
 
-      <header className="mt-8 border-b border-hairline pb-8">
-        <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
-          {log.project.name}
-        </p>
-        <h1 className="mt-3 text-3xl font-medium tracking-tight">
-          {log.title}
-        </h1>
-        <div className="@container mt-6">
-          <Timeline beforeDate={log.beforeDate} afterDate={log.afterDate} />
-        </div>
-        {log.tags.length > 0 && (
-          <p className="mt-6 font-mono text-[11px] text-ink-soft">
-            {log.tags.join(" · ")}
-          </p>
-        )}
-      </header>
+          <header className="mt-8 border-b border-hairline pb-8">
+            <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
+              {log.project.name}
+            </p>
+            <h1 className="mt-3 text-3xl font-medium tracking-tight">
+              {log.title}
+            </h1>
+            <div className="@container mt-6">
+              <Timeline beforeDate={log.beforeDate} afterDate={log.afterDate} />
+            </div>
+            {log.tags.length > 0 && (
+              <p className="mt-6 font-mono text-[11px] text-ink-soft">
+                {log.tags.join(" · ")}
+              </p>
+            )}
+          </header>
 
-      <section className="mt-12">
-        <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-          BEFORE
-        </h2>
-        <div className="mt-4">
-          <Markdown source={log.beforeContent} />
-        </div>
-      </section>
+          {showToc && <ArticleTocPanel groups={tocGroups} />}
 
-      {log.afterContent && (
-        <section className="mt-12">
-          <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-            AFTER
-          </h2>
-          <div className="mt-4">
-            <Markdown source={log.afterContent} />
-          </div>
-        </section>
-      )}
+          <section className="mt-12">
+            <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
+              BEFORE
+            </h2>
+            <div className="mt-4">
+              <Markdown
+                source={log.beforeContent}
+                tocIdPrefix={showToc ? "before" : undefined}
+              />
+            </div>
+          </section>
 
-      {log.lessonLearned && (
-        <section className="mt-12">
-          <h2 className="font-sans text-[10px] text-ink-soft">经验总结</h2>
-          <div className="mt-4">
-            <Markdown source={log.lessonLearned} />
-          </div>
-        </section>
-      )}
+          {log.afterContent && (
+            <section className="mt-12">
+              <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
+                AFTER
+              </h2>
+              <div className="mt-4">
+                <Markdown
+                  source={log.afterContent}
+                  tocIdPrefix={showToc ? "after" : undefined}
+                />
+              </div>
+            </section>
+          )}
 
-      {log.isAiAssisted && (
-        <p className="mt-10 font-mono text-[10px] text-ink-soft">
-          [ AI 辅助生成 · 作者审校 ]
-        </p>
-      )}
+          {log.lessonLearned && (
+            <section className="mt-12">
+              <h2 className="font-sans text-[10px] text-ink-soft">经验总结</h2>
+              <div className="mt-4">
+                <Markdown source={log.lessonLearned} />
+              </div>
+            </section>
+          )}
 
-      {log.contentHash && log.publishedAt ? (
-        <Seal contentHash={log.contentHash} publishedAt={log.publishedAt} />
-      ) : (
-        // 前台只渲染已发布日志，走到这里说明摘要字段缺失——宁可显式告警，也不能"安静地没有印章"
-        <div className="mt-16 border border-ink p-5 font-mono text-[11px] leading-relaxed text-ink">
-          <p className="tracking-[0.2em]">摘要缺失</p>
-          <p className="mt-3 text-ink-soft">
-            这条日志已发布，但库中缺少正文摘要或发布时间记录，因此无法核对内容是否被改动。
-            请在后台重新发布一次补齐；缺失期间，本页不构成内容未被篡改的证明。
-          </p>
-        </div>
-      )}
+          {log.isAiAssisted && (
+            <p className="mt-10 font-mono text-[10px] text-ink-soft">
+              [ AI 辅助生成 · 作者审校 ]
+            </p>
+          )}
+
+          {log.contentHash && log.publishedAt ? (
+            <Seal contentHash={log.contentHash} publishedAt={log.publishedAt} />
+          ) : (
+            // 前台只渲染已发布日志，走到这里说明摘要字段缺失——宁可显式告警，也不能"安静地没有印章"
+            <div className="mt-16 border border-ink p-5 font-mono text-[11px] leading-relaxed text-ink">
+              <p className="tracking-[0.2em]">摘要缺失</p>
+              <p className="mt-3 text-ink-soft">
+                这条日志已发布，但库中缺少正文摘要或发布时间记录，因此无法核对内容是否被改动。
+                请在后台重新发布一次补齐；缺失期间，本页不构成内容未被篡改的证明。
+              </p>
+            </div>
+          )}
+        </article>
+        {showToc && <ArticleTocRail groups={tocGroups} />}
+      </div>
     </main>
   );
 }

@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* F23/D34：日志详情页路径 u/[handle]/logs/[slug] 含 logs 段，命中 .gitignore 第 2 行的
+   Node 模板 logs 规则；Tailwind v4 自动内容探测按 gitignore 跳过该页（git 因文件已跟踪不受影响），
+   致本页独有的 lg:grid / lg:grid-cols / lg:gap-10 / lg:mx-0 不生成、桌面右栏 grid 失效。
+   按负责人裁定在 globals.css 内用 @source inline 强制生成这几个工具类（不动 .gitignore；
+   实测 @source 登记目录仍受 gitignore 过滤，故用 inline 直接生成候选）。下列类须与本页布局类同步；
+   I006/I014 同源的 ignore 隐患对该目录未来新文件仍在，根治需 .gitignore 否定规则——另记台账。 */
+@source inline("lg:grid lg:grid-cols-[minmax(0,720px)_minmax(0,1fr)] lg:gap-10 lg:mx-0 max-w-[1080px]");
+
 :root {
   --background: #f4f1ec;
   --foreground: #1a1a18;
@@ -163,6 +171,170 @@ select {
   input,
   textarea,
   select {
+    transition: none;
+  }
+}
+
+/* ── F23/D34：阅读目录与进度条 ───────────────────────────────────── */
+
+/* 整页阅读进度条：零 JS，CSS 滚动驱动动画。口径是整页滚动（含页眉页脚），
+   不是正文区间——负责人裁定先上整页版、观察反馈后再议。不支持 animation-timeline
+   的浏览器整条不画（@supports 之外 display:none），阅读不受影响。
+   颜色用主墨 --foreground：不给 --brown 扩权（D30 B1 强调色仍只属导航当前项） */
+.reading-progress {
+  display: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  .reading-progress {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--foreground);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    animation: reading-progress-grow linear both;
+    animation-timeline: scroll(root);
+    z-index: 40;
+    pointer-events: none;
+  }
+}
+
+@keyframes reading-progress-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* 锚点跳转让开进度条与呼吸位；ArticleToc 的 scrollspy 顶线（TOP_OFFSET=32）同口径 */
+.log-body h1,
+.log-body h2,
+.log-body h3 {
+  scroll-margin-top: 2rem;
+}
+
+/* 桌面目录右栏：sticky 随行，超高自滚；滚动条按本站令牌画，不留浏览器默认灰 */
+.toc-rail {
+  position: sticky;
+  top: 2rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  padding-bottom: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-hairline) transparent;
+}
+
+.toc-rail::-webkit-scrollbar {
+  width: 4px;
+}
+
+.toc-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.toc-rail::-webkit-scrollbar-thumb {
+  background: var(--color-hairline);
+}
+
+.toc-rail::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-soft);
+}
+
+.toc-group-block + .toc-group-block {
+  margin-top: 1rem;
+}
+
+.toc-group {
+  margin-top: 0.75rem;
+}
+
+.toc-list {
+  margin-top: 0.25rem;
+}
+
+/* 当前态 = 主墨文字 + 2px 主墨左边线（颜色之外另有非颜色线索）；非当前态辅助灰、边线透明。
+   层级用缩进表达：h1 不缩、h2 缩一档、h3 缩两档 */
+.toc-link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  border-left: 2px solid transparent;
+  padding: 0.3rem 0 0.3rem 0.75rem;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+
+.toc-link:hover {
+  color: var(--foreground);
+}
+
+.toc-link[aria-current="location"] {
+  border-left-color: var(--foreground);
+  color: var(--foreground);
+}
+
+.toc-link[data-level="2"] {
+  padding-left: 1.5rem;
+}
+
+.toc-link[data-level="3"] {
+  padding-left: 2.25rem;
+}
+
+.toc-num {
+  flex: none;
+}
+
+/* 移动端折叠面板：details/summary 原生开合（零 JS），1px 暖线框，零圆角零阴影 */
+.toc-panel {
+  border: 1px solid var(--color-hairline);
+}
+
+.toc-panel summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.toc-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.toc-panel-count {
+  margin-left: auto;
+}
+
+.toc-panel summary::after {
+  content: "▸";
+  font-size: 10px;
+  transition: transform 120ms linear;
+}
+
+.toc-panel[open] summary::after {
+  transform: rotate(90deg);
+}
+
+.toc-panel-body {
+  border-top: 1px solid var(--color-hairline);
+  padding: 0.5rem 1rem 0.75rem;
+  max-height: 50vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-hairline) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toc-panel summary::after {
     transition: none;
   }
 }
