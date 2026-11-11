@@ -6,6 +6,8 @@
  * 修改记录：
  * - 2026-11-03: 初始创建（合规方案 7.1 / 7.2 落地）。依赖许可值来自 node_modules 实测，字体许可标注为未联网复核
  * - 2026-11-04: 三处 text-[13px] 归到字号阶上的 14px（text-sm）——13 不在 10/11/12/14/18 里（D27）
+ * - 2026-11-11: 负责人完成上游 LICENSE 复核（I040 结案），移除"本次未联网复核上游 LICENSE 原文"免责提示，
+ *               改记已确认的许可（Inter / Noto Serif SC = OFL 1.1，JetBrains Mono = Apache 2.0）与免费商用结论
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -74,9 +76,9 @@ export default function LicensesPage() {
         <LicenseList items={FONT_LICENSES} />
         <p className="mt-4 text-sm leading-relaxed text-ink-soft">
           字体不随本仓库分发，由框架构建期从 Google Fonts 拉取后自托管产物。
-          上述许可按项目事实基座登记的字体白名单（SIL OFL / Apache 2.0）填写，
-          <strong className="font-medium text-ink">本次未联网复核上游 LICENSE 原文</strong>
-          ，若与上游不一致以字体仓库声明为准。
+          上述许可已由负责人复核上游 LICENSE 原文确认：Inter 与 Noto Serif SC 采用
+          SIL Open Font License 1.1，JetBrains Mono 采用 Apache License 2.0，
+          均为宽松开源许可，允许免费商用。
         </p>
       </section>
 

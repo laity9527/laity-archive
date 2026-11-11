@@ -65,12 +65,17 @@ OAuth 码缺失，测试钉住旧口径）、**I079**（refreshLogViews 仍在�
 补 OAuth 六码）、I079（确认页面全部请求期取数后删除死路径）、I080（SPEC 新增 F21 + 说明书 4.4 并入一段）。
 概览按脚本实算改为 **80 个编号 / FIXED 59 / OPEN 10**（83 明细行 = 82 状态行 + I034 指针行），
 未结项速览移除 I077–I080 四行。既有其它明细与「经验归纳」未改动。
+维护留痕续十四：2026-11-11 按负责人点名"关闭 I040 字体许可复核"——负责人已复核三款字体上游 LICENSE 原文，
+**I040 转 FIXED**（Inter / Noto Serif SC = SIL OFL 1.1、JetBrains Mono = Apache 2.0，均允许免费商用）；
+licenses.ts 补复核记录行（FONT_LICENSES 值本就与上游一致，未改值）、/licenses 页移除"本次未联网复核"免责提示。
+概览按脚本实算改为 **80 个编号 / FIXED 60 / OPEN 9**（83 明细行 = 82 状态行 + I034 指针行），
+未结项速览移除 I040 行。既有其它明细与「经验归纳」未改动。
 
 
 ## 台账概览（每次开工先看这里）
 
-- 规模：已登记 80 个编号（I001–I080），其中 I034 含 4 行多轮续记。状态分布：FIXED 59、WONTFIX 9、OPEN 10、PLANNED 4。
-  （本行计数由脚本按明细表实算得：**83 明细行 = 82 条状态行（FIXED 59 + WONTFIX 9 + OPEN 10 + PLANNED 4）
+- 规模：已登记 80 个编号（I001–I080），其中 I034 含 4 行多轮续记。状态分布：FIXED 60、WONTFIX 9、OPEN 9、PLANNED 4。
+  （本行计数由脚本按明细表实算得：**83 明细行 = 82 条状态行（FIXED 60 + WONTFIX 9 + OPEN 9 + PLANNED 4）
   + I034 首行指针行**，对应 80 个编号；2026-11-05 起按 AGENTS「已知坑速查 → 文档数据与代码实际不符」的口径，
   台账数字一律当场重算，不凭印象填、不沿用上一版。）
 - 编号规则：按发现顺序分配，**不复用、不重排**——所以正文里编号并非严格升序（I013–I016 排在 I021 之后、I023/I024 排在 I025/I026 之后、I042/I043 颠倒），这是留痕不是错误。引用一律用编号，不写"上次那条"。
@@ -87,7 +92,6 @@ OAuth 码缺失，测试钉住旧口径）、**I079**（refreshLogViews 仍在�
 | I021 | OPEN | 软著材料打印成 PDF 的真实分页未实测 |
 | I033 | PLANNED | Server Action 的 Origin 校验线上待验 |
 | I035 | OPEN | 备案号等合规位待本人填入 |
-| I040 | OPEN | 三款字体的上游 LICENSE 未联网复核 |
 | I051 | OPEN | 误写标题的提交已推 origin，不改历史 |
 | I062 | OPEN | 桶里两个 70 字节探针对象待清理 |
 | I068 | OPEN | 依赖有无已知 CVE 无数据，待批准换源跑一次审计 |
@@ -140,7 +144,7 @@ OAuth 码缺失，测试钉住旧口径）、**I079**（refreshLogViews 仍在�
 | I038 | 2026-11-03 | 目录名与文档不一致：AGENTS.md 与 README 写的是 `docs/03-功能截图/`，磁盘上实际是 `docs/03-截图/` | 按文档路径找截图会找不到；写脚本或让 AI 按约定落盘时也会放错位置 | FIXED（2026-11-03，经我"按你的经验决定"授权） | 已改名为 `docs/03-功能截图/`。更正一处预设：原打算"一次 `git mv`"，实际这个目录是空的且从未入库（Git 不跟踪空目录），所以是一次普通 `mv`，仓库层面没有历史变更；里面仍然零张截图，等你按验收补 |
 | I039 | 2026-11-03 | `npm run lint` 会把 `tmp/` 下的临时诊断脚本一起扫：本轮我自己写的 `window-measure.mjs` 里两个未使用的 import 就报了 2 条 warning，而 `tmp/` 已在 `.gitignore` 里 | 发版门禁（lint 退出 0）会被一次性的本地探针碰红，容易误判成"代码出问题"；为了过门禁去改临时脚本又是本末倒置 | FIXED（2026-11-03，经我"按你的经验决定"授权） | `eslint.config.mjs` 的 `globalIgnores` 加了 `"tmp/**"`（`tools/` 下的交付脚本仍参与 lint）。这件事还连带暴露一个更值的问题：为了让注释不被 lint 挑眼而写的那两行注释，把收录清单 ①+② 从 1486 行顶到 1501 行，`proxy.ts` 又被切掉一行——见 I034-补2 |
 
-| I040 | 2026-11-03 | `/licenses` 页三款字体（Inter、Noto Serif SC、JetBrains Mono）的许可证按 AGENTS.md 字体白名单登记，但本轮没能独立复核上游 LICENSE 原文：fonts.google.com 与 raw.githubusercontent 两次抓取都失败，Next 自带的 font-data.json 里也没有 license 字段 | 对外公示的许可信息若与上游不一致，属合规页自身的事实错误 | OPEN（等有出网环境再核） | 复核方式：取各字体上游仓库 LICENSE 原文比对（Inter 与 Noto Serif SC 应为 SIL OFL 1.1，JetBrains Mono 应为 Apache 2.0），确认后可删掉页面上那句"本次未联网复核"。依赖侧不受影响——18 个直接依赖的许可是实测读出来的，且有 tests/licenses.test.ts 对拍 |
+| I040 | 2026-11-03 | `/licenses` 页三款字体（Inter、Noto Serif SC、JetBrains Mono）的许可证按 AGENTS.md 字体白名单登记，但本轮没能独立复核上游 LICENSE 原文：fonts.google.com 与 raw.githubusercontent 两次抓取都失败，Next 自带的 font-data.json 里也没有 license 字段 | 对外公示的许可信息若与上游不一致，属合规页自身的事实错误 | FIXED（2026-11-11，负责人复核上游 LICENSE 结案） | 负责人已核实上游 LICENSE，均为宽松开源协议（Apache 2.0 / OFL-1.1），允许免费商用，已同步更新 licenses 页并移除免责提示。｜ 复核结论：Inter 与 Noto Serif SC 为 SIL Open Font License 1.1、JetBrains Mono 为 Apache License 2.0，与 FONT_LICENSES 原登记值一致（值未改，仅补复核记录行）；依赖侧 18 个直接依赖许可仍由 tests/licenses.test.ts 对拍，不受影响 |
 | I041 | 2026-11-03 | 外部《多用户开发者档案库合规需求设计方案》要求邮箱注册、手机号验证码、内容审核与举报、UGC 避风港、租户隔离、管理员分角色与审计日志、数据导出与账号注销 | 这些是平台型义务；本站无注册、无第三方投稿，实现它们要新增 4 个依赖与 3 个付费服务，且会让已登记的软著材料与实物不符 | WONTFIX（本轮裁决，见 DESIGN D19 与 docs/00-开发方法论/合规需求差距分析与分期方案.md） | 逐条对照已写成差距分析文档：已满足项列证据、前提不成立项标出不做理由、单人站也成立的项已在本轮落地（敏感信息门、删除权、/licenses、页脚三项合规位、应急预案）。若将来真要转多用户，按该文档的 Phase 9 单独立项，依赖与服务逐项报批 |
 | I043 | 2026-11-04 | compose 的项目名默认取自**所在目录名**，生产编排与本地开发编排在同一目录 → 同属项目 laity-archive。本机做整套生产预演时执行 `docker compose -f docker-compose.prod.yml -f tmp/prod-rehearsal.yml down -v`，**连带删掉了开发容器 laity-postgres** | 开发库容器消失；数据卷 laity-archive_postgres_data 因不在本次声明的卷列表里而幸存，数据无损（1 项目 / 1 日志 / 已发布 1，哈希前缀 a0197426 与已知向量一致） | FIXED（2026-11-04） | 立即用 `docker compose up -d` 重建容器并重挂原卷，五条路由（/ /logs /logs/prebuild-index /licenses /privacy）全部 200，读到真数据。根治：生产编排顶层加 `name: laity-prod`，两套编排从此互不波及——实测生产项目名为 laity-prod、开发仍为 laity-archive。教训本身也值得记：预演脚本必须用一次性容器名、独立卷与独立标签，本次除容器外这些都做到了 |
 | I042 | 2026-11-04 | 库不可达时，`/logs` 返回 **HTTP 200**（页面里内联渲染错误边界与 Retry），而 `/logs/[slug]` 返回 500 | 只看页面状态码做监控会漏报——列表页看起来一切正常 | WONTFIX（PPR 语义如此，不改代码） | 这是 Cache Components 下静态壳与延迟段分离的必然结果：壳能出 200，取数失败只影响内联片段。运维判据改为认 `/api/health` 的 `db` 字段（预演实测：停库后立刻 503 {"status":"degraded","db":false}，容器约 80s 后转 unhealthy；恢复库后约 20s 自动回到 healthy，全程 app 与 nginx 的 RestartCount 均为 0，无级联重启）。已写进手册第三节与第六节 |

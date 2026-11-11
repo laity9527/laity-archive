@@ -7,6 +7,9 @@
  *  - 2026-11-03: 初始创建（合规方案 7.1 开源致谢落地）。18 个直接依赖的 license 字段逐个从 node_modules 读出后登记，
  *                不凭记忆填写；tests/licenses.test.ts 会核对"每个依赖都在表里"与"许可不落在禁用集合内"
  * - 2026-11-04: next-auth 的用途与商标声明随 D20 改为口令登录口径
+ * - 2026-11-11: 负责人完成上游 LICENSE 复核（I040 结案）：Inter / Noto Serif SC 为 SIL Open Font License 1.1、
+ *                JetBrains Mono 为 Apache License 2.0，均允许免费商用。FONT_LICENSES 的值本就与上游一致，
+ *                本轮不改值，仅登记复核事实；/licenses 页同步移除"本次未联网复核"免责提示
  */
 
 export type DependencyLicense = {
