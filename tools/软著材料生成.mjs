@@ -76,6 +76,9 @@
  * - 2026-11-10: 第二十三次登记（V2.0 Step 6 Commit 2）：新增 ai-actions（AI 生成动作层）登记进 ③，
  *               与 sync-actions/upload-action 等后台动作同段；Editor 按钮为既有 ③ 段文件内改动，
  *               不出新文件；①+②、④ 均未动，出件看护栏
+ * - 2026-11-11: V2.1 全局搜索：新增 src/lib/log-search.ts（matchLog 匹配纯函数：四字段子串匹配）
+ *               登记进折走段 ③，与 logs.ts 相邻；调用方 searchLogs 在 ③ 内、页面在 ④，
+ *               ①+② 零余量防线不动，出件看护栏
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -151,6 +154,9 @@ const BANDS = [
       // logs.ts 是数据访问层（DAL），取数逻辑的调用方（页面/动作）都在 ③④ 可见；
       // 2026-11-10 第十六次配平：与 github-sync 一同让位，确保 auth/proxy/publish/projects/content-hash 整份在前窗口
       "src/lib/logs.ts",
+      // log-search 是 V2.1 全局搜索的匹配纯函数（四字段大小写不敏感子串匹配），
+      // 调用方 searchLogs 在 logs.ts 内、页面在 ④；与 ai-prompt/object-key 同类放 ③，不动 ①+② 行数
+      "src/lib/log-search.ts",
       // ai-prompt 是 Step 6 的纯函数层（提交列表→提示词、模型返回→BEFORE/AFTER 解析），调用方是后台动作层；
       // 与 github-sync-filter 同族放 ③，不动 ①+② 的行数（零余量防线下安全）
       "src/lib/ai-prompt.ts",

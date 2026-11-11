@@ -20,13 +20,16 @@
  *               summary 加 `w-fit` 把命中区收窄到文案本身
  * - 2026-11-09: V2.0 Step 3 阶段一：大厅仍是全局公共大厅（裁定 ①），列表行标题链接改
  *               /u/[handle]/logs/[slug]——owner 的 handle 经 getSafeLogs 的 include 白名单带出（公开标识）
+ * - 2026-11-11: V2.1 新增全局搜索：筛选栏上方搜索表单（GET 提交 + hidden input 携带
+ *               project/tag，提交不丢筛选）；logsHref 全链路保留 q；空态三态
+ *               （搜索无结果/筛选无结果/全空）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Timeline } from "@/components/Timeline";
 import { pickParam } from "@/lib/forms";
-import { getSafeLogs } from "@/lib/logs";
+import { getSafeLogs, searchLogs } from "@/lib/logs";
 
 export const metadata: Metadata = {
   title: "开发日志",
@@ -38,16 +41,18 @@ type LogsPageProps = {
   searchParams: Promise<{
     project?: string | string[];
     tag?: string | string[];
+    q?: string | string[];
   }>;
 };
 
 // 标签筛选区默认可见的上限，超出部分收进原生 details 折叠
 const TAG_LIMIT = 12;
 
-function logsHref(params: { project?: string; tag?: string }) {
+function logsHref(params: { project?: string; tag?: string; q?: string }) {
   const search = new URLSearchParams();
   if (params.project) search.set("project", params.project);
   if (params.tag) search.set("tag", params.tag);
+  if (params.q) search.set("q", params.q);
   const query = search.toString();
   return query ? `/logs?${query}` : "/logs";
 }
@@ -60,13 +65,15 @@ function filterClass(active: boolean) {
 }
 
 async function LogBoard({ searchParams }: LogsPageProps) {
-  const { project, tag } = await searchParams;
+  const { project, tag, q } = await searchParams;
   const projectFilter = pickParam(project);
   const tagFilter = pickParam(tag);
+  const qFilter = pickParam(q);
 
   const all = await getSafeLogs();
-  const logs =
-    projectFilter || tagFilter
+  const logs = qFilter
+    ? await searchLogs({ q: qFilter, project: projectFilter, tag: tagFilter })
+    : projectFilter || tagFilter
       ? await getSafeLogs({ project: projectFilter, tag: tagFilter })
       : all;
 
@@ -89,6 +96,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
       href={logsHref({
         project: projectFilter,
         tag: tagFilter === item ? undefined : item,
+        q: qFilter,
       })}
       className={filterClass(tagFilter === item)}
     >
@@ -98,11 +106,34 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
   return (
     <>
+      <form method="get" className="mb-8 flex items-baseline gap-4">
+        <label htmlFor="log-search" className="font-sans text-[10px] text-ink-soft">
+          搜索
+        </label>
+        <input
+          id="log-search"
+          type="search"
+          name="q"
+          defaultValue={qFilter}
+          placeholder="标题 / 正文 / 标签"
+          className="border-b border-hairline bg-transparent py-1 font-sans text-sm text-ink"
+          aria-label="搜索日志"
+        />
+        <input type="hidden" name="project" value={projectFilter ?? ""} />
+        <input type="hidden" name="tag" value={tagFilter ?? ""} />
+        <button
+          type="submit"
+          className="border-b border-ink font-sans text-sm text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+        >
+          搜索
+        </button>
+      </form>
+
       <nav className="mb-12 flex flex-col gap-4 border-y border-hairline py-4 md:flex-row md:items-baseline md:gap-10">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-3">
           <span className="font-sans text-[10px] text-ink-soft">项目</span>
           <Link
-            href={logsHref({ tag: tagFilter })}
+            href={logsHref({ tag: tagFilter, q: qFilter })}
             className={filterClass(!projectFilter)}
           >
             全部
@@ -113,6 +144,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
               href={logsHref({
                 project: projectFilter === slug ? undefined : slug,
                 tag: tagFilter,
+                q: qFilter,
               })}
               className={filterClass(projectFilter === slug)}
             >
@@ -145,14 +177,30 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
       {logs.length === 0 ? (
         <div>
-          <p className="font-sans text-xs text-ink-soft">没有符合条件的日志</p>
-          {(projectFilter || tagFilter) && (
-            <Link
-              href={logsHref({})}
-              className="mt-5 inline-block border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
-            >
-              清除筛选，看全部日志 →
-            </Link>
+          {qFilter ? (
+            <>
+              <p className="font-sans text-xs text-ink-soft">
+                没有找到包含「<code className="font-mono">{qFilter}</code>」的日志
+              </p>
+              <Link
+                href={logsHref({ project: projectFilter, tag: tagFilter })}
+                className="mt-5 inline-block border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+              >
+                清除搜索，看全部日志 →
+              </Link>
+            </>
+          ) : projectFilter || tagFilter ? (
+            <>
+              <p className="font-sans text-xs text-ink-soft">没有符合条件的日志</p>
+              <Link
+                href={logsHref({})}
+                className="mt-5 inline-block border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+              >
+                清除筛选，看全部日志 →
+              </Link>
+            </>
+          ) : (
+            <p className="font-sans text-xs text-ink-soft">还没有日志</p>
           )}
         </div>
       ) : (

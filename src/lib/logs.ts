@@ -19,8 +19,11 @@
  *               getLatestLogs 新增 userId 第二参数供租户主页取该租户最新日志
  * - 2026-11-09: V2.0 Step 4-B：getAdminLogById 加 userId 条件（findFirst 复合键），
  *               include 补 user.handle——编辑页「看前台」链接拼 /u/[handle]/logs/[slug] 要用
+ * - 2026-11-11: V2.1 新增全局搜索：searchLogs 在 getSafeLogs 之上内存过滤（大厅公域口径甲，
+ *               isPublished 恒定）；匹配逻辑抽至 src/lib/log-search.ts 的 matchLog 纯函数
  */
 import { db } from "@/lib/db";
+import { matchLog } from "@/lib/log-search";
 import { resolveUserId } from "@/lib/projects";
 
 export type SafeLogFilter = {
@@ -69,6 +72,18 @@ export async function getSafeLogs(filter: SafeLogFilter = {}) {
     owned.push({ ...log, user });
   }
   return owned;
+}
+
+// 全局搜索（V2.1）：大厅为公域广场（甲口径），isPublished 恒定、不做租户收窄；
+// 租户视图如需搜索，沿用 handle→userId 的既有口径（filter 形状与 getSafeLogs 一致）。
+// 匹配逻辑在内存层完成（大厅本就全量加载已发布日志），tags 子串是 Prisma 数组过滤做不到的
+export async function searchLogs(filter: SafeLogFilter & { q?: string }) {
+  const base = await getSafeLogs(filter);
+  const q = filter.q?.trim();
+
+  if (!q) return base;
+
+  return base.filter((log) => matchLog(log, q));
 }
 
 // 首页「最新日志」口径：beforeDate 是"哪天做的决策"，publishedAt 才是"什么时候写出来的"，
