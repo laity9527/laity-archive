@@ -12,6 +12,9 @@
 #   runner 侧 appleboy/scp-action@v0.1.7 打包整仓 SCP 推送（source "." 排除
 #   .git/node_modules/.next/tmp，rm: false 保护 .env.production 等未跟踪文件）；
 #   ssh 脚本删除 fetch/reset，直接 备份→构建→迁移→切换→健康门→失败回滚
+# - 2026-11-11: 恢复 ssh-action 的 fingerprint 参数（Secret 已按官方取法
+#   ssh-keygen -l -f <hostkey>.pub | cut -d ' ' -f2 更新为纯净 SHA256:base64 格式），
+#   host key 校验防线闭环
 #
 # 说明：
 #   1. ci.yml 一字不动（AGENTS 红线：CI 改动逐条批准；本文件是负责人点名批准的新建项）。
@@ -21,7 +24,10 @@
 #   3. Secrets（建议挂 production Environment，真实值永不落仓库）：
 #      DEPLOY_HOST / DEPLOY_PORT（可选，默认 22）/ DEPLOY_USER / DEPLOY_SSH_KEY（ed25519 私钥全文）/
 #      DEPLOY_SSH_FINGERPRINT（服务器 host key 的 SHA256 指纹）/ DEPLOY_PATH（可选，默认 /opt/laity-archive）。
-#      指纹取法（负责人在可信网络里执行一次）：ssh-keyscan -t ed25519 <host> | ssh-keygen -lf -
+#      指纹取法（负责人在可信网络里执行一次，必须取纯净格式）：
+#      ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub | cut -d ' ' -f2
+#      （只取 SHA256:base64 段；ssh-keygen -lf 的整行输出带位数前缀与注释，
+#      appleboy 逐字比对会 mismatch——2026-11-11 排障结论）
 #      appleboy/ssh-action 的 fingerprint 非空时严格校验 host key（等价 StrictHostKeyChecking=yes），
 #      为空会静默退化为不校验——所以部署前有一步硬卡指纹非空，缺了直接拒绝。
 #   4. 已查 appleboy/ssh-action 的 action.yml 核实：新版移除了 script_stop 输入，
@@ -68,9 +74,7 @@ jobs:
 
       # fingerprint 为空时 ssh-action 会退化为不校验 host key（MITM 大门敞开），
       # 这一步把"必须校验"变成硬门禁：缺指纹直接失败，不允许静默降级。
-      # 本轮起 ssh-action 的 fingerprint 参数临时移除排障（appleboy 指纹校验兼容
-      # 问题），此步保留"密钥必须配置"的前置硬卡，但 host key 校验本身暂不生效，
-      # 排障完成后恢复 fingerprint 参数
+      # fingerprint 参数已恢复（Secret 为纯净 SHA256:base64 格式，见文件头记录）
       - name: 校验 host key 指纹已配置
         env:
           FINGERPRINT: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
@@ -108,8 +112,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT || '22' }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          # 本轮临时移除 fingerprint 参数排障（appleboy 指纹校验兼容问题），
-          # host key 校验暂不生效，排障后恢复
+          fingerprint: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
           # 默认 10m 不够服务器侧 build + migrate + 健康门用，放宽到 30m（job 级 40m 兜底）
           command_timeout: 30m
           envs: DEPLOY_PATH,DEPLOY_SHA
