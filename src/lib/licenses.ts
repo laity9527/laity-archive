@@ -10,6 +10,8 @@
  * - 2026-11-11: 负责人完成上游 LICENSE 复核（I040 结案）：Inter / Noto Serif SC 为 SIL Open Font License 1.1、
  *                JetBrains Mono 为 Apache License 2.0，均允许免费商用。FONT_LICENSES 的值本就与上游一致，
  *                本轮不改值，仅登记复核事实；/licenses 页同步移除"本次未联网复核"免责提示
+ * - 2026-11-11: 修复 V1.0 旧口径（负责人点名）：next-auth 用途由"管理员口令与会话"改"GitHub OAuth 登录与会话（D33）"；
+ *                TRADEMARK_NOTE 删"本项目不接入 GitHub 登录"，改记 OAuth 身份验证 + 拉取公开提交数据（Step 5）
  */
 
 export type DependencyLicense = {
@@ -24,7 +26,7 @@ export const DEPENDENCY_LICENSES: DependencyLicense[] = [
   { name: "next", license: "MIT", purpose: "应用框架与路由（App Router）" },
   { name: "react", license: "MIT", purpose: "视图层" },
   { name: "react-dom", license: "MIT", purpose: "React 的 DOM 渲染器" },
-  { name: "next-auth", license: "ISC", purpose: "后台登录（管理员口令与会话）" },
+  { name: "next-auth", license: "ISC", purpose: "GitHub OAuth 登录与会话（D33）" },
   { name: "@prisma/client", license: "Apache-2.0", purpose: "数据库访问层" },
   { name: "prisma", license: "Apache-2.0", purpose: "schema 与迁移工具（开发期）" },
   { name: "tailwindcss", license: "MIT", purpose: "样式工具类" },
@@ -49,7 +51,7 @@ export const FONT_LICENSES: DependencyLicense[] = [
 ];
 
 export const TRADEMARK_NOTE =
-  "GitHub 是 GitHub, Inc. 的注册商标。本项目不接入 GitHub 登录，提到这个名称只用于说明代码仓库所在位置与发布前扫描的凭据形态，与 GitHub, Inc. 不存在赞助、背书或隶属关系。页面中出现的其他产品名称、商标与品牌均为其各自所有者的财产，本项目不主张任何相关权利。";
+  "GitHub 是 GitHub, Inc. 的注册商标。本项目使用 GitHub OAuth 进行身份验证，并通过 GitHub API 拉取账号的公开提交数据用于生成开发日志草稿；提到这个名称仅用于说明上述集成与代码仓库所在位置，与 GitHub, Inc. 不存在赞助、背书或隶属关系。页面中出现的其他产品名称、商标与品牌均为其各自所有者的财产，本项目不主张任何相关权利。";
 
 // AGENTS.md 的依赖许可红线：GPL / AGPL 等传染性许可一律禁止。清单里出现下列前缀即判不合格
 export const FORBIDDEN_LICENSE_PREFIXES = ["GPL", "AGPL", "LGPL", "CC-BY-NC", "SSPL"];
