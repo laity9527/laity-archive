@@ -53,6 +53,8 @@
   `AI_001` 统一降级、`isAiAssisted` 字段落库与详情页 [ AI 辅助生成 · 作者审校 ] 标签；
   F22 状态行由「已裁决待实施」改记「已实施（2026-11-10）」。既有 F 编号与其余条目未改动。
 - 2026-11-11 阅读目录与进度条（负责人点名三项裁断：排版 A 右栏 grid+sticky/1024px、编号 mono+中文标题 sans/进度条主墨、进度条先上 CSS 整页版零 JS）：「已实施增补」新增 **F23（日志详情阅读目录与进度条）**，状态记「已实施（2026-11-11）」，实施细节见 D34；范围界定首句增补区间由 F19–F21 衍生清理为 **F19–F23**（F22 早已实施却不在区间内，本轮加 F23 直接加剧该矛盾，一并修正）；上线基线回归测试数按 `npm test` 实测由 85 改为 **113**（本轮 toc 新增 12 条）。既有 F 编号未重排；追溯矩阵沿 F20–F22 先例不增行（该缺口另记 I082）。
+- 2026-11-11 按负责人点名"I082 请顺手补掉"：一次性把 F20–F23 四行补入第六节追溯矩阵（状态均标「已实施」），
+I082 结案（台账转 FIXED）。既有 F 编号与其余条目未改动。
 
 已确认的三项决策（2026-10-30）：
 1. 后台登录：NextAuth + GitHub OAuth，仅允许我本人的 GitHub 账号；
@@ -338,6 +340,10 @@ URL 里手填的任意串一律显示"未收录的错误码"（D28）。新增�
 | F17 删除权 | D19 | `deleteLog` | 回填 slug 不符得 `LOG_004` 且删除未执行；删除后该 slug 前台 404 |
 | F18 开源许可 | D19 | `licenses.ts`、`/licenses` | 与 package.json 对拍通过、许可值来自 `node_modules` 实测、无传染性许可 |
 | F19 关于页 | D31 | `app/about/page.tsx`（新增）、`sitemap-data.ts`、`SiteNav.tsx`（`routes.ts` 经实测无需改，黑名单制下 `/about` 天然公开） | **已实施（2026-11-05）**：`id="main"`、`generateMetadata`、`← 返回首页` 齐备；浏览器 hydrated DOM 实测「关于」项 `aria-current="page"` 且计算色为墨色实线边框、未配置邮箱时「待补充」以 `font-style: italic` 渲染且页面 `mailto` 链接数为 0；`/about` 进 sitemap；构建路由表 `○ /about` |
+| F20 GitHub 自动同步 | D33、V2.0 Step 5 | `admin/page.tsx`（[ 从 GitHub 同步 ] 按钮与 `github-sync` 虚拟项目）、`admin/sync-actions.ts`、`github-sync-filter.ts` | **已实施（2026-11-10，Step 5）**：实测 102 条 commit → 12 条草稿（`synced=12&skipped=1`）；四道过滤 + `sourceCommitSha` 幂等锚点 + `@@unique([userId, sourceCommitSha])` 重复点击不产重复行；SYNC_001/002/003 三分支；`tests/github-sync-filter.test.ts`（同步过滤 11 条）与 `tests/token-crypto.test.ts`（加密 7 条）全绿（`npm test`） |
+| F21 租户主页 | D33、V2.0 Step 3 | `u/[handle]/page.tsx`、`projects.ts:getArchiveBoard(userId)` | **已实施（2026-11-09，Step 3）**：构建路由表 `◐ /u/[handle]`（PPR）；下钻页 `/u/[handle]/logs/[slug]` 与 `/u/[handle]/projects/[slug]`、handle 不存在走品牌化 404；进 sitemap（只收公开稳定路由）；说明书 4.4 已并入租户主页描述（I080 FIXED） |
+| F22 AI 辅助生成 | V2.0 Step 6 六项边界裁定（2026-11-10，负责人） | `admin/ai-actions.ts`（`generateAiDraftAction`）、`Editor.tsx`（[ AI 帮我写 ] 按钮与 `isAiAssisted`）、`ai-prompt.ts`、`ai-client.ts` | **已实施（2026-11-10，Step 6）**：手动触发不自动生成、超 12 次请求返 `AI_002`、失败统一 `AI_001` 降级保留「（等待补充）」且不自动发布；`isAiAssisted` 落库、详情页末尾 [ AI 辅助生成 · 作者审校 ] 标签；模型默认 DashScope compatible-mode（`qwen-plus`）；`tests/ai-prompt.test.ts` 全绿（`npm test`） |
+| F23 阅读目录与进度条 | D34 | `toc.ts`、`ArticleToc.tsx`、`u/[handle]/logs/[slug]/page.tsx`、`markdown.tsx`、`globals.css` | **已实施（2026-11-11）**，实施细节见 D34；`tests/toc.test.ts` 12 条纯逻辑测试锁抽取口径；浏览器实测桌面三档几何（1280/1024/1023）、锚点偏移 32px、移动面板开合 42↔232px、空态日志不画目录；scrollspy 高亮迁移与进度条推进的动态派发受应用内浏览器引擎局限未验证，算法与 CSS 配置已分别自证 |
 
 ## 七、上线基线（工程与合规）
 

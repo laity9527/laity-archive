@@ -5,6 +5,7 @@
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建（合规方案 2.2.3 的验收依据）
+ * - 2026-11-11: 新增一条回归测试钉住「明文口令赋值」大小写不敏感（findAll 丢 /i 标志问题）
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -49,6 +50,12 @@ test("私钥块与 JWT 命中（都跨标点，必须走全文作用域）", () 
 test("明文口令赋值命中，等号两侧带空格也要抓到", () => {
   assert.ok(codes('password = "hunter2244xx"').includes("inlineSecret"));
   assert.ok(codes("api_key: sk-abcdef123456").includes("inlineSecret"));
+});
+
+test("明文口令赋值大小写不敏感（大写键名也要抓到）", () => {
+  assert.ok(codes('Password = "hunter2244xx"').includes("inlineSecret"));
+  assert.ok(codes("API_KEY: sk-abcdef123456").includes("inlineSecret"));
+  assert.ok(codes('TOKEN="abcdef123456"').includes("inlineSecret"));
 });
 
 test("内网地址命中，公网地址不误判", () => {

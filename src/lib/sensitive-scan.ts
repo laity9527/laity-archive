@@ -5,6 +5,8 @@
  * 创建日期：2026-11-03
  * 修改记录：
  * - 2026-11-03: 初始创建（合规方案 2.2.3"发布前检测"落地）。零依赖，纯正则
+ * - 2026-11-11: findAll 原先只用 "g" 重建正则，丢掉原 pattern 的 /i 标志，「明文口令赋值」退化为大小写敏感
+ *   会漏判大写键名；改为按原 pattern 的 flags 重建（缺 g 时补 g），并新增对应回归测试
  *
  * 误报是这条功能的主要风险：日志里本来就要写 commit SHA、contentHash、版本号与公网 IP。
  * 所以规则分两种作用域——数字形态类（手机号/身份证/IP/AK）只在"词元"内匹配并整体跳过长度 ≥16 的
@@ -119,7 +121,9 @@ function mask(value: string) {
 }
 
 function findAll(pattern: RegExp, haystack: string) {
-  return [...haystack.matchAll(new RegExp(pattern.source, "g"))].map((m) => m[0]);
+  // 必须保留原 pattern 的 flags（如明文口令赋值的 /i），matchAll 又要求 /g：缺则补
+  const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+  return [...haystack.matchAll(new RegExp(pattern.source, flags))].map((m) => m[0]);
 }
 
 export function scanSensitive(text: string): SensitiveHit[] {
