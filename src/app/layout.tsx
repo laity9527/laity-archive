@@ -9,6 +9,8 @@
  * - 2026-11-03: 元信息升级为 metadataBase + 标题模板 + Open Graph，并挂载前台持久导航 SiteNav
  * - 2026-11-03: 挂页脚 SiteFooter（隐私入口 + ICP 备案号合规位），备案号在服务端读取后以 prop 下传
  * - 2026-11-03: 默认标题从"开发复盘证据链"改为"开发复盘档案"——对外文案只描述事实，不暗示法律效果
+ * - 2026-11-12: F27 RSS 订阅：metadata 加 alternates.types 指向 /feed.xml，全站 head 自动发现（官方文档原样写法，
+ *               metadataBase 已就位，相对路径渲染为绝对 URL）
  */
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Noto_Serif_SC } from "next/font/google";
@@ -62,6 +64,9 @@ export const metadata: Metadata = {
     card: "summary",
     title: siteName,
     description: siteDescription,
+  },
+  alternates: {
+    types: { "application/rss+xml": "/feed.xml" },
   },
 };
 

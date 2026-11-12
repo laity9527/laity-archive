@@ -88,6 +88,8 @@
  *               （合计 440），④ 回到 1439 行装进后窗口，ArticleToc 整份留 ④ 不拆。三者皆排版/交互外壳，逻辑在 ②③ 可见
  * - 2026-11-12: F27 RSS 订阅 Commit 1：登记 src/lib/rss.ts 进折走段 ③（与 highlight/export/toc 同族的纯函数层，
  *               调用方 feed 路由下一步同段登记），①+② 零余量防线不动，出件看护栏
+ * - 2026-11-12: F27 RSS 订阅 Commit 2：登记 src/app/feed.xml/route.ts 进折走段 ③（与 sitemap/robots/export route
+ *               同族的对外出口层）；layout.tsx 属 ④ 段内行数增长，出件看护栏
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -210,6 +212,9 @@ const BANDS = [
       "src/lib/sitemap-data.ts",
       "src/app/sitemap.ts",
       "src/app/robots.ts",
+      // feed.xml 路由是 F27 RSS 订阅出口（请求期取数 + 组装 + XML 响应），
+      // 与 sitemap/robots/export route 同族（对外出口层），①+② 零余量防线不动
+      "src/app/feed.xml/route.ts",
       "src/app/admin/layout.tsx",
       "src/app/admin/log-actions.ts",
       "src/app/admin/sync-actions.ts",
