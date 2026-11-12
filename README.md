@@ -66,9 +66,9 @@ GitHub Actions 包含两条工作流：
 |---|---|---|---|
 | 0 | **本文件 README.md** | 项目入口 | 这是什么、做到哪了、怎么跑起来 |
 | 1 | [AGENTS.md](file:///D:/ZHANGLEI/laity-archive/AGENTS.md) | **事实基座（每次开工必读）** | 技术栈锁定、视觉铁律、环境变量总表、常见变更操作手册、已知坑速查 |
-| 2 | [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) | 架构与取舍 | **先读「零、架构总览」与「零·补、历史决策裁剪说明」**，再按需查 D1–D33 决策记录 |
-| 3 | [SPEC.md](file:///D:/ZHANGLEI/laity-archive/SPEC.md) | 需求规格（V2.0 冻结） | 读 F 编号：F01–F22 范围与验收口径、数据模型、接口契约、追溯矩阵 |
-| 4 | [ISSUES.md](file:///D:/ZHANGLEI/laity-archive/ISSUES.md) | 范围外问题台账 | 遇到疑似历史遗留问题先查这里（I001–I080） |
+| 2 | [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) | 架构与取舍 | **先读「零、架构总览」与「零·补、历史决策裁剪说明」**，再按需查 D1–D38 决策记录 |
+| 3 | [SPEC.md](file:///D:/ZHANGLEI/laity-archive/SPEC.md) | 需求规格（V2.0 冻结） | 读 F 编号：F01–F27 范围与验收口径、数据模型、接口契约、追溯矩阵 |
+| 4 | [ISSUES.md](file:///D:/ZHANGLEI/laity-archive/ISSUES.md) | 范围外问题台账 | 遇到疑似历史遗留问题先查这里（I001–I085） |
 
 冲突判定顺序：**代码与运行时实测 > AGENTS.md > SPEC.md > DESIGN.md > ISSUES.md**；README 只作入口，发现冲突一律回报。
 

@@ -11,6 +11,7 @@
  *               页面侧与 proxy 前置判定共用）
  * - 2026-11-12: 新增 decodeTagParam（F26 修正：App Router 实测向页面交付编码原样的 path 参数，
  *               入口解码一次，解码失败回退原值；与 normalizeTag 组合使用）
+ * - 2026-11-12: 修正 normalizeTag 上方注释（I084 结案），改述为编码原样参数口径，函数体未动
  */
 
 // ?error= / ?saved= 这类参数被框架给成数组时按缺省处理，只认非空字符串
@@ -18,8 +19,9 @@ export function pickParam(value: string | string[] | undefined) {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-// 标签聚合页归一化（F26）：页面 path 参数已被框架解码（Next 源码实证），这里不做二次解码，
-// 只做 trim 与空值/超长拒收。调用方（标签页与 proxy 前置判定）负责先过 normalizeTag 再查库。
+// 标签聚合页归一化（F26）：App Router 交付编码原样的 path 参数（双编码探针证实），
+// 调用方须先经 decodeTagParam 解码一次（解码失败回退原值交本函数拒收），
+// 本函数只做 trim 与空值/超长拒收，不做解码。
 export function normalizeTag(value: string): string | null {
   const tag = value.trim();
 
