@@ -23,15 +23,19 @@
  *               未知 handle 与缺日志/项目都回同一页 404，文案不泄露缺的是哪一层
  * - 2026-11-09: V2.0 Step 4-B：guardAdmin 判据由 token.isAdmin 改 token.userId 非空字符串——
  *               多租户下每个注册用户都是自己的管理员，isAdmin 布尔位随口令登录退役（数据隔离在数据层做）
+ * - 2026-11-12: F26 标签聚合页真 404：matcher 增 /tags/:tag，readTagSegment + decodeTagParam/normalizeTag/
+ *               hasPublishedTag 三段判定；非法值与无已发布日志的标签回同一 404，文案不泄露缺的是哪一层；
+ *               四组色值字面量一字未动
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { isPublishedLogSlug } from "@/lib/logs";
+import { decodeTagParam, normalizeTag } from "@/lib/forms";
+import { hasPublishedTag, isPublishedLogSlug } from "@/lib/logs";
 import { isProjectSlug } from "@/lib/projects";
 
 export const config = {
-  matcher: ["/u/:handle/logs/:slug", "/u/:handle/projects/:slug", "/admin/:path*"],
+  matcher: ["/u/:handle/logs/:slug", "/u/:handle/projects/:slug", "/tags/:tag", "/admin/:path*"],
 };
 
 // 文案全部是常量，请求里的 slug 不会拼进 HTML
@@ -49,6 +53,13 @@ const NOT_FOUND_COPY = {
     hint: "链接可能失效了，也可能这个项目还没有进档案库。",
     backHref: "/projects",
     backText: "← 返回项目列表",
+  },
+  tag: {
+    title: "404 · 标签不存在",
+    heading: "这个标签不存在",
+    hint: "它可能还没有已发布的日志，或者链接已经失效。",
+    backHref: "/logs",
+    backText: "← 返回日志列表",
   },
 };
 
@@ -123,6 +134,25 @@ function readTenantSegment(pathname: string, kind: "logs" | "projects") {
   }
 }
 
+// 从 /tags/<tag> 提取标签段；段可能带 URL 编码，decode 失败一律 null（与 readTenantSegment 同构）
+function readTagSegment(pathname: string) {
+  if (!pathname.startsWith("/tags/")) {
+    return null;
+  }
+
+  const parts = pathname.slice(6).replace(/\/+$/, "").split("/");
+
+  if (parts.length !== 1 || !parts[0]) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(parts[0]);
+  } catch {
+    return null;
+  }
+}
+
 async function guardAdmin(request: NextRequest) {
   const token = await getToken({ req: request });
 
@@ -141,6 +171,20 @@ export async function proxy(request: NextRequest) {
 
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     return guardAdmin(request);
+  }
+
+  // 标签聚合页（F26）：原始 pathname 解码一次 → 归一化 → 查有无已发布日志。
+  // 非法值、无已发布日志的标签都回同一页 404——文案只写"不存在/可能没有已发布日志"，不泄露缺的是哪一层
+  const tagHit = readTagSegment(pathname);
+
+  if (tagHit) {
+    const tag = normalizeTag(decodeTagParam(tagHit));
+
+    if (!tag || !(await hasPublishedTag(tag))) {
+      return notFoundResponse("tag");
+    }
+
+    return NextResponse.next();
   }
 
   // 双层判定：层一 handle 在库里存在（lib 内 resolveUserId 查不到即 false），层二 slug 命中且已发布。
