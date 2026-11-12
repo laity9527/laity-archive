@@ -25,6 +25,10 @@ SPEC 的范围界定、F04、路由表、追溯矩阵与回归测试数（73→8
 既有 D1–D33 正文一字未改。同轮 SPEC 增 F23、说明书 4.3 补描述。本轮另按负责人裁定用 globals.css 的
 `@source inline` 绕过 .gitignore 的 logs 规则对本页路径的误伤（Tailwind v4 跳过该页致桌面 grid 类不生成），
 根治所需的 .gitignore 否定规则另记 I081 待点名。
+维护留痕续六：2026-11-12 V2.1 体验打磨（F24 搜索高亮 / F25 全站数据导出）——按已批准的方案文档
+新增 **D35（搜索高亮服务端纯函数 + indexOf 非正则口径）** 与 **D36（数据导出 JSON 格式 + 零新增依赖裁定 +
+Route Handler 口径）**，决策索引同步（D1–D36）。既有 D1–D34 正文一字未改；SPEC 增 F24/F25 并将范围区间
+改记 F19–F25，ISSUES 登记 I083，说明书补两功能描述。
 
 
 ---
@@ -615,7 +619,68 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
   按负责人裁定 Option 2 把租户主页(190)/关于页(158)/登录页(92)自 ④ 平移进 ③（合计 440），④ 回到 1439 行装进后窗口，
   ArticleToc 整份留 ④ 不拆；三者皆排版/交互外壳，逻辑在 ②③ 可见，搜索大厅与首页/详情/目录右栏保留可见。
 
-## 决策索引（D1–D34 一览）
+### D35：搜索关键词高亮——服务端纯函数 + indexOf 非正则口径（F24，已实施 2026-11-12）
+
+- 背景：V2.1 全局搜索（匹配由 `matchLog` 纯函数在内存层完成）上线后，结果列表只显示标题与标签，读者看不到
+  命中在正文里的位置；而列表本不展示正文，高亮需要"命中片段"作载体。方案文档
+  （`docs/00-开发方法论/搜索高亮与数据导出方案.md`）2026-11-12 获批，负责人裁两点：高亮服务端做、A 案棕底纸白字。
+- 决策（均按负责人点名/裁断）：
+  1. **服务端做**：搜索链路本就是服务端请求期处理（PPR 静态壳 + Suspense），高亮是纯文本切分，在服务端把文本切成
+     `{text, match}` 段序列、RSC 直接渲染 `<mark>`——零客户端 JS、零 island；纯函数进 `src/lib/highlight.ts`，
+     `node --test` 直测。
+  2. **indexOf 非正则口径**：查询词是用户输入，拼正则引入正则注入与 ReDoS 两个面；切段用 `indexOf` 循环，
+     lowercase 折叠只用于定位、切片取原文保留作者大小写；与 `matchLog` 同用 `.toLowerCase()`，不出现"匹配了没高亮"。
+  3. **A 案配色**：`mark { background: var(--color-brown); color: var(--background); line-height: inherit; }`，
+     棕底纸白字（实算 5.56:1，≥AA），`--brown` 用途由"仅导航当前项"扩到"导航当前项 + 搜索高亮底色"
+     （AGENTS 视觉铁律修订留痕续十七已记，负责人裁断①授权）。
+- 理由：React 文本节点默认 HTML 转义——正文含 `<script>` 也只显示为文字，XSS 防护是结构性的，不依赖任何净化器；
+  片段是纯文本预览、不经 Markdown 渲染器，不存在 Markdown → HTML 的注入旁路（rehype-sanitize 职责不变，仍管详情页）；
+  窗口边界不变量：切片后按完整 needle 做 `indexOf`，被切口截断的命中不可能匹配——不会产生半个词的高亮残段。
+- 代价与边界：① 片段展示原文，Markdown 语法字符（`##`、`**`）以文字原样可见——有意（片段是搜索预览不是排版）；
+  ② 高亮只做大厅 `/logs`，tags 不参与高亮、租户视图无搜索故无高亮；③ `mark` 必须 `line-height: inherit`，
+  否则背景块撑开行高（已实现）。
+- 判据：`npm test` 12 条纯逻辑全绿（大小写不敏感 / 保留原文大小写 / 多命中 / 空查询 / 正则特殊字符字面处理 /
+  中文 / 窗口省略号 / 边界不变量 / 首尾位置 / 无命中 null / 与 matchLog 口径一致）；浏览器实测 `q=Docker`：
+  标题与 AFTER 片段命中包 `<mark>`，计算样式背景 `rgb(122,90,58)` 文字 `rgb(244,241,236)`、行高继承 22.75px；
+  `q=first-entry` 的 tag-only 命中行无片段行；无命中空态与空 q 零高亮、列表行为不变。
+- 连带：SPEC（F24 增补行 + 追溯矩阵行）、`src/lib/highlight.ts`（新增）、`tests/highlight.test.ts`（新增）、
+  `src/app/logs/page.tsx`（标题切段 + BEFORE/AFTER 片段行接线）、`src/app/globals.css`（mark 规则 +
+  `--color-brown` 令牌注释同步）、AGENTS.md（视觉铁律色彩行 + 修订留痕续十七，点名授权）、
+  `tools/软著材料生成.mjs`（③ 登记）、说明书 4.2（搜索与高亮描述）。
+
+### D36：全站数据导出——JSON 格式 + 零新增依赖裁定 + Route Handler 口径（F25，已实施 2026-11-12）
+
+- 背景：负责人点名在后台概览加 [ 导出所有数据 ] 入口，导出当前账号全部 Project 与 Log。需定三件事：JSON 还是
+  Markdown 压缩包、是否引 archiver 一类依赖、下载怎么触发。方案 2026-11-12 获批；初版实现（Server Action 返回
+  Response）实测被框架拒绝，裁断改 Route Handler。
+- 决策（负责人裁定）：
+  1. **JSON 格式、零新增依赖**：不引 archiver 等 zip 库——新增依赖要停批 + 许可证核查 + linux 容器重算锁文件
+     （I018 复发过），zip 容器格式手写易错，单人档案 JSON 无损（全字段 + 草稿）且可再渲染足够；Markdown 导出
+     YAGNI，日后可基于 JSON 加二次产物。
+  2. **payload 由纯函数组装**：`src/lib/export.ts` 的 `buildExportPayload` 收 plain objects 返 plain object——
+     确定性排序（projects 按 slug 升序、logs 按 beforeDate 降序）钉在函数里、counts 统计、`exportedAt` 的 ISO 化、
+     字段透传，全部 `node --test` 可测；处理器层只做查库与响应。
+  3. **Route Handler 下载口径**：初版为 Server Action 返回 Response，实测动作返回值走 RSC 序列化通道（只收纯对象，
+     Response 是类实例进不了），客户端报错掉错误边界；按官方文档下载范例改 `/admin/export` 路由处理器（GET），
+     `Content-Disposition` 是真实响应头驱动下载，入口为后台概览锚点，零客户端 JS。
+  4. **会话与错误口径**：`requireAdminSession()` 第一行（无会话返 401，不用 redirect——redirect 会打断下载响应）；
+     `where:{userId}` 复合条件（D33 口径）；异常返 500 + `{error:"EXPORT_001"}`。
+- 理由：官方文档（`node_modules/next/dist/docs` streaming 章）的 Content-Disposition 下载范例就是 Route Handler，
+  server-actions 文档的返回值口径只有纯对象与内置类型，无"返回 Response"条款——能力预设以文档与实测为准。
+- 代价与边界：① 导出含草稿（备份语义，草稿本就只对本人可见），与前台可见性是两件事；② 导出面不触
+  `User.githubAccessToken` 列（只查 Project/Log，User 仅 `select handle`）；③ 500 JSON 错误响应不走后台概览横幅
+  （`?error=EXPORT_001` 路径不可达，代码与文案保留作防御性兜底，记 I083）；④ 响应大小不受 `bodySizeLimit` 约束
+  （那是请求侧上限），单人规模无压力。
+- 判据：`npm test` 5 条纯逻辑全绿（counts、slug 升序、beforeDate 降序、ISO 往返、全字段无损）；真实点击实测——
+  锚点触发 `GET /admin/export [200]`，浏览器直接落盘 `laity-export-2026-11-12.json`（82,418 字节），响应头
+  200 / `application/json; charset=utf-8` / `attachment; filename="laity-export-2026-11-12.json"` / `no-store`；
+  meta.counts=2 项目、33 日志（13 已发布 + 20 草稿），projects 升序与 logs 降序复核通过；抽查已发布日志
+  「测试AI帮我写」：`contentHash`、`sourceCommitSha`、`isAiAssisted` 俱在、15 字段全。
+- 连带：SPEC（F25 增补行 + 追溯矩阵行）、`src/lib/export.ts`（新增）、`tests/export.test.ts`（新增）、
+  `src/app/admin/export/route.ts`（新增）、`src/app/admin/page.tsx`（导出入口锚点接线）、`src/lib/error-text.ts`
+  （EXPORT_001）、ISSUES（I083 登记）、`tools/软著材料生成.mjs`（③ 登记）、说明书 5.2（导出描述）。
+
+## 决策索引（D1–D36 一览）
 
 编号按落定顺序分配，因此在正文里并非按数字排列。下表按编号汇总，便于反查；状态与正文保持同步。
 
@@ -655,6 +720,8 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
 | D32 | 文档体系重构：SPEC 转 V1.0 冻结（F01–F18）+ 本文件补裁剪说明与执行档案定位 | 有效（本轮即它的落地） |
 | D33 | V2.0 恢复 GitHub OAuth 多用户登录（取代 D20 单口令） | **已实施（2026-11-10，4-A/4-B/Step 5 全部落地）** |
 | D34 | 日志详情阅读目录与进度条（F23）：A 右栏 grid+sticky/1024px、编号 mono+标题 sans、进度条主墨 CSS 整页版 | **已实施（2026-11-11）** |
+| D35 | 搜索高亮（F24）：服务端纯函数切段 + indexOf 非正则口径，A 案棕底纸白字 | **已实施（2026-11-12）** |
+| D36 | 全站数据导出（F25）：JSON 格式 + 零新增依赖裁定，Route Handler 下载口径（初版动作返 Response 方案被推翻） | **已实施（2026-11-12）** |
 
 ## 二、分阶段路线图（7 个 Phase，每个都是可运行最小闭环；Phase 8/9 为待裁决备选）
 

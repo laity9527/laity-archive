@@ -53,6 +53,9 @@
   `AI_001` 统一降级、`isAiAssisted` 字段落库与详情页 [ AI 辅助生成 · 作者审校 ] 标签；
   F22 状态行由「已裁决待实施」改记「已实施（2026-11-10）」。既有 F 编号与其余条目未改动。
 - 2026-11-11 阅读目录与进度条（负责人点名三项裁断：排版 A 右栏 grid+sticky/1024px、编号 mono+中文标题 sans/进度条主墨、进度条先上 CSS 整页版零 JS）：「已实施增补」新增 **F23（日志详情阅读目录与进度条）**，状态记「已实施（2026-11-11）」，实施细节见 D34；范围界定首句增补区间由 F19–F21 衍生清理为 **F19–F23**（F22 早已实施却不在区间内，本轮加 F23 直接加剧该矛盾，一并修正）；上线基线回归测试数按 `npm test` 实测由 85 改为 **113**（本轮 toc 新增 12 条）。既有 F 编号未重排；追溯矩阵沿 F20–F22 先例不增行（该缺口另记 I082）。
+- 2026-11-12 F24/F25 实施收口（负责人点名）：「已实施增补」新增 **F24（搜索关键词高亮）**、
+  **F25（全站数据导出）**，追溯矩阵补两行（决策 D35/D36）；范围区间由 F19–F23 改记 **F19–F25**。
+  既有 F 编号未重排，其余条目未改动。
 - 2026-11-11 按负责人点名"I082 请顺手补掉"：一次性把 F20–F23 四行补入第六节追溯矩阵（状态均标「已实施」），
 I082 结案（台账转 FIXED）。既有 F 编号与其余条目未改动。
 
@@ -67,7 +70,7 @@ I082 结案（台账转 FIXED）。既有 F 编号与其余条目未改动。
 
 ## 一、范围界定与形态边界
 
-本规格描述 **Laity 项目档案库的当前实现**：V1.0 冻结范围（F01–F18）+ V2.0 已上线增补（F19–F23）。三项硬边界（与 AGENTS.md、DESIGN 一致）：
+本规格描述 **Laity 项目档案库的当前实现**：V1.0 冻结范围（F01–F18）+ V2.0 已上线增补（F19–F25）。三项硬边界（与 AGENTS.md、DESIGN 一致）：
 
 1. **多租户（V2.0，D33）**：访客只读；后台对完成 GitHub OAuth 登录的账号开放，各账号只能读写自己的档案——数据层以 `userId` 复合条件强制隔离（0 行即资源不存在），站内没有自建注册表单、没有角色分级。数据模型含 `User` 表与 `userId`。
 2. **无 UGC**：所有内容仅由登录账号在后台录入并发布；不提供评论、投稿、举报等任何第三方参与面。
@@ -127,6 +130,8 @@ I082 结案（台账转 FIXED）。既有 F 编号与其余条目未改动。
 | F20 | 作为站长，我不想手动写日志，系统能自动拉取我的 GitHub 公开提交并生成 BEFORE/AFTER 草稿，以便发布留痕不靠手写 | `/admin` 概览页 [ 从 GitHub 同步 ] 按钮（`syncGithubAction`）：登录时截获 access_token、AES-256-GCM 加密落库（`githubAccessToken`，不进 JWT/session）；点击后拉 `/user/repos`（最近推送前 30 个公开仓库）与逐仓库 commits（限并发 5、超时 10s）；四道过滤（去 merge、去 <10 字符与黑名单、按 sha 去重、同仓库同日合并）；草稿自动挂 `github-sync` 虚拟项目，标题取 commit 首行、BEFORE/AFTER 填占位、`sourceCommitSha` 做幂等锚点；重复点击不产重复行（`@@unique([userId, sourceCommitSha])`）；只同步公开仓库（scope 不加 `repo`）；结果横幅回显 `?synced=N&skipped=M`，未绑定/授权失效/网络不可达分别给 SYNC_001/002/003 | **已实施（2026-11-10，Step 5）**：Commit 1 加密底座与截获、Commit 2 引擎与过滤、Commit 3 UI 与文档收口；实测 102 条 commit → 12 条草稿（`synced=12&skipped=1`）；AI 改写 BEFORE/AFTER 由 F22 承接 |
 | F22 | 作为站长，我想让 AI 把同步草稿里"（等待补充）"的 BEFORE/AFTER 写成可读的复盘初稿，以便省去从 commit 清单重写一遍的功夫 | **AI 辅助生成（Step 6）**，六项边界经负责人裁定（2026-11-10）：①**触发**——后台编辑草稿页手动点 [ AI 帮我写 ]，不做同步后自动触发；②**模型**——国内合规大模型（如通义千问 / DeepSeek）API，属新增外部依赖，接入前需报批并按合规条款落实现；③**生成范围**——仅填充 BEFORE 与 AFTER 两段，`lessonLearned` 与标题保留用户手写（"经验总结"是作者判断的存证语义，不接受代笔）；④**降级**——生成失败保留"（等待补充）"，不阻塞同步/编辑主流程，生成结果只写入草稿、**不自动发布**；⑤**对外标注**——生成内容在详情页末尾打 [AI 辅助生成] 标签，作者审校后仍保留该标签；⑥**成本限制**——单次页面最多触发 12 次请求，单次返回长度 ≤500 字 | **已实施（2026-11-10，Step 6）**：Commit 1 底座（`ai-prompt` 纯函数、`ai-client` OpenAI 兼容协议、三键环境变量与 compose 门禁）、Commit 2 动作与编辑器按钮（手动触发、超 12 条 Commit 返 `AI_002`、失败统一 `AI_001` 降级）、Commit 3 标记（`isAiAssisted` 落库、详情页末尾 [ AI 辅助生成 · 作者审校 ] 标签）；模型默认 DashScope compatible-mode（`qwen-plus`）；失败保留"（等待补充）"不阻塞同步/编辑、不自动发布；发布仍按 D5 口径重算摘要 |
 | F23 | 作为访客，我阅读长日志时能看到章节目录与阅读进度，以便快速定位小节并把握读到哪 | 日志详情页（`/u/[handle]/logs/[slug]`）阅读目录 + 进度条：≥1024px 正文左、目录右栏（grid + sticky，A 方案），<1024px 目录收为正文头部折叠面板（details/summary 原生开合，零 JS）；目录从 BEFORE/AFTER 两段正文按渲染序抽 h1–h3 锚点（`toc.ts` 纯函数 `extractToc` + `markdown.tsx` 可选 `tocIdPrefix` 盖 id，两侧同一计数口径），总标题数 ≥2 才画，经验总结段不索引；编号 mono、中文标题 sans，当前项主墨 + 2px 左边线（`aria-current="location"`，IntersectionObserver scrollspy），不给 `--brown` 扩权；进度条为整页口径 CSS 滚动驱动动画（`animation-timeline: scroll(root)`，零 JS，不支持的浏览器整条不画），色用主墨 `--foreground`；锚点自证：id/标签/文本与渲染器对不上即整体不画目录，宁缺毋指错 | **已实施（2026-11-11）**，实施细节见 D34；12 条纯逻辑测试锁抽取口径；浏览器实测桌面三档几何（1280/1024/1023）、锚点偏移 32px、移动面板开合 42↔232px、空态日志不画目录均通过；scrollspy 高亮迁移与进度条推进的动态派发受应用内浏览器引擎局限未验证（新建对照 IO/ScrollTimeline 同样零触发），算法与 CSS 配置已分别自证 |
+| F24 | 作为访客，搜索日志时我希望命中关键词在结果里被高亮，以便快速看到命中位置 | 日志大厅 `/logs` 搜索结果：标题全量高亮；BEFORE/AFTER 正文有命中时新增片段行（首个命中前后各 60 字符、越界侧 `…`）；片段是纯文本预览、不经 Markdown 渲染器；`<mark>` A 案棕底纸白字（`--brown` 扩权，AGENTS 视觉铁律已记）；高亮为服务端纯函数 `src/lib/highlight.ts`（indexOf 切段、不构造正则），React 文本节点渲染、全链路无 `dangerouslySetInnerHTML` | **已实施（2026-11-12）**，实施细节见 D35 |
+| F25 | 作为站长，我要把名下全部项目与日志数据导出成文件，以便备份与迁移 | 后台概览 [ 导出所有数据 ] 锚点指向 `/admin/export` 路由处理器（GET）：`requireAdminSession()` 会话校验（缺失返 401）→ `where:{userId}` 查全部 Project/Log → `src/lib/export.ts:buildExportPayload` 组装（确定性排序：projects 按 slug 升序、logs 按 beforeDate 降序；含草稿、全字段）→ `Content-Disposition: attachment` 的 JSON 响应触发浏览器下载；JSON 格式零新增依赖（不引 archiver，见 D36）；异常返 500 + `EXPORT_001` | **已实施（2026-11-12）**，实施细节见 D36 |
 
 ## 三、数据模型（Prisma Schema）
 
@@ -344,6 +349,8 @@ URL 里手填的任意串一律显示"未收录的错误码"（D28）。新增�
 | F21 租户主页 | D33、V2.0 Step 3 | `u/[handle]/page.tsx`、`projects.ts:getArchiveBoard(userId)` | **已实施（2026-11-09，Step 3）**：构建路由表 `◐ /u/[handle]`（PPR）；下钻页 `/u/[handle]/logs/[slug]` 与 `/u/[handle]/projects/[slug]`、handle 不存在走品牌化 404；进 sitemap（只收公开稳定路由）；说明书 4.4 已并入租户主页描述（I080 FIXED） |
 | F22 AI 辅助生成 | V2.0 Step 6 六项边界裁定（2026-11-10，负责人） | `admin/ai-actions.ts`（`generateAiDraftAction`）、`Editor.tsx`（[ AI 帮我写 ] 按钮与 `isAiAssisted`）、`ai-prompt.ts`、`ai-client.ts` | **已实施（2026-11-10，Step 6）**：手动触发不自动生成、超 12 次请求返 `AI_002`、失败统一 `AI_001` 降级保留「（等待补充）」且不自动发布；`isAiAssisted` 落库、详情页末尾 [ AI 辅助生成 · 作者审校 ] 标签；模型默认 DashScope compatible-mode（`qwen-plus`）；`tests/ai-prompt.test.ts` 全绿（`npm test`） |
 | F23 阅读目录与进度条 | D34 | `toc.ts`、`ArticleToc.tsx`、`u/[handle]/logs/[slug]/page.tsx`、`markdown.tsx`、`globals.css` | **已实施（2026-11-11）**，实施细节见 D34；`tests/toc.test.ts` 12 条纯逻辑测试锁抽取口径；浏览器实测桌面三档几何（1280/1024/1023）、锚点偏移 32px、移动面板开合 42↔232px、空态日志不画目录；scrollspy 高亮迁移与进度条推进的动态派发受应用内浏览器引擎局限未验证，算法与 CSS 配置已分别自证 |
+| F24 搜索关键词高亮 | D35 | `src/lib/highlight.ts`、`src/app/logs/page.tsx`、`src/app/globals.css` | **已实施（2026-11-12）**：12 条纯逻辑测试钉大小写不敏感 / 保留原文大小写 / 窗口边界不变量；浏览器实测 `q=Docker`：标题与片段命中包 `<mark>`，计算样式棕底 `rgb(122,90,58)` 纸白字 `rgb(244,241,236)`；tag-only 命中行无片段行；无命中与空 q 零高亮、列表行为不变 |
+| F25 全站数据导出 | D36 | `src/app/admin/export/route.ts`、`src/lib/export.ts`、`src/app/admin/page.tsx` | **已实施（2026-11-12）**：真实点击实测下载 `laity-export-2026-11-12.json`（82,418 字节），响应头 200 / attachment / no-store；meta.counts=2 项目、33 日志（13 已发布 + 20 草稿），排序与全字段核验通过；5 条纯逻辑测试钉 counts / 排序 / ISO / 无损 |
 
 ## 七、上线基线（工程与合规）
 
