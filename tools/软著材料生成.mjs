@@ -167,6 +167,9 @@ const BANDS = [
       // highlight 是 F24 搜索关键词高亮的纯函数（indexOf 切段 + 片段窗口提取，不构造正则），
       // 与 log-search/toc 同族；调用方页面在 ④，登记 ③ 不动 ①+② 零余量防线
       "src/lib/highlight.ts",
+      // export 是 F25 全站数据导出的纯函数（payload 组装：排序确定性 + counts 统计 + ISO 化），
+      // 与 highlight/log-search 同族；调用方动作层在 ③、JSON 序列化与响应在动作层，登记 ③ 不动 ①+② 防线
+      "src/lib/export.ts",
       // toc.ts 是 F23/D34 的阅读目录抽取纯函数（ATX/setext、围栏与缩进代码跳过、行内剥离），
       // 调用方详情页在 ④、markdown.tsx 在 ③；与 log-search/ai-prompt 同族放 ③，不动 ①+② 零余量防线
       "src/lib/toc.ts",
