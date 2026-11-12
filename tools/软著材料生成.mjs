@@ -86,6 +86,8 @@
  * - 2026-11-11: F23/D34 窗口配平（负责人裁定 Option 2）：assertWindowFit 拒件（④ 1879 > 后窗口 1498，缺口 381），
  *               预案1（拆移动面板约 30–70 行）单独不够；按裁定把租户主页(190)/关于页(158)/登录页(92)自 ④ 平移进 ③
  *               （合计 440），④ 回到 1439 行装进后窗口，ArticleToc 整份留 ④ 不拆。三者皆排版/交互外壳，逻辑在 ②③ 可见
+ * - 2026-11-12: F27 RSS 订阅 Commit 1：登记 src/lib/rss.ts 进折走段 ③（与 highlight/export/toc 同族的纯函数层，
+ *               调用方 feed 路由下一步同段登记），①+② 零余量防线不动，出件看护栏
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -173,6 +175,9 @@ const BANDS = [
       // toc.ts 是 F23/D34 的阅读目录抽取纯函数（ATX/setext、围栏与缩进代码跳过、行内剥离），
       // 调用方详情页在 ④、markdown.tsx 在 ③；与 log-search/ai-prompt 同族放 ③，不动 ①+② 零余量防线
       "src/lib/toc.ts",
+      // rss.ts 是 F27 RSS 订阅的纯函数层（XML 转义、Markdown 尽力剥离、feed 组装），
+      // 与 highlight/export/toc 同族；调用方 feed 路由下一步同段登记，①+② 零余量防线不动
+      "src/lib/rss.ts",
       // ai-prompt 是 Step 6 的纯函数层（提交列表→提示词、模型返回→BEFORE/AFTER 解析），调用方是后台动作层；
       // 与 github-sync-filter 同族放 ③，不动 ①+② 的行数（零余量防线下安全）
       "src/lib/ai-prompt.ts",
