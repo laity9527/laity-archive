@@ -5,18 +5,18 @@
 
 数字档案，记录每一次工程决策。收集项目作品与开发复盘，构建一份可信的数字履历。
 
-当前形态：**V2.0 多租户**（GitHub OAuth 一键登录，各账号读写独立隔离；无自建注册、无 UGC；含 GitHub 提交自动同步引擎与 AI 辅助生成）。决策见 [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) 的 D33。
+当前形态：**V2.2 多租户**（GitHub OAuth 一键登录，各账号读写独立隔离；无自建注册、无 UGC；含 GitHub 提交自动同步引擎与 AI 辅助生成；支持 RSS 订阅）。决策见 [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) 的 D33。
 
-## 当前状态快照（2026-11-11）
+## 当前状态快照（2026-11-12）
 
 | 维度 | 状态 |
 |---|---|
-| 阶段进度 | **V2.0 核心闭环已交付**（多租户隔离、GitHub 同步、AI 辅助生成、自动化部署全部上线） |
-| 回归测试 | `npm test` **95 条断言全绿**（Node 自带 test runner，零测试依赖；只测纯逻辑） |
+| 阶段进度 | **V2.2（F19–F27 已实施）**：多租户隔离、GitHub 同步、AI 辅助生成、全站搜索与高亮、数据导出、标签聚合页与 RSS 订阅均已上线 |
+| 回归测试 | `npm test` **154 条断言全绿**（Node 自带 test runner，零测试依赖；只测纯逻辑） |
 | 四道门禁 | `npm run lint` / `npx tsc --noEmit` / `npm run build` / `npm test` 全 0；CI 同序代跑 |
 | 数据实况 | 生产环境已接入多账号 GitHub 登录，数据物理隔离；第一条真实数据为本项目自身 |
 | 自动化交付 | 已接入 **GitHub Actions 自动部署**：push 到 `main` 且门禁通过后，自动 SSH 至服务器备份、构建、迁移与健康校验 |
-| 文档体系 | SPEC.md 新增 F20（同步）/ F21（租户主页）/ F22（AI 生成）冻结口径；DESIGN.md 补至 D33；AGENTS/README/ISSUES 同步本轮 |
+| 文档体系 | SPEC.md 覆盖 F19–F27（含 F26 标签聚合、F27 RSS 订阅）；DESIGN.md 补至 D38；AGENTS/README/ISSUES 同步本轮 |
 
 ## 技术栈
 

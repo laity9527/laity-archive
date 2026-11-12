@@ -58,6 +58,10 @@
   既有 F 编号未重排，其余条目未改动。
 - 2026-11-11 按负责人点名"I082 请顺手补掉"：一次性把 F20–F23 四行补入第六节追溯矩阵（状态均标「已实施」），
 I082 结案（台账转 FIXED）。既有 F 编号与其余条目未改动。
+- 2026-11-12 F26/F27 实施收口（负责人点名）：「已实施增补」新增 **F26（标签聚合页）**、**F27（RSS 订阅）**，
+追溯矩阵补两行（决策 D37/D38）；范围区间由 F19–F25 改记 **F19–F27**；非目标清单第 5 条删「全文搜索」与「RSS」
+（全文搜索 V2.1 已实施、RSS 本轮解禁）；上线基线回归测试数按 `npm test` 实测由 113 改为 **154**。
+既有 F 编号未重排，其余条目未改动。
 
 已确认的三项决策（2026-10-30）：
 1. 后台登录：NextAuth + GitHub OAuth，仅允许我本人的 GitHub 账号；
@@ -70,7 +74,7 @@ I082 结案（台账转 FIXED）。既有 F 编号与其余条目未改动。
 
 ## 一、范围界定与形态边界
 
-本规格描述 **Laity 项目档案库的当前实现**：V1.0 冻结范围（F01–F18）+ V2.0 已上线增补（F19–F25）。三项硬边界（与 AGENTS.md、DESIGN 一致）：
+本规格描述 **Laity 项目档案库的当前实现**：V1.0 冻结范围（F01–F18）+ V2.0 已上线增补（F19–F27）。三项硬边界（与 AGENTS.md、DESIGN 一致）：
 
 1. **多租户（V2.0，D33）**：访客只读；后台对完成 GitHub OAuth 登录的账号开放，各账号只能读写自己的档案——数据层以 `userId` 复合条件强制隔离（0 行即资源不存在），站内没有自建注册表单、没有角色分级。数据模型含 `User` 表与 `userId`。
 2. **无 UGC**：所有内容仅由登录账号在后台录入并发布；不提供评论、投稿、举报等任何第三方参与面。
@@ -82,7 +86,7 @@ I082 结案（台账转 FIXED）。既有 F 编号与其余条目未改动。
 2. 不做富文本所见即所得编辑器——Markdown 双栏纯文本足够；
 3. 不做日志版本历史/回收站——git 与数据库备份承担该职责；
 4. 不做移动端 App/小程序——响应式 Web 覆盖；
-5. 不做评论、点赞、全文搜索、RSS、国际化——个人档案库无此需求，做了徒增攻击面；
+5. 不做评论、点赞、国际化——个人档案库无此需求，做了徒增攻击面；
 6. 不做 GitHub API 自动锚定 commit 数——数据模型不为此加字段，日志页不展示 commits 统计
    （历史草稿 Mock 中的 ⏱/commits 属装饰数据，仅保留可由 beforeDate/afterDate 直接计算的时长）；
 7. 不做访问统计/埋点——上线后视需要另立需求；
@@ -132,6 +136,8 @@ I082 结案（台账转 FIXED）。既有 F 编号与其余条目未改动。
 | F23 | 作为访客，我阅读长日志时能看到章节目录与阅读进度，以便快速定位小节并把握读到哪 | 日志详情页（`/u/[handle]/logs/[slug]`）阅读目录 + 进度条：≥1024px 正文左、目录右栏（grid + sticky，A 方案），<1024px 目录收为正文头部折叠面板（details/summary 原生开合，零 JS）；目录从 BEFORE/AFTER 两段正文按渲染序抽 h1–h3 锚点（`toc.ts` 纯函数 `extractToc` + `markdown.tsx` 可选 `tocIdPrefix` 盖 id，两侧同一计数口径），总标题数 ≥2 才画，经验总结段不索引；编号 mono、中文标题 sans，当前项主墨 + 2px 左边线（`aria-current="location"`，IntersectionObserver scrollspy），不给 `--brown` 扩权；进度条为整页口径 CSS 滚动驱动动画（`animation-timeline: scroll(root)`，零 JS，不支持的浏览器整条不画），色用主墨 `--foreground`；锚点自证：id/标签/文本与渲染器对不上即整体不画目录，宁缺毋指错 | **已实施（2026-11-11）**，实施细节见 D34；12 条纯逻辑测试锁抽取口径；浏览器实测桌面三档几何（1280/1024/1023）、锚点偏移 32px、移动面板开合 42↔232px、空态日志不画目录均通过；scrollspy 高亮迁移与进度条推进的动态派发受应用内浏览器引擎局限未验证（新建对照 IO/ScrollTimeline 同样零触发），算法与 CSS 配置已分别自证 |
 | F24 | 作为访客，搜索日志时我希望命中关键词在结果里被高亮，以便快速看到命中位置 | 日志大厅 `/logs` 搜索结果：标题全量高亮；BEFORE/AFTER 正文有命中时新增片段行（首个命中前后各 60 字符、越界侧 `…`）；片段是纯文本预览、不经 Markdown 渲染器；`<mark>` A 案棕底纸白字（`--brown` 扩权，AGENTS 视觉铁律已记）；高亮为服务端纯函数 `src/lib/highlight.ts`（indexOf 切段、不构造正则），React 文本节点渲染、全链路无 `dangerouslySetInnerHTML` | **已实施（2026-11-12）**，实施细节见 D35 |
 | F25 | 作为站长，我要把名下全部项目与日志数据导出成文件，以便备份与迁移 | 后台概览 [ 导出所有数据 ] 锚点指向 `/admin/export` 路由处理器（GET）：`requireAdminSession()` 会话校验（缺失返 401）→ `where:{userId}` 查全部 Project/Log → `src/lib/export.ts:buildExportPayload` 组装（确定性排序：projects 按 slug 升序、logs 按 beforeDate 降序；含草稿、全字段）→ `Content-Disposition: attachment` 的 JSON 响应触发浏览器下载；JSON 格式零新增依赖（不引 archiver，见 D36）；异常返 500 + `EXPORT_001` | **已实施（2026-11-12）**，实施细节见 D36 |
+| F26 | 作为访客，我点击标签时想跳到一个聚合页，看到该标签下全部已发布日志，以便按标签维度浏览 | 标签聚合页 `/tags/[tag]`（V2.2）：大厅列表行与详情页头部的标签文字改链接，点击跳到 `/tags/<tag>`；聚合页复用 `getSafeLogs({ tag })`（`tags: { has }` 区分大小写精确匹配，与大厅筛选同口径），按 beforeDate 倒序；归一化 `normalizeTag` 只做 trim 与空值/超长拒收（不解码、不大小写折叠）；不存在标签、纯草稿标签、超长值一律由 proxy 前置返回**真 404**（404 + noindex + no-store + 品牌化内联页，标签值不拼进 HTML）；页面含 `id="main"`、`generateMetadata`、Timeline 容器查询第六个调用点 `@container`；标签链接不用棕色（`--brown` 仍限导航当前项与搜索高亮）；筛选区标签 chip 不动（F03 筛选交互保留）；本轮不收 sitemap；**方案第 7 条实测修正**：App Router 交付编码原样的 path 参数，页面入口需 `decodeTagParam` 自行解码一次（双编码探针证实，见 D37 判据） | **已实施（2026-11-12）**，实施细节见 D37 |
+| F27 | 作为订阅方，我想订阅本站更新源，以便不访问站点也能收到新日志的更新 | RSS 2.0 订阅 `/feed.xml`（Route Handler，仅 GET）：手写模板字符串 XML，**零新增依赖**（`src/lib/rss.ts` 纯函数 `escapeXml` / `toPlainText` / `buildRssXml`）；数据复用 `getLatestLogs(20)`（publishedAt 降序 + beforeDate 兜底，请求期取数，不写 connection()/use cache）；`description` 为 **200 字符纯文本摘要**（lessonLearned 优先、与详情页 meta 同优先级，剥 Markdown 成纯文本、压缩空白、截断补 `…`，不输出全文 HTML）；日期用内置 `toUTCString()`（RFC 822）；link/guid 为绝对 URL（站点域名单源 `siteUrl()`）；空库返回 200 + 空 channel；head 自动发现：`layout.tsx` metadata `alternates.types["application/rss+xml"] = "/feed.xml"`，全站渲染 `<link rel="alternate">`；XML 转义（五字符 + 剥非法控制字符）在纯函数层集中做、测试钉死 | **已实施（2026-11-12）**，实施细节见 D38 |
 
 ## 三、数据模型（Prisma Schema）
 
@@ -351,12 +357,14 @@ URL 里手填的任意串一律显示"未收录的错误码"（D28）。新增�
 | F23 阅读目录与进度条 | D34 | `toc.ts`、`ArticleToc.tsx`、`u/[handle]/logs/[slug]/page.tsx`、`markdown.tsx`、`globals.css` | **已实施（2026-11-11）**，实施细节见 D34；`tests/toc.test.ts` 12 条纯逻辑测试锁抽取口径；浏览器实测桌面三档几何（1280/1024/1023）、锚点偏移 32px、移动面板开合 42↔232px、空态日志不画目录；scrollspy 高亮迁移与进度条推进的动态派发受应用内浏览器引擎局限未验证，算法与 CSS 配置已分别自证 |
 | F24 搜索关键词高亮 | D35 | `src/lib/highlight.ts`、`src/app/logs/page.tsx`、`src/app/globals.css` | **已实施（2026-11-12）**：12 条纯逻辑测试钉大小写不敏感 / 保留原文大小写 / 窗口边界不变量；浏览器实测 `q=Docker`：标题与片段命中包 `<mark>`，计算样式棕底 `rgb(122,90,58)` 纸白字 `rgb(244,241,236)`；tag-only 命中行无片段行；无命中与空 q 零高亮、列表行为不变 |
 | F25 全站数据导出 | D36 | `src/app/admin/export/route.ts`、`src/lib/export.ts`、`src/app/admin/page.tsx` | **已实施（2026-11-12）**：真实点击实测下载 `laity-export-2026-11-12.json`（82,418 字节），响应头 200 / attachment / no-store；meta.counts=2 项目、33 日志（13 已发布 + 20 草稿），排序与全字段核验通过；5 条纯逻辑测试钉 counts / 排序 / ISO / 无损 |
+| F26 标签聚合页 | D37 | `src/app/tags/[tag]/page.tsx`（新增）、`src/lib/forms.ts`（`normalizeTag`/`decodeTagParam`）、`src/lib/logs.ts`（`hasPublishedTag`）、`src/proxy.ts`（tag 分支）、`src/app/logs/page.tsx` 与 `src/app/u/[handle]/logs/[slug]/page.tsx`（标签链接接线） | **已实施（2026-11-12）**：`/tags/<已有中文标签>` 200，行数与大厅 `?tag=` 筛选一致；`/tags/<不存在标签>` 与 `<纯草稿标签>` 均**真 404**（404 + noindex + no-store + 「标签不存在」文案，不泄露草稿存在）；大厅列表行标签点击跳聚合页、筛选 chip 点击仍为筛选（回归）；双编码探针实测：单编码标签 404、双重编码 404、ASCII 标签正常——据此确立 `decodeTagParam` 的 try/catch 回退设计（见 D37 判据） |
+| F27 RSS 订阅 | D38 | `src/app/feed.xml/route.ts`（新增）、`src/lib/rss.ts`（新增）、`src/app/layout.tsx`（alternates 注入） | **已实施（2026-11-12）**：`/feed.xml` 200 + `Content-Type: application/rss+xml`；DOMParser 解析无 `parsererror`、13 条 item、`pubDate` 为 RFC 822 形状、`link`/`guid` 为绝对 URL；任一前台页 head 已渲染 `<link rel="alternate" type="application/rss+xml">`（绝对 URL）；escapeXml 注入用例与 200 字符摘要截断由 `npm test` 钉住（154 条全绿） |
 
 ## 七、上线基线（工程与合规）
 
 | 项 | 要求 | 现状 |
 |---|---|---|
-| 回归测试 | 纯逻辑必须有可重复运行的测试：D5 摘要口径、图片内容签名、slug 与表单取值、错误码文案完整性、时间展示、路由归属判定、发布前敏感信息形态、开源许可清单与红线、token 加密往返与篡改检测、同步过滤四道规则、对象名断言、阅读目录抽取口径 | `npm test`（Node 自带 test runner，零测试依赖），**113 条测试全绿（2026-11-11 实测，含本轮 toc 12 条）**；DB 层与需登录的动作层不在覆盖内，那部分靠 `docs/02-测试记录/` 的自测表与人工联调，不能用测试全绿代替 |
+| 回归测试 | 纯逻辑必须有可重复运行的测试：D5 摘要口径、图片内容签名、slug 与表单取值、错误码文案完整性、时间展示、路由归属判定、发布前敏感信息形态、开源许可清单与红线、token 加密往返与篡改检测、同步过滤四道规则、对象名断言、阅读目录抽取口径、标签归一化与解码回退、RSS XML 转义与摘要截断 | `npm test`（Node 自带 test runner，零测试依赖），**154 条测试全绿（2026-11-12 实测，含 F26 标签归一化/解码回退与 F27 RSS 纯函数用例）**；DB 层与需登录的动作层不在覆盖内，那部分靠 `docs/02-测试记录/` 的自测表与人工联调，不能用测试全绿代替 |
 | 构建门禁 | `npm run lint`、`npx tsc --noEmit`、`npm run build` 必须全 0 才算可发版 | 全 0 |
 | 健康检查 | 提供与登录无关的 `/api/health`，能区分"进程活着"与"数据库连得上"，异常不外泄细节 | 已实现，实测库停止时 503 `{"status":"degraded","db":false}`、恢复后 200；生产编排的 app 探针已改打这一条并校验响应体 `db === true`（I036），`web` 等 `app` healthy 再起 |
 | 持续集成 | 四条门禁不能只靠人记得跑（I037） | `.github/workflows/ci.yml`：`npm ci` → `prisma generate` → lint → tsc → test → `prisma migrate deploy` → build → 软著材料两步自检（漏登记新文件、HTML 与说明书不同步都会红）。配一次性 `postgres:16` 服务，因为"构建期是否查库"本机未能实测；工作流 env 全为占位值。Actions 首跑已确认（run 41752295295 @ d8ced9c，completed/success，14 步全绿，耗时 2m07s） |

@@ -29,6 +29,10 @@ SPEC 的范围界定、F04、路由表、追溯矩阵与回归测试数（73→8
 新增 **D35（搜索高亮服务端纯函数 + indexOf 非正则口径）** 与 **D36（数据导出 JSON 格式 + 零新增依赖裁定 +
 Route Handler 口径）**，决策索引同步（D1–D36）。既有 D1–D34 正文一字未改；SPEC 增 F24/F25 并将范围区间
 改记 F19–F25，ISSUES 登记 I083，说明书补两功能描述。
+维护留痕续七：2026-11-12 **V2.2 标签聚合与 RSS 决策（负责人点名）**——按已批准的方案文档
+（`docs/00-开发方法论/标签聚合与RSS方案.md`）新增 **D37（标签聚合页口径，F26）** 与 **D38（RSS 订阅口径，F27）**，
+决策索引同步（D1–D38）。既有 D1–D36 正文一字未改；SPEC 增 F26/F27、范围区间改记 F19–F27、非目标清单第 5 条
+清理漂移与解禁词，说明书在既有小节内并入两功能描述，方案文档本轮入库。
 
 
 ---
@@ -680,7 +684,115 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
   `src/app/admin/export/route.ts`（新增）、`src/app/admin/page.tsx`（导出入口锚点接线）、`src/lib/error-text.ts`
   （EXPORT_001）、ISSUES（I083 登记）、`tools/软著材料生成.mjs`（③ 登记）、说明书 5.2（导出描述）。
 
-## 决策索引（D1–D36 一览）
+### D37：标签聚合页口径——精确匹配 + proxy 真 404 + 链接落点（F26，已实施 2026-11-12）
+
+- 背景：V2.2 首批方案（`docs/00-开发方法论/标签聚合与RSS方案.md`，2026-11-12 获批）点名做标签聚合。
+  标签在大厅列表行、筛选区 chip、详情页头部三处展示，前两处是纯文本 `join(" · ")`、无聚合入口，
+  标签维度只能筛选不能浏览。SPEC「非目标清单」第 5 条明文禁用「全文搜索、RSS」——全文搜索 V2.1 已实施
+  （表述已漂移）、RSS 本轮由负责人点名解禁，实施时同步清理该句措辞。
+- 决策（含方案待裁决①，裁 A 案）：
+  1. **路由与落点**：新建 `/tags/[tag]`（`src/app/tags/[tag]/page.tsx`；`instant = false` 退出即时导航校验，
+     不写 `generateStaticParams`、不用 Suspense 包数据，与详情页/导出路由同构）。链接落点两处：
+     大厅**列表行**标签行与详情页**头部**标签行改链接（`href` 一律 `/tags/${encodeURIComponent(tag)}`，
+     ` · ` 作文字分隔，样式沿用该行 mono 11px 辅助灰 + 既有 hover 习语，**不用棕色**）；
+     筛选区 tagChip **一字不动**（筛选是 F03 点名的交互，聚合是新增出口，两者并存）；标签页自身列表行
+     的标签同样链接化（一致性）。另三处标签纯文本展示（首页最新日志行、租户主页最新日志行、项目详情
+     日志行）本轮不接线（方案报备④，范围外，等点名）。
+  2. **匹配口径**：区分大小写的精确匹配（Prisma `tags: { has }`），与大厅筛选完全同口径，不做大小写折叠；
+     `normalizeTag`（新增于 `src/lib/forms.ts`）只做 trim 与空值/超长（> `LIMITS.tag` 即 24 字符）拒收，
+     **不做解码、不做大小写折叠**，页面与 proxy 共用同一纯函数；超长拒收让伪造长 URL 不进数据库。
+  3. **404 口径（方案裁决①，采纳 A 案）**：`src/proxy.ts` matcher 增 `/tags/:tag`；新增 `readTagSegment`
+     按**原始 pathname** 切段（`/tags/` 前缀、恰一段、非空），与 `readTenantSegment` 同构；
+     `NOT_FOUND_COPY` 增 `tag` 条目（「404 · 标签不存在」/「这个标签不存在」/「它可能还没有已发布的日志，
+     或者链接已经失效。」/ 回 `/logs`），文案全常量、标签值不拼进 HTML；归一化后 `hasPublishedTag`
+     未命中 → `notFoundResponse("tag")` **真 404**（404 + noindex + no-store + 品牌化内联页）。
+     B 案（页面级软 404）被否：PPR 下页面级 `notFound()` 只返回 200，违反 F13「真 404 带 noindex + no-store」
+     与全站既有口径，无效标签 URL 还会被搜索引擎持续收录。
+  4. **URL 编码**：标签可含 `/` 与 `%`（`parseTags` 不禁），编码为 `%2F`/`%25` 后不是字面路径分隔符，
+     proxy 按原始 pathname 切段不会误切，框架解码还原——往返无损。
+- 理由：精确匹配保证聚合结果与筛选结果同一口径（不会出现"筛选能筛到、聚合页没有"）；proxy 真 404 与
+  D7 既有机制同构，不引入第二套 404 语义；chip 保持筛选交互，避免同一标签在站内有跳转与筛选两种行为。
+- 代价与边界：① 每次详情类访问多一次索引级 `findFirst` 查询（与 `isPublishedLogSlug` 同模式，接受）；
+  ② 标签页无导航当前项（与 `/privacy`、`/licenses` 同态，`aria-current` 0 处、棕色下划线 0 处，符合
+  「至多一个」铁律，SiteNav 不改）；③ 本轮不收 sitemap（方案裁决②，聚合页是衍生页，大厅已覆盖全部
+  日志 URL）；④ 三处内联标签链接（每处约 8 行）不抽共享组件——抽取要新增收录文件吃窗口，且上下文有差异，
+  出现第四处再议。
+- 判据（本轮实测，非推断）：
+  - **方案第 7 条被双编码探针推翻**：方案原写「框架已对 path params 做 `decodeURIComponent`
+    （Next 源码 `route-matcher.js:getRouteMatcher` 实证），页面侧禁止二次解码」。实测探针：
+    **单编码标签 → 404、双重编码标签 → 404、ASCII 标签 → 正常**——App Router 实际向页面**交付编码原样的
+    path 参数**，页面入口必须自行解码一次，方案第 7 条的源码判读不成立。
+  - `decodeTagParam` 设计（新增于 `src/lib/forms.ts`）：`try { return decodeURIComponent(value) }
+    catch { return value }`——解码失败回退原值交 `normalizeTag` 拒收。try/catch 在两种环境下都安全：
+    参数若已被解码，解码要么恒等、要么遇字面 `%` 抛错回退，不会损坏合法标签；页面与 proxy 共用同一函数，
+    两侧判定口径一致。
+  - `/tags/<已有中文标签>` 200，行数与大厅 `?tag=` 筛选一致，行标题链接指 `/u/[handle]/logs/[slug]`；
+    `/tags/<不存在标签>` 与 `/tags/<纯草稿标签>` 均**真 404**（404 + `x-robots-tag: noindex` +
+    `cache-control: no-store` + 「标签不存在」文案，不泄露草稿存在）；大厅列表行标签点击跳聚合页、
+    筛选 chip 点击仍为筛选（回归）、details 折叠正常（回归）；标签页 Timeline 窄/宽容器几何成对量测
+    （容器查询第六个调用点 `@container` 生效）。
+- 连带：SPEC（F26 增补行 + 追溯矩阵行、非目标第 5 条删「全文搜索」「RSS」、范围区间 F19–F27）、
+  `src/lib/forms.ts`（`normalizeTag` / `decodeTagParam`）、`src/lib/logs.ts`（`hasPublishedTag`）、
+  `src/app/tags/[tag]/page.tsx`（新增）、`src/proxy.ts`（tag 分支 + matcher）、`src/app/logs/page.tsx` 与
+  `src/app/u/[handle]/logs/[slug]/page.tsx`（标签链接接线）、`tests/forms.test.ts`（归一化与解码用例）、
+  `tools/软著材料生成.mjs`（BANDS 登记：页面在 ④、纯函数在 ③）、说明书 4.2/4.3（并入段落）。
+
+### D38：RSS 订阅口径——手写 XML 零依赖 + 200 字符纯文本摘要 + 请求期取数 + alternates 自动发现（F27，已实施 2026-11-12）
+
+- 背景：方案裁决③。订阅方需要一个标准源，在不访问站点的情况下收到新日志更新；本站已发布日志有真实基数
+  （本地库 13 篇已发布），RSS 2.0 子集小（channel + item 共 9 种元素），手写纯函数可全覆盖且可单测。
+- 决策（含方案待裁决②③，裁摘要案、不收 sitemap 条目）：
+  1. **零新增依赖**：不引 feed/rss 生成库——手写约 110 行纯函数全覆盖且可单测；引入即触发报批 +
+     linux 容器重算锁文件（I018）+ `licenses.ts` 与测试同步，成本大于收益。与 D36 导出 JSON 零依赖先例
+     同口径。
+  2. **纯函数层** `src/lib/rss.ts`：`escapeXml`（`& < > " '` 五字符转义 + 剥 XML 1.0 非法控制字符
+     `\x00-\x08 \x0B \x0C \x0E-\x1F`）、`toPlainText`（剥标题/围栏/行内代码/链接图片/强调/引用与列表
+     标记、压缩空白——尽力而为的预览剥离，不是完整 Markdown 解析器）、`buildRssXml`（组装模板，
+     全确定性）；**不 import db / next / site**，站点文案与日志行由 route 层组装后传入。
+  3. **数据与取数**：`getLatestLogs(20)` 全站口径（`publishedAt desc` + `beforeDate desc` 兜底、
+     `publishedAt: { not: null }`、带 `user.handle` 与 project），**请求期取数**——cacheComponents 下
+     GET 默认请求期运行，数据库查询本身终止预渲染（官方文档实证，F25 导出路由同构），不写 `connection()`、
+     不写 `use cache`；20 篇上限在 `take` 参数，不在 XML 层截断。
+  4. **摘要口径（方案裁决③，采纳摘要案）**：`description` = `lessonLearned?.trim() || beforeContent`
+     （与详情页 `describeLog` / meta 同优先级）→ 剥 Markdown 成纯文本 → 压缩空白 → 截 200 字符补 `…`；
+     不输出 `content:encoded` 全文 HTML——那要复用 sanitize 管线，窗口与攻击面都涨，摘要 + permalink
+     已满足订阅器预览与回站阅读。
+  5. **模板与域名**：日期用内置 `Date.prototype.toUTCString()`（RFC 822 GMT 格式），零依赖、确定性、
+     可单测；`lastBuildDate` 取首条 `publishedAt`（排序保证即最大值），空 feed 省略该元素——不引入
+     `new Date()` 非确定性，同数据同产物；`atom:link rel="self"` 为 RSS Advisory Board 最佳实践；
+     域名唯一来源 `siteUrl()`，`link`/`guid` 拼绝对 URL，不写死（AGENTS 站点标识单源红线）；
+     不用 CDATA（转义更简单且可单测）。
+  6. **head 自动发现**：`src/app/layout.tsx` metadata 增 `alternates.types["application/rss+xml"] =
+     "/feed.xml"`（官方文档原样范例）；`metadataBase` 已就位，全站每页渲染
+     `<link rel="alternate" type="application/rss+xml" href="<siteUrl>/feed.xml" />`；不手写 `<head>`
+     标签、不加客户端组件——Metadata API 即框架正道。
+  7. **错误与空口径**：仅 GET、公开数据、**无会话校验**（数据源恒 isPublished，访客只读边界不变）；
+     空库（0 篇已发布）返回 200 + 空 channel（合法 RSS），不 404；异常走框架 500，**不新造错误码**
+     （I083 教训：路由层错误码横幅不可达，不加死码）。
+- 理由：用户内容（标题/标签/正文摘要）是唯一注入面，转义集中在纯函数层并由测试钉死，XSS 防线是结构性的；
+  摘要 + permalink 的形态对单人档案库足够，全文 HTML 属 YAGNI；Metadata API 的效果与"head 里有
+  `<link rel=alternate>`"逐字等价，且不吃收录窗口、不引客户端 JS。
+- 代价与边界：① `toPlainText` 是尽力而为的预览剥离，极端 Markdown（列表深层缩进标题、标题内裸 HTML）
+  的文本可能与渲染器不一致——摘要只是预览，不影响内容正确性；② 外部 RSS 阅读器（Feedly 等）真实订阅
+  **未测**（外部服务，需批准后才碰），W3C Feed Validator 未跑——XML 良构由 DOMParser + 单测保证，
+  规范符合性按 RSS 2.0 spec 逐元素自查；③ 生产编排下 `/feed.xml` 实跑未测（服务器动作只出步骤清单，
+  归本人执行）；④ 20 篇上限是固定口径，日志量增长后改 `take` 参数即可。
+- 判据（本轮实测，非推断）：
+  - `/feed.xml` 200，`Content-Type: application/rss+xml; charset=utf-8`；**DOMParser 解析无
+    `parsererror`**；**13 条 item**（与库中 13 篇已发布一致）；每条 `pubDate` 为 **RFC 822** 形状
+    （`toUTCString()` 的 GMT 格式）；`link` 与 `guid` 均为**绝对 URL**（`siteUrl()` 单源），
+    `guid isPermaLink="true"`；`category` 每个标签一个。
+  - head 自动发现：任一前台页 head 已渲染 `<link rel="alternate" type="application/rss+xml">`，
+    href 为绝对 URL。
+  - 单测：`tests/rss.test.ts` 钉 escapeXml 五字符逐个 + 控制字符剥除、toPlainText 剥离与 200 字符截断、
+    buildRssXml 字段/item 数/guid/pubDate 形状/空 items/多 category、注入用例（`<&"` 的标题与标签）；
+    `npm test` 154 条全绿。
+- 连带：SPEC（F27 增补行 + 追溯矩阵行、非目标第 5 条删「RSS」）、`src/lib/rss.ts`（新增）、
+  `src/app/feed.xml/route.ts`（新增）、`src/app/layout.tsx`（alternates 注入）、`tests/rss.test.ts`（新增）、
+  `tools/软著材料生成.mjs`（BANDS 登记：`rss.ts` 与 route 均在 ③）、说明书 4.5（并入段落）与第十节
+  （删「订阅源」）。
+
+## 决策索引（D1–D38 一览）
 
 编号按落定顺序分配，因此在正文里并非按数字排列。下表按编号汇总，便于反查；状态与正文保持同步。
 
@@ -722,6 +834,8 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
 | D34 | 日志详情阅读目录与进度条（F23）：A 右栏 grid+sticky/1024px、编号 mono+标题 sans、进度条主墨 CSS 整页版 | **已实施（2026-11-11）** |
 | D35 | 搜索高亮（F24）：服务端纯函数切段 + indexOf 非正则口径，A 案棕底纸白字 | **已实施（2026-11-12）** |
 | D36 | 全站数据导出（F25）：JSON 格式 + 零新增依赖裁定，Route Handler 下载口径（初版动作返 Response 方案被推翻） | **已实施（2026-11-12）** |
+| D37 | 标签聚合页口径（F26）：精确匹配 + proxy 真 404 + 链接落点（列表行/详情头部，筛选 chip 不动） | **已实施（2026-11-12）** |
+| D38 | RSS 订阅口径（F27）：手写 XML 零依赖 + 200 字符纯文本摘要 + 请求期取数 + alternates 自动发现 | **已实施（2026-11-12）** |
 
 ## 二、分阶段路线图（7 个 Phase，每个都是可运行最小闭环；Phase 8/9 为待裁决备选）
 
