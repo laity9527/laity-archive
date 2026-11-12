@@ -90,6 +90,8 @@
  *               调用方 feed 路由下一步同段登记），①+② 零余量防线不动，出件看护栏
  * - 2026-11-12: F27 RSS 订阅 Commit 2：登记 src/app/feed.xml/route.ts 进折走段 ③（与 sitemap/robots/export route
  *               同族的对外出口层）；layout.tsx 属 ④ 段内行数增长，出件看护栏
+ * - 2026-11-12: F26 标签聚合 Commit 4：登记 src/app/tags/[tag]/page.tsx 进 ④ 段（访客可见界面，与大厅/详情同类）；
+ *               大厅与详情页标签链接接线属 ④ 段内行数增长，出件看护栏
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -322,6 +324,9 @@ const BANDS = [
       "src/app/logs/page.tsx",
       // V2.0 Step 3 阶段一：日志详情路由迁至 /u/[handle]/logs/[slug]，收录路径随目录迁移
       "src/app/u/[handle]/logs/[slug]/page.tsx",
+      // 标签聚合页（F26）：访客可见界面，列表行复用大厅形态；
+      // Timeline 容器查询的第六个调用点，ul 必须带 @container
+      "src/app/tags/[tag]/page.tsx",
       // 租户主页 / 关于页 / 登录页于本轮（F23/D34，负责人裁定 Option 2）自 ④ 平移进折走段 ③：
       // ArticleToc + 详情页接线 + globals.css 进度条/rail/面板样式把 ④ 顶到 1879 行（后窗口仅 1498），
       // 移出这三页（190+158+92=440）后 ④ 回到 1439 行。三者皆排版/交互外壳——租户主页复用 getArchiveBoard（②）、

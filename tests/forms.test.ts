@@ -10,10 +10,12 @@
  *               浏览器控制台报 Invalid character class，由这条测试钉住
  * - 2026-11-12: 增补 normalizeTag 六条用例（F26 标签聚合归一化口径：trim/空值/超长拒收、不解码不折叠，
  *               TDD 先红后绿）
+ * - 2026-11-12: 增补 decodeTagParam 三条用例（F26 修正：App Router 实测 path 参数为编码原样，
+ *               页面入口需解码一次，解码失败回退原值）
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { LIMITS, REPO_URL_PATTERN, REPO_URL_SOURCE, SLUG_PATTERN, SLUG_SOURCE, ID_PATTERN, normalizeTag, pickParam, readField, safeCallbackUrl } from "../src/lib/forms.ts";
+import { LIMITS, REPO_URL_PATTERN, REPO_URL_SOURCE, SLUG_PATTERN, SLUG_SOURCE, ID_PATTERN, decodeTagParam, normalizeTag, pickParam, readField, safeCallbackUrl } from "../src/lib/forms.ts";
 
 test("pickParam 只认非空字符串", () => {
   assert.equal(pickParam("abc"), "abc");
@@ -152,4 +154,19 @@ test("normalizeTag 的 % 原样保留，不二次解码", () => {
 
 test("normalizeTag 大小写原样，不做折叠", () => {
   assert.equal(normalizeTag("Docker"), "Docker");
+});
+
+// App Router 向页面交付的 path 参数实测为编码原样（dev 双编码探针证实），
+// 入口需解码一次；解码失败保留原值交 normalizeTag 拒收
+test("decodeTagParam 解码百分号编码的中文段", () => {
+  assert.equal(decodeTagParam("%E5%AD%98%E8%AF%81"), "存证");
+});
+
+test("decodeTagParam 对已解码值原样返回或安全回退", () => {
+  assert.equal(decodeTagParam("CI"), "CI");
+  assert.equal(decodeTagParam("100%"), "100%");
+});
+
+test("decodeTagParam 对残缺编码回退原值不抛错", () => {
+  assert.equal(decodeTagParam("%E5%AD"), "%E5%AD");
 });

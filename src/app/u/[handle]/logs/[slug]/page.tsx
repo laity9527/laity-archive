@@ -19,6 +19,7 @@
  * - 2026-11-11: F23/D34 接线阅读目录与进度条：≥1024px 正文左 + 目录右栏（grid+sticky），<1024px 折叠面板
  *               在正文头部；BEFORE/AFTER 经 extractToc 抽锚点、总标题数 ≥2 才画；进度条为整页口径 CSS 滚动驱动动画（零 JS）；
  *               经验总结段不索引；无目录时 main 放宽到 1080px 但正文仍 mx-auto 限宽 720px，与改前观感一致
+ * - 2026-11-12: F26 标签聚合：header 标签改 Link 指向 /tags/[tag]
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -118,7 +119,17 @@ export default async function LogDetailPage({
             </div>
             {log.tags.length > 0 && (
               <p className="mt-6 font-mono text-[11px] text-ink-soft">
-                {log.tags.join(" · ")}
+                {log.tags.map((item, i) => (
+                  <span key={item}>
+                    {i > 0 && " · "}
+                    <Link
+                      href={`/tags/${encodeURIComponent(item)}`}
+                      className="hover:text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                    >
+                      {item}
+                    </Link>
+                  </span>
+                ))}
               </p>
             )}
           </header>

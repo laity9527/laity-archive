@@ -9,6 +9,8 @@
  *               浏览器属性、服务端判定、测试三处各写一遍；回调判定的反斜杠漏项也要能被单测锁住
  * - 2026-11-12: 新增 normalizeTag（F26 标签聚合页归一化：trim + 空值/超长拒收，不解码不折叠，
  *               页面侧与 proxy 前置判定共用）
+ * - 2026-11-12: 新增 decodeTagParam（F26 修正：App Router 实测向页面交付编码原样的 path 参数，
+ *               入口解码一次，解码失败回退原值；与 normalizeTag 组合使用）
  */
 
 // ?error= / ?saved= 这类参数被框架给成数组时按缺省处理，只认非空字符串
@@ -26,6 +28,17 @@ export function normalizeTag(value: string): string | null {
   }
 
   return tag;
+}
+
+// App Router 实测向页面交付编码原样的 path 参数（dev 双编码探针证实），入口需解码一次；
+// 解码失败回退原值交 normalizeTag 拒收。try/catch 写法在两种环境下都安全：参数若已被解码，
+// 解码要么恒等、要么遇字面 % 抛错回退，不会损坏合法标签
+export function decodeTagParam(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 export function readField(formData: FormData, key: string) {

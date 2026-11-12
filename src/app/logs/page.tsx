@@ -26,6 +26,8 @@
  * - 2026-11-12: F24 搜索关键词高亮接线：标题按 highlightSegments 切段包 <mark>；
  *               命中字段新增 BEFORE/AFTER 片段行（extractSnippet 半径 60，纯文本预览不经
  *               Markdown 渲染器）；q 为空时列表行为不变
+ * - 2026-11-12: F26 标签聚合：列表行标签改 Link 指向 /tags/[tag]；筛选区 tagChip 与 details
+ *               一字不动（筛选是 F03 点名交互，改成跳转会破坏功能）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -256,7 +258,17 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 </h2>
                 {log.tags.length > 0 && (
                   <p className="mt-3 font-mono text-[11px] text-ink-soft">
-                    {log.tags.join(" · ")}
+                    {log.tags.map((item, i) => (
+                      <span key={item}>
+                        {i > 0 && " · "}
+                        <Link
+                          href={`/tags/${encodeURIComponent(item)}`}
+                          className="hover:text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                        >
+                          {item}
+                        </Link>
+                      </span>
+                    ))}
                   </p>
                 )}
                 {snippetRow("BEFORE", log.beforeContent)}
