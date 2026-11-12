@@ -8,10 +8,12 @@
  * - 2026-11-04: 补 ID_PATTERN、LIMITS 与 safeCallbackUrl 三组判定（D26：反斜杠写法的回调此前能绕过），
  *               以及 SLUG_SOURCE 在浏览器 `v` flag 下的可编译性——上一轮把正则 source 直接写进 pattern 属性，
  *               浏览器控制台报 Invalid character class，由这条测试钉住
+ * - 2026-11-12: 增补 normalizeTag 六条用例（F26 标签聚合归一化口径：trim/空值/超长拒收、不解码不折叠，
+ *               TDD 先红后绿）
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { LIMITS, REPO_URL_PATTERN, REPO_URL_SOURCE, SLUG_PATTERN, SLUG_SOURCE, ID_PATTERN, pickParam, readField, safeCallbackUrl } from "../src/lib/forms.ts";
+import { LIMITS, REPO_URL_PATTERN, REPO_URL_SOURCE, SLUG_PATTERN, SLUG_SOURCE, ID_PATTERN, normalizeTag, pickParam, readField, safeCallbackUrl } from "../src/lib/forms.ts";
 
 test("pickParam 只认非空字符串", () => {
   assert.equal(pickParam("abc"), "abc");
@@ -124,4 +126,30 @@ test("回调地址只认本站相对路径，反斜杠写法也挡掉", () => {
   assert.equal(safeCallbackUrl("javascript:alert(1)"), "/admin");
   assert.equal(safeCallbackUrl(""), "/admin");
   assert.equal(safeCallbackUrl(undefined), "/admin");
+});
+
+// 标签聚合页归一化口径（F26）：页面 path 参数已被框架解码（Next 源码实证），
+// 这里不做二次解码，只做 trim 与超长拒收；页面侧与 proxy 侧共用
+test("normalizeTag 去掉首尾空白", () => {
+  assert.equal(normalizeTag(" docker "), "docker");
+});
+
+test("normalizeTag 空串返 null", () => {
+  assert.equal(normalizeTag(""), null);
+});
+
+test("normalizeTag 纯空白返 null", () => {
+  assert.equal(normalizeTag(" "), null);
+});
+
+test("normalizeTag 超上限长度返 null", () => {
+  assert.equal(normalizeTag("a".repeat(25)), null);
+});
+
+test("normalizeTag 的 % 原样保留，不二次解码", () => {
+  assert.equal(normalizeTag("100%"), "100%");
+});
+
+test("normalizeTag 大小写原样，不做折叠", () => {
+  assert.equal(normalizeTag("Docker"), "Docker");
 });

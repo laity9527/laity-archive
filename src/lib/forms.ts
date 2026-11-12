@@ -7,11 +7,25 @@
  * - 2026-11-02: 从 5 个页面与 2 个 Server Action 中收敛同名重复定义
  * - 2026-11-04: 补 ID_PATTERN / LIMITS / safeCallbackUrl（D26）：校验数字原先只活在 action 的 if 里，
  *               浏览器属性、服务端判定、测试三处各写一遍；回调判定的反斜杠漏项也要能被单测锁住
+ * - 2026-11-12: 新增 normalizeTag（F26 标签聚合页归一化：trim + 空值/超长拒收，不解码不折叠，
+ *               页面侧与 proxy 前置判定共用）
  */
 
 // ?error= / ?saved= 这类参数被框架给成数组时按缺省处理，只认非空字符串
 export function pickParam(value: string | string[] | undefined) {
   return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+// 标签聚合页归一化（F26）：页面 path 参数已被框架解码（Next 源码实证），这里不做二次解码，
+// 只做 trim 与空值/超长拒收。调用方（标签页与 proxy 前置判定）负责先过 normalizeTag 再查库。
+export function normalizeTag(value: string): string | null {
+  const tag = value.trim();
+
+  if (tag.length === 0 || tag.length > LIMITS.tag) {
+    return null;
+  }
+
+  return tag;
 }
 
 export function readField(formData: FormData, key: string) {

@@ -21,6 +21,8 @@
  *               include 补 user.handle——编辑页「看前台」链接拼 /u/[handle]/logs/[slug] 要用
  * - 2026-11-11: V2.1 新增全局搜索：searchLogs 在 getSafeLogs 之上内存过滤（大厅公域口径甲，
  *               isPublished 恒定）；匹配逻辑抽至 src/lib/log-search.ts 的 matchLog 纯函数
+ * - 2026-11-12: 新增 hasPublishedTag（F26 标签聚合页 proxy 前置判定：标签是否有已发布日志，
+ *               select id 保持索引层，与 isPublishedLogSlug 同构）
  */
 import { db } from "@/lib/db";
 import { matchLog } from "@/lib/log-search";
@@ -139,6 +141,17 @@ export async function isPublishedLogSlug(slug: string, handle: string) {
 
   const hit = await db.log.findFirst({
     where: { userId, slug, isPublished: true },
+    select: { id: true },
+  });
+
+  return hit !== null;
+}
+
+// 标签聚合页 proxy 前置判定（F26）：标签是否有已发布日志。
+// 入参约定为已过 normalizeTag 的合法值（调用方负责归一化）；select id 让查询停留在索引层，与 isPublishedLogSlug 同构
+export async function hasPublishedTag(tag: string): Promise<boolean> {
+  const hit = await db.log.findFirst({
+    where: { isPublished: true, tags: { has: tag } },
     select: { id: true },
   });
 
