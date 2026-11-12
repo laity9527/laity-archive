@@ -23,12 +23,16 @@
  * - 2026-11-11: V2.1 新增全局搜索：筛选栏上方搜索表单（GET 提交 + hidden input 携带
  *               project/tag，提交不丢筛选）；logsHref 全链路保留 q；空态三态
  *               （搜索无结果/筛选无结果/全空）
+ * - 2026-11-12: F24 搜索关键词高亮接线：标题按 highlightSegments 切段包 <mark>；
+ *               命中字段新增 BEFORE/AFTER 片段行（extractSnippet 半径 60，纯文本预览不经
+ *               Markdown 渲染器）；q 为空时列表行为不变
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Timeline } from "@/components/Timeline";
 import { pickParam } from "@/lib/forms";
+import { extractSnippet, highlightSegments } from "@/lib/highlight";
 import { getSafeLogs, searchLogs } from "@/lib/logs";
 
 export const metadata: Metadata = {
@@ -103,6 +107,29 @@ async function LogBoard({ searchParams }: LogsPageProps) {
       {item}
     </Link>
   );
+
+  // F24：命中字段的片段行。仅当 q 非空且该字段内存在命中时渲染；
+  // 纯文本预览（不经过 Markdown 渲染器），命中词由 highlightSegments 切段包 <mark>
+  const snippetRow = (label: string, content: string) => {
+    if (!qFilter) return null;
+
+    const snip = extractSnippet(content, qFilter);
+
+    if (!snip) return null;
+
+    return (
+      <p className="mt-3 font-sans text-sm leading-relaxed text-ink">
+        <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
+          {label}
+        </span>{" "}
+        {snip.leadingEllipsis && "…"}
+        {snip.segments.map((seg, i) =>
+          seg.match ? <mark key={i}>{seg.text}</mark> : seg.text,
+        )}
+        {snip.trailingEllipsis && "…"}
+      </p>
+    );
+  };
 
   return (
     <>
@@ -220,7 +247,11 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                     href={`/u/${log.user.handle}/logs/${log.slug}`}
                     className="hover:underline hover:decoration-1 hover:underline-offset-4"
                   >
-                    {log.title}
+                    {qFilter
+                      ? highlightSegments(log.title, qFilter).map((seg, i) =>
+                          seg.match ? <mark key={i}>{seg.text}</mark> : seg.text,
+                        )
+                      : log.title}
                   </Link>
                 </h2>
                 {log.tags.length > 0 && (
@@ -228,6 +259,8 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                     {log.tags.join(" · ")}
                   </p>
                 )}
+                {snippetRow("BEFORE", log.beforeContent)}
+                {snippetRow("AFTER", log.afterContent ?? "")}
               </article>
             </li>
           ))}

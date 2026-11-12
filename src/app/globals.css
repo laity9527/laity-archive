@@ -20,7 +20,8 @@
   --color-ink: var(--foreground);
   --color-ink-soft: #625d53;
   --color-hairline: #d9d2c5;
-  /* D30 B1：全站唯一强调色，目前只给持久导航的当前项（文字 + 下边框）用；
+  /* D30 B1：全站唯一强调色，用于持久导航的当前项（文字 + 下边框）与
+     搜索高亮底色（F24，A案棕底纸白字，2026-11-12 负责人裁断扩权）；
      非文本对比 #7a5a3a / #f4f1ec = 5.56:1，≥3:1；不加进按钮、边框或正文 */
   --color-brown: #7a5a3a;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Arial,
@@ -173,6 +174,16 @@ select {
   select {
     transition: none;
   }
+}
+
+/* ── F24：搜索关键词高亮 ───────────────────────────────────────────────── */
+
+/* A案（负责人 2026-11-12 裁断）：棕底纸白字。浏览器对 <mark> 有默认黄底样式，
+   必须显式覆盖；line-height: inherit 保证行高不被背景块撑开 */
+mark {
+  background: var(--color-brown);
+  color: var(--background);
+  line-height: inherit;
 }
 
 /* ── F23/D34：阅读目录与进度条 ───────────────────────────────────── */
