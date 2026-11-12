@@ -16,6 +16,9 @@
  * - 2026-11-09: V2.0 Step 4-B：概览取数带 session.userId（布局的会话检查不阻塞页面并行渲染，
  *               本页自查会话后再查库），三项计数与最近动态只统计本租户
  * - 2026-11-10: V2.0 Step 5 Commit 3：概览加 [ 从 GitHub 同步 ] 按钮与结果横幅（?synced/skipped/SYNC_001）
+ * - 2026-11-12: F25：概览加 [ 导出所有数据 ] 下载入口（与同步按钮同一行）与 EXPORT_001 横幅
+ * - 2026-11-12: F25 收口：导出入口由客户端按钮（动作返回 Response）改为锚点指向 /admin/export
+ *               路由处理器——动作返回值走 RSC 序列化通道无法承载 Response，按官方下载范例改
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -84,7 +87,13 @@ export default async function AdminHomePage({
         </p>
       )}
 
-      {errorCode && errorCode !== "SYNC_001" && (
+      {errorCode === "EXPORT_001" && (
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+          导出失败，请稍后重试
+        </p>
+      )}
+
+      {errorCode && errorCode !== "SYNC_001" && errorCode !== "EXPORT_001" && (
         <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
           {errorCode} · {errorTextOf(errorCode, "log")}
         </p>
@@ -145,16 +154,29 @@ export default async function AdminHomePage({
           <span className="ml-4">草稿对外不可见，发布后前台立即可见</span>
         </p>
 
-        <form action={syncGithubAction} className="mt-6 inline">
-          <SubmitButton
-            label="[ 从 GitHub 同步 ]"
-            pendingLabel="同步中…"
-            className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
-          />
-          <span className="ml-4 font-mono text-[10px] text-ink-soft">
-            拉取公开仓库的提交，生成草稿挂在 github-sync 项目下
-          </span>
-        </form>
+        <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3">
+          <form action={syncGithubAction} className="inline">
+            <SubmitButton
+              label="[ 从 GitHub 同步 ]"
+              pendingLabel="同步中…"
+              className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
+            />
+            <span className="ml-4 font-mono text-[10px] text-ink-soft">
+              拉取公开仓库的提交，生成草稿挂在 github-sync 项目下
+            </span>
+          </form>
+          <div className="flex items-baseline gap-3">
+            <a
+              href="/admin/export"
+              className="border border-ink px-4 py-2 font-sans text-sm text-ink hover:bg-ink hover:text-paper"
+            >
+              导出所有数据
+            </a>
+            <span className="font-mono text-[10px] text-ink-soft">
+              导出当前账号全部项目与日志（含草稿）
+            </span>
+          </div>
+        </div>
       </section>
 
       <p className="mt-16">

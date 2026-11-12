@@ -16,6 +16,7 @@
  *               OAuthCreateAccount/OAuthAccountNotLinked/Callback 六个码
  * - 2026-11-10: Step 6 Commit 2：补 AI_001（生成失败/超时/解析失败，降级保留「（等待补充）」）/
  *               AI_002（单次 Commit 条数超 F22 的 12 条上限）
+ * - 2026-11-12: F25 全站数据导出：补 EXPORT_001（查库或组装异常，概览横幅兜底）
  */
 
 export const ERROR_TEXT: Record<string, string> = {
@@ -36,6 +37,8 @@ export const ERROR_TEXT: Record<string, string> = {
   // Step 6 / F22：AI 辅助生成的动作结果码（AI_001 全局降级、AI_002 输入超限）
   AI_001: "AI 生成失败，请稍后重试或手动补全。",
   AI_002: "单次最多处理 12 条 Commit，请分次生成。",
+  // F25 全站数据导出的动作结果码（查库或组装异常）
+  EXPORT_001: "导出失败，请稍后重试。",
   // NextAuth v4 OAuth 链路实际会回跳的码（core/routes/signin.js 与 callback.js 实查）
   OAuthSignin: "发起 GitHub 登录失败，请稍后再试。",
   AccessDenied: "GitHub 授权被拒绝或已取消。",

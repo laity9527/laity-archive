@@ -208,6 +208,10 @@ const BANDS = [
       "src/app/admin/layout.tsx",
       "src/app/admin/log-actions.ts",
       "src/app/admin/sync-actions.ts",
+      // export/route 是 F25 全站数据导出路由处理器（会话校验→查库→组装→JSON 下载响应），
+      // 与后台动作层同族，放 ③ 不动 ①+② 零余量防线；原方案为动作返回 Response，实测被 RSC
+      // 序列化通道拒绝（只收纯对象），按官方下载范例改路由处理器
+      "src/app/admin/export/route.ts",
       // ai-actions 是 Step 6 的 AI 动作层（会话校验 → 表单解析 → 调用客户端 + 解析结果），
       // 与另外三个后台动作同层，放 ③ 不动 ①+② 零余量防线
       "src/app/admin/ai-actions.ts",
@@ -282,6 +286,11 @@ const BANDS = [
       "src/app/u/[handle]/page.tsx",
       "src/app/about/page.tsx",
       "src/app/login/page.tsx",
+      // ArticleToc 自 ④ 平移进来（F25 导出轮，负责人裁断批准）：③ 段新增两个导出文件后总行数
+      // 非线性回落使后窗口容量 1492→1478，④ 超余量、globals.css 头部被切口切掉；按"折排版不折逻辑"
+      // 让位——toc.ts 抽取口径已在 ③ 整份可见，ArticleToc 是目录右栏/折叠面板的排版交互外壳，
+      // 详情页（④）的调用处仍可见
+      "src/components/ArticleToc.tsx",
       // forms.ts 自 ② 平移进折走段（2026-11-09 第二十次窗口配平，负责人裁断一批准）：主体是常量表
       // （LIMITS 上限表 + SLUG/REPO_URL/ID 三组正则源串）+ 三个纯函数判（pickParam/readField/safeCallbackUrl），
       // 与已在 ③ 的 error-text.ts / licenses.ts 同性质；①+② 因阶段一 logs/projects 涨行 + 阶段二 proxy 涨行
@@ -303,9 +312,6 @@ const BANDS = [
       "src/app/logs/page.tsx",
       // V2.0 Step 3 阶段一：日志详情路由迁至 /u/[handle]/logs/[slug]，收录路径随目录迁移
       "src/app/u/[handle]/logs/[slug]/page.tsx",
-      // ArticleToc 是 F23/D34 的阅读目录客户端岛（桌面 sticky 右栏 + 移动折叠面板 + scrollspy），
-      // 访客可见界面，与详情页同类放 ④
-      "src/components/ArticleToc.tsx",
       // 租户主页 / 关于页 / 登录页于本轮（F23/D34，负责人裁定 Option 2）自 ④ 平移进折走段 ③：
       // ArticleToc + 详情页接线 + globals.css 进度条/rail/面板样式把 ④ 顶到 1879 行（后窗口仅 1498），
       // 移出这三页（190+158+92=440）后 ④ 回到 1439 行。三者皆排版/交互外壳——租户主页复用 getArchiveBoard（②）、
