@@ -94,6 +94,8 @@
  *               B1 大厅、B2 详情、B4 骨架让 ④ 涨到 1610 行，后窗口起点越过 globals.css 头部（护栏拒件），
  *               按“折排版不折逻辑”把 src/app/logs/page.tsx 平移进 ③——取数/主题/时间轴均在窗口内，
  *               折走的是列表排版。出件：12158 行 / 244 页 / 收录 90 / 后窗口余量 244
+ * - 2026-11-13: Phase C 登记：新增 AdminNav 与 admin/logs/page（均 ③），后台壳层与列表排版不折逻辑；
+ *               AI 帮写回退/错误码改动已在 ③ 的 ai-prompt/ai-client/ai-actions 内，行数变化出件看护栏
  * - 2026-11-12: F26 标签聚合 Commit 4：登记 src/app/tags/[tag]/page.tsx 进 ④ 段（访客可见界面，与大厅/详情同类）；
  *               大厅与详情页标签链接接线属 ④ 段内行数增长，出件看护栏
  */
@@ -231,6 +233,9 @@ const BANDS = [
       // 与 sitemap/robots/export route 同族（对外出口层），①+② 零余量防线不动
       "src/app/feed.xml/route.ts",
       "src/app/admin/layout.tsx",
+      // Phase C 后台侧栏：深墨导航外壳，与 admin/layout 同属后台壳层；调用方布局已在 ③，
+      // 登记 ③ 不动 ①+② 零余量防线（2026-11-13）
+      "src/components/AdminNav.tsx",
       "src/app/admin/log-actions.ts",
       "src/app/admin/sync-actions.ts",
       // export/route 是 F25 全站数据导出路由处理器（会话校验→查库→组装→JSON 下载响应），
@@ -246,6 +251,9 @@ const BANDS = [
       "src/app/admin/projects/page.tsx",
       "src/app/admin/logs/new/page.tsx",
       "src/app/admin/logs/[id]/edit/page.tsx",
+      // Phase C 后台日志列表：状态筛选 + 标题搜索 + 分页的纯列表排版，
+      // 与大厅页同属“折排版不折逻辑”；取数在 ③ 的 logs.ts，登记 ③（2026-11-13）
+      "src/app/admin/logs/page.tsx",
       // 项目详情页让位给后窗口的站点外壳：项目列表页仍在 ④ 段，功能面不缺
       // V2.0 Step 3 阶段一：路由迁至 /u/[handle]/projects/[slug]，收录路径随目录迁移
       "src/app/u/[handle]/projects/[slug]/page.tsx",

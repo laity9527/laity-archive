@@ -22,6 +22,8 @@
  *               服务端 confirmDelete=on 闸门未动，由弹窗分支恒置 on 满足
  * - 2026-11-09: V2.0 Step 4-B：列表与编辑回填都带 session.userId——别人的项目不出现在列表里，
  *               ?edit= 传别人的 id 回填不到（getProjectById 按 {id,userId} 查），与不存在同表现
+ * - 2026-11-13: Phase C 收口：标题区加 PROJECTS 眉标与「新建项目」锚点；表单区加 id/scroll-mt；
+ *               三处横幅与保存/取消按钮的中文从 Mono 改回 Inter；表单逻辑一字未动
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -142,25 +144,38 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   return (
     <>
-      <h1 className="text-3xl font-medium tracking-tight">项目</h1>
+      <header className="flex flex-wrap items-baseline justify-between gap-4 border-b border-ink pb-5">
+        <div>
+          <p className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+            PROJECTS
+          </p>
+          <h1 className="mt-2 text-3xl font-medium tracking-tight">项目</h1>
+        </div>
+        <a
+          href="#project-form"
+          className="border border-ink px-4 py-2 font-sans text-xs text-ink hover:bg-ink hover:text-paper"
+        >
+          新建项目
+        </a>
+      </header>
 
       {errorText && (
         <p
           id="form-error"
-          role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink"
+          role="alert" className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink"
         >
           {errorCodeChip(errorCode ?? "")} · {errorText}
         </p>
       )}
 
       {saved && (
-        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink">
           项目已保存
         </p>
       )}
 
       {deleted && (
-        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink">
           该项目已删除
         </p>
       )}
@@ -210,7 +225,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
         ))}
       </ul>
 
-      <section className="mt-16 border-t border-ink pt-8">
+      <section id="project-form" className="mt-16 scroll-mt-6 border-t border-ink pt-8">
         <h2 className="font-sans text-[10px] text-ink-soft">
           {editing ? "编辑项目" : "新建项目"}
         </h2>
@@ -272,12 +287,12 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             <SubmitButton
               label={editing ? "保存修改" : "新建项目"}
               pendingLabel="提交中…"
-              className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
+              className="border-b border-ink font-sans text-xs text-ink disabled:text-ink-soft"
             />
             {editing && (
               <Link
                 href="/admin/projects"
-                className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
+                className="font-sans text-xs text-ink-soft hover:text-ink"
               >
                 取消
               </Link>
