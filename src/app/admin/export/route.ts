@@ -8,6 +8,7 @@
  *               实测动作返回值走 RSC 序列化通道（只收纯对象，Response 是类实例进不了）被框架拒绝，
  *               按官方文档下载范例改用 Route Handler——Content-Disposition 是真实响应头驱动下载；
  *               where 带 userId 复合条件（D33 口径），User 只 select handle，导出面不触加密 token 列
+ * - 2026-11-13: 导出失败补服务端日志（O3），只记错误消息，错误码与前端文案不变
  */
 import { requireAdminSession } from "@/auth";
 import { db } from "@/lib/db";
@@ -50,8 +51,9 @@ export async function GET() {
         "Cache-Control": "no-store",
       },
     });
-  } catch {
+  } catch (error) {
     // 查库或组装异常返回 500 + 错误码，客户端下载失败时据此提示（EXPORT_001 文案在 error-text 表）
+    console.error("[export] 导出失败", error instanceof Error ? error.message : error);
     return new Response(JSON.stringify({ error: "EXPORT_001" }), { status: 500 });
   }
 }
