@@ -12,11 +12,10 @@
  * - 2026-11-09: V2.0 Step 3 阶段二：先查拥有公开资源的用户（有已发布日志或有项目），再按租户生成
  *               /u/[handle]、/u/[handle]/logs/[slug]、/u/[handle]/projects/[slug] 清单；
  *               草稿（isPublished=false）与后台路径一律不进——取数仍走 getSafeLogs/listPublicProjects 的公开白名单
+ * - 2026-11-13: O5：逐用户 N+1 改为三张表单次取齐 + 内存按 handle 分组（输出顺序与条目不变）
  */
 import { connection } from "next/server";
 import { db } from "@/lib/db";
-import { getSafeLogs } from "@/lib/logs";
-import { listPublicProjects } from "@/lib/projects";
 import { siteUrl } from "@/lib/site";
 
 export type SitemapEntry = {
@@ -31,16 +30,36 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
 
   const base = siteUrl();
 
-  // 有公开资源的用户：至少一条已发布日志，或至少一个项目（项目无发布开关，公开范围由字段白名单控制）
-  const users = await db.user.findMany({
-    where: {
-      OR: [
-        { logs: { some: { isPublished: true } } },
-        { projects: { some: {} } },
-      ],
-    },
-    select: { handle: true, id: true },
-  });
+  // 一次取齐三张表，按 handle 分组（O5）：日志全局 beforeDate desc、项目全局 createdAt asc，
+  // 同一租户取出的子序列与原先"每用户各查一次"的顺序一致；无主行（user 为空）与原来一样跳过。
+  const [users, logRows, projectRows] = await Promise.all([
+    db.user.findMany({
+      where: { OR: [{ logs: { some: { isPublished: true } } }, { projects: { some: {} } }] },
+      select: { handle: true },
+    }),
+    db.log.findMany({
+      where: { isPublished: true },
+      orderBy: { beforeDate: "desc" },
+      select: { slug: true, updatedAt: true, user: { select: { handle: true } } },
+    }),
+    db.project.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { slug: true, createdAt: true, user: { select: { handle: true } } },
+    }),
+  ]);
+
+  const groupByHandle = <T extends { user: { handle: string } | null }>(rows: T[]) => {
+    const map = new Map<string, T[]>();
+    for (const row of rows) {
+      const handle = row.user?.handle;
+      if (!handle) continue;
+      const bucket = map.get(handle);
+      if (bucket) bucket.push(row);
+      else map.set(handle, [row]);
+    }
+    return map;
+  };
+  const logsByHandle = groupByHandle(logRows), projectsByHandle = groupByHandle(projectRows);
 
   const entries: SitemapEntry[] = [
     { url: `${base}/` },
@@ -51,23 +70,12 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     { url: `${base}/about` },
   ];
 
-  for (const user of users) {
-    const { handle, id } = user;
-    const [logs, projects] = await Promise.all([
-      getSafeLogs({ handle }),
-      listPublicProjects(id),
-    ]);
-
+  for (const { handle } of users) {
     entries.push({ url: `${base}/u/${handle}` });
-
-    for (const log of logs) {
-      entries.push({
-        url: `${base}/u/${handle}/logs/${log.slug}`,
-        lastModified: log.updatedAt,
-      });
+    for (const log of logsByHandle.get(handle) ?? []) {
+      entries.push({ url: `${base}/u/${handle}/logs/${log.slug}`, lastModified: log.updatedAt });
     }
-
-    for (const project of projects) {
+    for (const project of projectsByHandle.get(handle) ?? []) {
       entries.push({
         url: `${base}/u/${handle}/projects/${project.slug}`,
         lastModified: project.createdAt,
