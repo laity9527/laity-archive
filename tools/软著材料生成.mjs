@@ -96,7 +96,8 @@
  *               折走的是列表排版。出件：12158 行 / 244 页 / 收录 90 / 后窗口余量 244
  * - 2026-11-13: Phase C 登记：新增 AdminNav 与 admin/logs/page（均 ③），后台壳层与列表排版不折逻辑；
  *               AI 帮写回退/错误码改动已在 ③ 的 ai-prompt/ai-client/ai-actions 内，行数变化出件看护栏；
- *               编辑器实时发布检查 PublishCheck 同批登记 ③
+ *               编辑器实时发布检查 PublishCheck 同批登记 ③；临时本地登录 dev-login / DevLoginForm
+ *               按负责人 2026-11-13 决定保留，同批登记 ③（GitHub 恢复后再删并重出）
  * - 2026-11-12: F26 标签聚合 Commit 4：登记 src/app/tags/[tag]/page.tsx 进 ④ 段（访客可见界面，与大厅/详情同类）；
  *               大厅与详情页标签链接接线属 ④ 段内行数增长，出件看护栏
  */
@@ -167,6 +168,9 @@ const BANDS = [
       // token 加密是 node:crypto 的一层壳（Step 5），调用方 auth.ts 在 ② 整份可见；
       // 与 object-key 同类放折走段，不动 ①+② 行数（proxy.ts 被前窗口切开过多次）
       "src/lib/token-crypto.ts",
+      // dev-login 是本地开发临时账号密码校验（纯函数：非 production 且 DEV_LOGIN_PASSWORD 存在才启用），
+      // 与 token-crypto 同属鉴权辅助层；授权方仍是 auth.ts（②），登记 ③ 不动 ①+② 防线
+      "src/lib/dev-login.ts",
       // github-sync-filter 是 Step 5 的纯函数过滤（merge/无意义/去重/同日合并 + slug 净化），
       // 调用方 sync-actions 与 github-sync 都在 ②③ 可见载体；2026-11-10 第十六次窗口配平：
       // 进 ② 把 ①+② 顶过 1500，oss/auth/proxy 越界，由它让位
@@ -263,6 +267,9 @@ const BANDS = [
       // sensitive-scan / reading-time 两个纯函数），与 Editor 同属后台交互层，登记 ③
       "src/components/PublishCheck.tsx",
       "src/components/SignInButton.tsx",
+      // DevLoginForm 是登录页的本地调试表单（客户端，仅在 dev-admin 启用时渲染），
+      // 与 SignInButton 同属登录交互层；登记 ③
+      "src/components/DevLoginForm.tsx",
       "src/components/SignOutButton.tsx",
       // 提交按钮与编辑器、登录表单同属后台交互层：这一层整体在折走段是第八轮起定的口径
       // （它的调用方——各表单页——也都在这一段），本轮它整份落在省略段属于该口径的正常结果，
