@@ -158,6 +158,11 @@ DashScope 兼容端点 `https://dashscope.aliyuncs.com/compatible-mode/v1`）/ `
 项目链接 404（新增 `publicProjectHref()` 单源）、关于页两处口令文案改 GitHub OAuth、导航中文
 10px → 12px、首页加馆藏条与精选编号；未改数据模型、鉴权链路与写路径。
 
+修订留痕续二十四：2026-11-13 由我点名“授权改 AGENTS 临时登录行”+“提交验收记录”——**按点名授权修改本文件**，
+只在「技术栈锁定」登录行追加“临时本地登录（仅开发、env 控制、生产不注册、恢复后删除）”一段；
+GitHub OAuth 主线、ADMIN_PASSWORD 废弃结论、会话判定、登录限速、环境变量总表、视觉铁律与技术选型
+（Next 16.4.3 / Prisma 6.19.3 / Tailwind 4.3.3）均未改动。同轮提交最终验收记录；后台截图与 connection() 修复已在
+`e19f6cc`，临时登录在 `c4504a1`，材料重出在 `5487607`。
 
 ---
 
@@ -174,6 +179,11 @@ DashScope 兼容端点 `https://dashscope.aliyuncs.com/compatible-mode/v1`）/ `
   `src/lib/token-crypto.ts` 的 AES-256-GCM 加密后写入 `User.githubAccessToken`（token 不进 JWT/session）。
   登录页自建在 `/login`（I012-B）。**已废弃勿再用**：`ADMIN_PASSWORD`、`ALLOWED_GITHUB_IDS`、
   `src/lib/admin-password.ts`——随 D33 一并退役，见到别加回。
+  **临时本地登录（2026-11-13 负责人授权，仅开发）**：当 `NODE_ENV !== "production"` 且 `.env` 配置
+  `DEV_LOGIN_PASSWORD` 时，`src/auth.ts` 额外注册 `dev-admin` Credentials provider；用户名默认 `admin`
+  （`DEV_LOGIN_USER` 可覆盖），密码只从环境变量读取、源码不写死，登录解析到真实 `zhanglei` 用户的 `userId`。
+  生产构建不注册；GitHub OAuth 恢复稳定后须删除该 provider、`src/lib/dev-login.ts`、`src/components/DevLoginForm.tsx`
+  与两个环境变量，并重出软著材料。**该临时入口不是 `ADMIN_PASSWORD` 的复活**，上面的废弃结论不变。
   会话判定共三处且**共用同一个入口** `requireAdminSession()`（定义在 `src/auth.ts`）：`src/proxy.ts` 前置守卫
   （matcher 覆盖 `/admin/:path*`，判 `token.userId` 为非空字符串）、`src/app/admin/layout.tsx`、各 Server Action
   （不依赖前端隐藏按钮）。布局与动作判的是 `session` 回调带出的 `userId`——"存在会话"本身不构成放行理由；
