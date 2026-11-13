@@ -146,6 +146,11 @@ DashScope 兼容端点 `https://dashscope.aliyuncs.com/compatible-mode/v1`）/ `
 115–163 之间波动，结构性最低 115（高于阈值 100）」，`后窗口第 9201 行起于 forms.ts` 改为「后窗口起点与
 切口文件随总行数变化，以封面边界签名为准，不写死」。A1+B+C2、阈值 100、三类非法切口拒件、封面签名即
 位移信号与三项核对标准均保留；其余事实行、修订留痕块与技术选型（Next 16.4.3 / Prisma 6.19.3 / Tailwind 4.3.3）一字未动。
+修订留痕续二十二：2026-11-13 由我点名“O8 性能预算写进验证命令”——**按点名授权修改本文件**，
+只在「验证命令（验收唯一依据）」节「软著材料」命令之后追加三条可核对的性能预算
+（`/logs` 首屏查询数 ≤2 且响应不含正文字段；任一前台页面 Prisma 查询数 ≤3，不含 Proxy 前置判定；
+`/sitemap.xml` 查询数 ≤3，与用户数无关），每条附核对方式；其余事实行、修订留痕块与
+技术选型（Next 16.4.3 / Prisma 6.19.3 / Tailwind 4.3.3）一字未动。
 
 
 ---
@@ -395,6 +400,14 @@ AI 不得用"看起来没问题"替代任何一条的实际输出：
 - 生产编排校验：`docker compose --env-file tmp/<哑值文件> -f docker-compose.prod.yml config`
   （变量插值与 healthcheck 渲染核对；真实值只在服务器上）
 - 软著材料：`node tools/软著材料生成.mjs`（收录完整性 + 窗口适配，见下一节）
+- 性能预算（可数、可 grep，不用“响应时间 <200ms”这类不可核对的指标）：
+  - `/logs` 首屏查询数 — **≤ 2**（`getLogFacets` 1 次 + `getLogList`/`searchLogsLimited` 1 次）— 核对：
+    dev 里给 Prisma Client 挂 `$on("query")` 计数（或取 `pg_stat_statements` 请求前后差值），
+    并 grep 响应 HTML 确认不含 `beforeContent`/`afterContent`。
+  - 任一前台页面的 Prisma 查询数 — **≤ 3**（不含 `src/proxy.ts` 的前置判定）— 核对：同上计数中间件，
+    逐页刷新一次记数。
+  - `/sitemap.xml` 查询数 — **≤ 3**（与用户数无关；O5 后固定三条批量查询）— 核对：同上计数；
+    新增用户后复测仍为 3。
 
 覆盖边界要如实说：`npm test` 只锁纯逻辑（摘要口径、图片内容签名、slug 与表单取值、错误码文案、
 时间展示、路由归属）。数据库层、需登录的 Server Action、页面渲染都不在其内，那部分靠
