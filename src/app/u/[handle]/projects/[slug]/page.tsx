@@ -17,6 +17,8 @@
  * - 2026-11-09: V2.0 Step 3 阶段一：路由迁至 /u/[handle]/projects/[slug]，params 提取 handle 传入
  *               getPublicProjectBySlug 与 getSafeLogs（后者带 handle，挡住复合唯一下同名 slug 的跨租户日志）；
  *               日志行链接改 /u/[handle]/logs/[slug]；「在日志大厅筛选该项目」沿用全局大厅路由 /logs?project=
+ * - 2026-11-13: B3 收尾——返回链接改中文 12px（不再走 Mono），标签从纯文本改指向 /tags/[tag] 的链接并走
+ *               font-sans，日志条目标题 24 → 20px，与大厅条目同阶
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -66,9 +68,9 @@ export default async function ProjectDetailPage({
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
       <Link
         href="/projects"
-        className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
+        className="font-sans text-xs text-ink-soft hover:text-ink"
       >
-        ← 项目
+        ← 作品档案
       </Link>
 
       <header className="mt-8 border-b border-hairline pb-8">
@@ -115,7 +117,7 @@ export default async function ProjectDetailPage({
               >
                 <Timeline beforeDate={log.beforeDate} afterDate={log.afterDate} />
                 <article className="flex-1">
-                  <h3 className="text-2xl font-medium">
+                  <h3 className="text-xl font-medium">
                     <Link
                       href={`/u/${handle}/logs/${log.slug}`}
                       className="hover:underline hover:decoration-1 hover:underline-offset-4"
@@ -124,8 +126,18 @@ export default async function ProjectDetailPage({
                     </Link>
                   </h3>
                   {log.tags.length > 0 && (
-                    <p className="mt-3 font-mono text-[11px] text-ink-soft">
-                      {log.tags.join(" · ")}
+                    <p className="mt-3 font-sans text-[11px] text-ink-soft">
+                      {log.tags.map((item, i) => (
+                        <span key={item}>
+                          {i > 0 && " · "}
+                          <Link
+                            href={`/tags/${encodeURIComponent(item)}`}
+                            className="hover:text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                          >
+                            {item}
+                          </Link>
+                        </span>
+                      ))}
                     </p>
                   )}
                 </article>

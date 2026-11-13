@@ -1,6 +1,6 @@
 /**
  * 文件：src/app/login/page.tsx
- * 描述：后台登录页：纸白单列，给 GitHub 一键登录入口；承接 NextAuth 回跳的 error 码
+ * 描述：后台登录页：左侧说明与品牌、右侧 GitHub 一键登录；承接 NextAuth 回跳的 error 码
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
@@ -19,6 +19,8 @@
  *               第一处已经在读会话之前声明了请求期渲染，第二处什么都不做
  * - 2026-11-09: V2.0 Step 4-A：口令登录换回 GitHub OAuth 一键——口令输入框整段退役，页面只剩一个大按钮；
  *               说明文案改 GitHub 登录口径；会话判定仍走 requireAdminSession（4-B 把 /admin 改个人控制台后退役）
+ * - 2026-11-13: 显著升级 B3：单列居中改左右分栏（说明 + 登录卡），补「访客无需登录」与品牌收口；
+ *               中文标签从 Mono 改回 Inter（视觉铁律 2026-11-06 口径），鉴权逻辑与 callbackUrl 校验一字未动
  */
 import Link from "next/link";
 import { connection } from "next/server";
@@ -48,34 +50,69 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   }
 
   return (
-    <main id="main" className="mx-auto flex min-h-screen max-w-[560px] flex-col justify-center px-6 py-24">
-      <Link
-        href="/"
-        className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
-      >
-        ← 首页
-      </Link>
+    <main
+      id="main"
+      className="mx-auto flex min-h-screen max-w-[960px] flex-col justify-center px-6 py-16"
+    >
+      <div className="grid border border-hairline md:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="p-8 md:p-12">
+          <Link
+            href="/"
+            className="font-sans text-xs text-ink-soft hover:text-ink"
+          >
+            ← 返回首页
+          </Link>
 
-      <h1 className="mt-10 text-3xl font-medium tracking-tight">后台登录</h1>
-      <p className="mt-4 text-lg text-ink-soft">
-        使用 GitHub 登录进入档案后台。
-      </p>
+          <p className="mt-10 font-mono text-[9px] tracking-[0.2em] text-ink-soft">
+            ADMINISTRATION
+          </p>
+          <h1 className="mt-3 text-2xl font-medium tracking-tight md:text-4xl">
+            后台是写档案的地方，
+            <br />
+            不是另一个网站。
+          </h1>
+          <p className="mt-5 max-w-[420px] text-sm leading-relaxed text-ink-soft">
+            登录后可以新建项目与日志、从 GitHub 拉取提交草稿、导出全部数据。访客不需要账号，前台的日志与项目档案直接可读。
+          </p>
 
-      {errorCode && (
-        <p
-          role="alert"
-          className="mt-8 border border-ink px-4 py-3 font-mono text-xs text-ink"
-        >
-          {ERROR_TEXT[errorCode] ?? ERROR_TEXT.Default}
-        </p>
-      )}
+          <p className="mt-10 font-mono text-[10px] tracking-[0.2em] text-ink-soft">
+            LAITY ARCHIVE
+          </p>
+          <p className="mt-2 font-sans text-[11px] leading-relaxed text-ink-soft">
+            仅站主一个账号 · GitHub OAuth
+            <br />
+            登录信息不进入前台页面
+          </p>
+        </section>
 
-      <div className="mt-10">
-        <SignInButton callbackUrl={callbackUrl} />
+        <section className="flex flex-col justify-center border-t border-hairline p-8 md:border-l md:border-t-0">
+          <p className="font-sans text-[10px] text-ink-soft">后台登录</p>
+
+          {errorCode && (
+            <p
+              role="alert"
+              className="mt-4 border border-ink px-4 py-3 font-sans text-xs leading-relaxed text-ink"
+            >
+              {ERROR_TEXT[errorCode] ?? ERROR_TEXT.Default}
+            </p>
+          )}
+
+          <div className="mt-5">
+            <SignInButton callbackUrl={callbackUrl} />
+          </div>
+
+          <p className="mt-3 font-sans text-[11px] leading-relaxed text-ink-soft">
+            登录后回到你刚才想去的页面。
+          </p>
+
+          <p className="mt-8 border-t border-hairline pt-4 font-sans text-[11px] leading-relaxed text-ink-soft">
+            无账号？前台内容无需登录。
+          </p>
+        </section>
       </div>
 
-      <p className="mt-10 font-mono text-[11px] leading-relaxed text-ink-soft">
-        访客不需要登录，前台的日志与项目档案直接可读。
+      <p className="mt-6 text-center font-mono text-[10px] text-ink-soft">
+        © 2026 LAITY
       </p>
     </main>
   );

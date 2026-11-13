@@ -10,6 +10,7 @@
  * - 2026-11-09: 口令框旁加纯字符 [显示]/[隐藏] 切换（type=button 不触发提交），Enter 提交不受影响
  * - 2026-11-09: V2.0 Step 4-A：换回 GitHub 一键登录——口令输入框与显隐切换一并退役，
  *               按钮直接 signIn("github")；服务端渲染拿不到 csrf-token cookie 的约束不变
+ * - 2026-11-13: B3 登录页重排：按钮拉满右栏宽度，中文标签从 Mono 改回 Inter；不再用方括号包裹
  */
 "use client";
 
@@ -46,9 +47,9 @@ export function SignInButton({ callbackUrl }: SignInButtonProps) {
       onClick={onClick}
       disabled={pending}
       aria-busy={pending ? true : undefined}
-      className="w-full max-w-[320px] border border-ink px-8 py-3 font-mono text-[11px] tracking-[0.2em] text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
+      className="w-full border border-ink px-6 py-3 font-sans text-xs text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
     >
-      {pending ? "登录中…" : "[ 使用 GitHub 登录 ]"}
+      {pending ? "登录中…" : "使用 GitHub 登录"}
     </button>
   );
 }
