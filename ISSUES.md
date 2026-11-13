@@ -129,12 +129,19 @@ C2（封面边界签名，计算值输出）三项与效果；总行数 10699 / 
 ③ 经负责人授权，同步 `AGENTS.md:520`「已知坑速查 → 分页边界效应」那一条（仅该行改述，未追加修订留痕块）。
 ④ I075 明细行核对：其描述为 2.66:1 与 `border-left` 1px，未引用「42 行」旧余量数字，故本轮不改
 （状态仍 OPEN、复测判据不变）。⑤ 本轮无状态变更，计数保持 FIXED 64 / WONTFIX 12 / OPEN 8 / PLANNED 3。
+维护留痕续二十三：2026-11-13 Commit 11（负责人裁决：I001 转 WONTFIX + I016 描述校准；纯文档，只改本文件）。
+① **I001 转 WONTFIX**：门禁已在 `docker-compose.prod.yml:60-62` 实现（拒绝 root、拒绝口令等于用户名、要求 ≥12 位），
+剩余为部署时在 `.env.production` 设强口令，属上线手册执行项而非代码缺陷；本地 root/root 仅限开发容器，不改 compose。
+② **I016 描述校准（状态仍 PLANNED，不降级、不移出台账）**：能力已由 I061（2026-11-04）实传成功证明，
+但 4-B 后对象键改为 `logs/<userId>/…`（`src/lib/object-key.ts`）未再实传，待一次人工实传即可结案。
+③ I033 与其他未结项条目一字未动。④ 概览按脚本实算改为 **FIXED 64 / WONTFIX 13 / OPEN 8 / PLANNED 2**
+（88 明细行 = 87 条状态行 + I034 指针行），未结项速览移除 I001 行（余 10 条）、I016 行补描述。
 
 
 ## 台账概览（每次开工先看这里）
 
-- 规模：已登记 85 个编号（I001–I085），其中 I034 含 4 行多轮续记。状态分布：FIXED 64、WONTFIX 12、OPEN 8、PLANNED 3。
-  （本行计数由脚本按明细表实算得：**88 明细行 = 87 条状态行（FIXED 64 + WONTFIX 12 + OPEN 8 + PLANNED 3）
+- 规模：已登记 85 个编号（I001–I085），其中 I034 含 4 行多轮续记。状态分布：FIXED 64、WONTFIX 13、OPEN 8、PLANNED 2。
+  （本行计数由脚本按明细表实算得：**88 明细行 = 87 条状态行（FIXED 64 + WONTFIX 13 + OPEN 8 + PLANNED 2）
   + I034 首行指针行**，对应 85 个编号；2026-11-05 起按 AGENTS「已知坑速查 → 文档数据与代码实际不符」的口径，
   台账数字一律当场重算，不凭印象填、不沿用上一版。）
 - 编号规则：按发现顺序分配，**不复用、不重排**——所以正文里编号并非严格升序（I013–I016 排在 I021 之后、I023/I024 排在 I025/I026 之后、I042/I043 颠倒），这是留痕不是错误。引用一律用编号，不写"上次那条"。
@@ -143,9 +150,8 @@ C2（封面边界签名，计算值输出）三项与效果；总行数 10699 / 
 
 | 编号 | 状态 | 一句话 |
 |---|---|---|
-| I001 | PLANNED | 本地 compose 弱口令，上线门禁强制更换 |
 | I013 | OPEN | 未登录直调 Server Action 的 AUTH_001 分支在 HTTP 层不可达 |
-| I016 | PLANNED | OSS 真实上传联调，待本人登录点一次 |
+| I016 | PLANNED | OSS 真实上传联调；能力已由 I061 证明，4-B 后键改 `logs/<userId>/…`，待一次人工实传 |
 | I019 | OPEN | 镜像经镜像站拉取，未与官方逐层比对 |
 | I021 | OPEN | 软著材料打印成 PDF 的真实分页未实测 |
 | I033 | PLANNED | Server Action 的 Origin 校验线上待验 |
@@ -157,7 +163,7 @@ C2（封面边界签名，计算值输出）三项与效果；总行数 10699 / 
 
 | 编号 | 发现日期 | 问题描述 | 影响 | 状态 | 处置 |
 |---|---|---|---|---|---|
-| I001 | 2026-10-30 | 此前外部方案生成的 docker-compose 草稿使用已废弃的 version 字段、root/root 弱口令 | 本地开发可用，上线前必须改 | PLANNED | Phase 1 建库时去掉 version 字段；生产口令在 Phase 6 上线门禁强制更换 |
+| I001 | 2026-10-30 | 此前外部方案生成的 docker-compose 草稿使用已废弃的 version 字段、root/root 弱口令 | 本地开发可用，上线前必须改 | WONTFIX（2026-11-13） | Phase 1 建库时去掉 version 字段；生产口令在 Phase 6 上线门禁强制更换 ｜ **转 WONTFIX（2026-11-13，Commit 11，负责人裁决）**：门禁已实现（`docker-compose.prod.yml:60-62` 的 preflight 拒绝 root、拒绝口令等于用户名、要求 ≥12 位），剩余为部署时在 `.env.production` 设强口令，属上线手册执行项而非代码缺陷；本地 root/root 仅限开发容器，不改 compose。 |
 | I002 | 2026-10-30 | 此前外部方案按 Next.js 14 旧 API 编写骨架代码，与本项目实际版本可能不符 | 骨架代码不可直接采信 | FIXED（2026-11-04 结案） | Phase 1 脚手架就绪后以 node_modules/next/dist/docs/ 为准重写，旧骨架仅作参考 ｜ 后续事实：src/ 与 prisma/ 全部代码按 node_modules/next/dist/docs 与实测版本 Next 16.4.3 编写，2026-11-04 的 linux 容器复跑里 lint、tsc、build 全 0，路由表含 PPR 的 ◐ 标记——说明没有任何 Next 14 时代 API 残留。旧骨架已不在仓库里，本条不再有待办|
 | I003 | 2026-10-30 | AGENTS.md 登录行仍写"NextAuth.js（仅此一处）"，未反映已确认的 GitHub OAuth + 白名单决策 | 事实基座与 SPEC 有细微不同步 | FIXED（2026-11-02，经我批准改文件） | 该行已扩写为：NextAuth.js v4.24.15、提供方固定 GitHub OAuth、按 `ALLOWED_GITHUB_IDS` 数字 ID 白名单（非白名单回调处拒绝）、登录页自建在 `/login`（I012-B）、会话判定三处（`src/proxy.ts` 前置守卫 / `src/app/admin/layout.tsx` / 各 Server Action 内 `getServerSession`）。三处判定已逐个 grep 核实在位 |
 | I004 | 2026-10-30 | 本机 WSL2 未安装，Docker Desktop Linux 引擎无法启动，Phase 1 数据库相关验收全部阻塞 | 无法建库、迁移、种子、页面真数据验证 | FIXED（2026-10-30，非代码修复） | 我本人装好 WSL2（默认版本 2）后，Docker Desktop 后端因启动早于 WSL2 就绪仍卡住，`docker desktop stop/start` 后恢复；迁移、种子、真数据验证已在 Phase 1 自测表第 2–5 条回填为 PASS |
@@ -177,7 +183,7 @@ C2（封面边界签名，计算值输出）三项与效果；总行数 10699 / 
 | I013 | 2026-10-30 | 未登录直调 Server Action 的 HTTP 探针被运行时安全策略判为越权测试并拦下，未执行；而 Proxy 的 matcher 覆盖 `/admin/:path*`，未登录请求根本到不了 action，`AUTH_001` 分支在 HTTP 层不可达 | Phase 4 验收第 5 条后半段只验证到 Proxy 层拦截 | OPEN | 保留 action 内的 `getServerSession` 作为第二道防线；若日后收窄 Proxy matcher，必须先补这条验证（用测试环境或单元测试，不再用生产端点试探） |
 | I014 | 2026-10-30 | I006 复发：`logs` 规则同样忽略 `src/app/admin/logs/`，Phase 4 的 new / [id]/edit 两页在 `git status` 里不出现 | 若不处理，Phase 4 的编辑页会静默漏提交 | FIXED（2026-10-30，随 Phase 4 提交） | `.gitignore` 末尾补 `!src/app/admin/logs/`、`!src/app/admin/logs/**`；用 `git check-ignore -q` 逐文件确认已不被忽略、`git ls-files --others` 能列出两页。根因是模板规则按目录名匹配，后续任何新目录名叫 `logs` 都要先验一次 |
 | I015 | 2026-10-30 | `/projects/[slug]` 里 `notFound()` 对不存在的 slug 只换正文不换状态码：`curl -w %{http_code}` → **200**，正文首行 `<html id="__next_error__">`（与 Phase 2 第六节探针 A 同因：Cache Components 下静态壳已用 200 发出响应头） | 访客拿到 200 的错误页，搜索引擎可能收下脏 URL；Phase 5a 首测时这条判为不通过 | FIXED（2026-10-30，经我批准） | 照 D7 扩 `src/proxy.ts`：matcher 加 `/projects/:slug`，用 `isProjectSlug()` 做一次 `select slug`，未命中直接返回带 404 的纸白页；文案按路由类型分 `NOT_FOUND_COPY.log / .project` 两套，slug 不拼进 HTML。复测：不存在的项目 404、编码写法 `earth%2Dmirror` 200、只有草稿的项目 200 且 `NO LOG YET`、`/logs/*` 与 `/admin` 无回归 |
-| I016 | 2026-10-30 | Phase 5 的 OSS 半段前置动作（开 Bucket、配 RAM 最小权限密钥、填 `.env`）是外部账号与计费操作，只能由我本人执行；且很可能要新增 OSS SDK | 5b 无法由 AI 独立完成 | PLANNED（只剩真实上传联调） | 我已拍板拆段：5a 项目页先做（本轮完成），5b 等密钥就绪。届时新增依赖先报许可证再装，`next.config.ts` 的 `images.remotePatterns` 变更已在 DESIGN 批准范围内 ｜ 2026-11-03 我本人已完成 AK 轮换并删掉两个多余键（I023），OSS_REGION 也改成 oss-cn-beijing；前置的外部动作全部就绪。剩下的就是后台点一次上传并核对直链，与 I010 同一个阻塞——本地 GITHUB_ID 值形态不合法（含大写，GitHub 侧 404）|
+| I016 | 2026-10-30 | Phase 5 的 OSS 半段前置动作（开 Bucket、配 RAM 最小权限密钥、填 `.env`）是外部账号与计费操作，只能由我本人执行；且很可能要新增 OSS SDK | 5b 无法由 AI 独立完成 | PLANNED（只剩真实上传联调） | 我已拍板拆段：5a 项目页先做（本轮完成），5b 等密钥就绪。届时新增依赖先报许可证再装，`next.config.ts` 的 `images.remotePatterns` 变更已在 DESIGN 批准范围内 ｜ 2026-11-03 我本人已完成 AK 轮换并删掉两个多余键（I023），OSS_REGION 也改成 oss-cn-beijing；前置的外部动作全部就绪。剩下的就是后台点一次上传并核对直链，与 I010 同一个阻塞——本地 GITHUB_ID 值形态不合法（含大写，GitHub 侧 404） ｜ **描述校准（2026-11-13，Commit 11，负责人裁决；状态仍 PLANNED）**：能力已由 I061（2026-11-04）实传成功证明（70 字节 PNG 两次上传、直链以 `<img>` 加载成功）；V2.0 Step 4-B 后对象键改为 `logs/<userId>/…`（`src/lib/object-key.ts`），此后未再实传；待一次人工实传即可结案，不降级、不移出台账。 |
 | I022 | 2026-11-02 | 装上 `ali-oss@6.23.0` 后 `npm run build` 直接红：`./node_modules/urllib/lib/detect_proxy_agent.js:24:44 Module not found: Can't resolve 'proxy-agent'`（导入链 `src/app/admin/upload-action.ts → src/lib/oss.ts → ali-oss/lib/client.js → urllib`）。`proxy-agent` 是 urllib@2 的可选懒加载依赖，本就没进那 68 个新增包，而 Next 会把 Server Component 用到的依赖打进 bundle，Turbopack 静态解析这句 `require` 即失败。lint/tsc 全绿也照样 build 不出来，说明"类型过≠构建过" | Phase 5b 卡在"lint/build 通过"这条硬门禁，standalone 镜像也就构建不出来 | FIXED（2026-11-02，经我批准走 A，改动待随 5b 一起提交） | 两条路都在 AGENTS.md 红线上，AI 先停下未动：A（已采用）`next.config.ts` 加 `serverExternalPackages: ["ali-oss"]`，语义先按本地文档 `node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/serverExternalPackages.md` 核实（排除出 Server Components 打包、改用原生 Node require），不新增依赖；落地后 `npm run lint`/`npx tsc --noEmit`/`npm run build` 均退出 0，`docker build --target runner` 出图成功且镜像内 `require('ali-oss')` 与假凭据实例化都通过，standalone 产物确认带全。B（未采用）装 `proxy-agent`，会再引入 pac-proxy-agent/degenerator 等一批业务用不到的传递依赖。详见 Phase-5b 自测表第三节 |
 | I025 | 2026-11-02 | `docker compose run --rm migrate db seed` 跑不起来：migrator 镜像 `FROM deps`，而 deps 阶段只做 `npm ci`，`npx prisma generate` 只在 builder 阶段执行，所以镜像里 `node_modules/.prisma/client/default.js` 仍是抛错的桩。加 `--build` 强制重建后照样报同一句 | 生产库若要灌种子数据（或任何依赖 Prisma Client 的一次性脚本）走现有编排做不到；`migrate deploy` 本身不受影响，本轮实测应用迁移成功 | WONTFIX（2026-11-04 结案：真因查明，生产不播种） | 原诊断（客户端是桩）不成立。容器内实测：require 后 PrismaClient 是 function，镜像里 prisma/seed.ts 也在；真正的失败是 ERR_MODULE_NOT_FOUND: Cannot find module /app/src/lib/content-hash.ts——deps 与 migrator 阶段只拷 package.json、锁文件与 prisma/，**镜像里没有 src/ 目录**，而 seed.ts 第 12 行按 AGENTS.md 的哈希单源要求 import 了 ../src/lib/content-hash.ts。处置走 B：生产不 seed，数据一律由后台录入（把测试种子塞进真库本就不合适），seed 定位为本地 prisma migrate dev 的伴生动作。若将来确需在生产播种，两条正路：在含 src 的环境里跑，或改 Dockerfile 把 src/lib/content-hash.ts 拷进 deps 阶段——后者属 build 配置变更，需逐条批准 |
 | I026 | 2026-11-02 | 本机 `laity-archive-migrate:prod` 是 2026-10-30T09:55:42Z 的旧镜像（`command -v openssl` 在其中找不到，而当天我用 `docker build --target migrator` 新构建的镜像里有 `/usr/bin/openssl`）。`docker compose build migrate` 连跑两次、以及 `docker compose run --build`，镜像 ID 都停在 `4b925be03f65` 没换，直接构建出来的是另一个 ID `7f300a290a73…`。**为什么 compose 认为它已经最新，我没查明白**，不下结论 | 服务器上若照 `docker compose build && docker compose run --rm migrate` 走，迁移可能跑在旧镜像里：改了 `prisma/` 或 Dockerfile 之后不会报错，只是静默用旧内容 | FIXED（2026-11-04，根因是标签错配不是构建失效） | 实测定位：migrate 服务原先不写 image，compose 把镜像构建到项目默认名 laity-archive-migrate:latest（该镜像 43 小时前、内含 /usr/bin/openssl、prisma 可用），而部署步骤核对的是 laity-archive-migrate:prod——那个标签只有手工 docker build -t :prod 才写。所以"连跑两次 ID 不变"量的是 compose 根本不碰的标签，compose 的构建一直是好的。修法：给 migrate 钉 image: laity-archive-migrate:prod。复跑验证 docker compose build migrate 后 :prod 由 4b925be03f65 变 d161c2e131b8，新镜像内 openssl 存在；同一镜像在全新 postgres:16 上跑 npx prisma migrate deploy 输出 All migrations have been successfully applied。手册第二节的"显式 docker build"步骤相应简化 |
