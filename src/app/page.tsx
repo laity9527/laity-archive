@@ -26,9 +26,11 @@
  * - 2026-11-13: 显著升级 A：标语下加馆藏条（项目数 / 已发布数 / 最近更新，复用同一次 board+latest 取数，
  *               零新增查询）；精选行加 mono 索引 01–03；两处「全部」入口统一 12px；项目链接改走
  *               publicProjectHref()（原先手拼，与看板同一处 404 根因）；版心首页放宽到 1200px
+ * - 2026-11-13: 显著升级 B4：Suspense fallback 由「加载中…」文本改为暖线骨架（LoadingRows）
  */
 import Link from "next/link";
 import { Suspense } from "react";
+import { LoadingRows } from "@/components/LoadingRows";
 import { StatusBoard } from "@/components/StatusBoard";
 import { Timeline } from "@/components/Timeline";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
@@ -200,9 +202,7 @@ export default function Home() {
       </header>
 
       <div className="mt-20">
-        <Suspense
-          fallback={<p className="font-sans text-sm text-ink-soft">加载中…</p>}
-        >
+        <Suspense fallback={<LoadingRows rows={3} />}>
           <ArchiveOverview />
         </Suspense>
       </div>

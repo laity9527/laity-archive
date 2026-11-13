@@ -35,10 +35,12 @@
  *               结果区顶部给激活筛选摘要与逐项清除；新增 topic 参数（主题 key → 标签集合 hasSome），
  *               点主题会清掉单标签、点单标签会清掉主题；标签全量收进 details，不再默认铺 12 个。
  *               计数在同一次 facets 查询里派生，首屏仍为 2 次数据库查询（O8）
+ * - 2026-11-13: 显著升级 B4：Suspense fallback 由文本改为暖线骨架（LoadingRows）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { LoadingRows } from "@/components/LoadingRows";
 import { Timeline } from "@/components/Timeline";
 import { db } from "@/lib/db";
 import { ID_PATTERN, pickParam } from "@/lib/forms";
@@ -560,9 +562,7 @@ export default function LogsPage({ searchParams }: LogsPageProps) {
   return (
     <main id="main" className="mx-auto max-w-[1200px] px-6 py-24">
       <h1 className="mb-12 text-4xl font-medium tracking-tight">开发日志</h1>
-      <Suspense
-        fallback={<p className="font-sans text-sm text-ink-soft">加载中…</p>}
-      >
+      <Suspense fallback={<LoadingRows rows={4} />}>
         <LogBoard searchParams={searchParams} />
       </Suspense>
     </main>
