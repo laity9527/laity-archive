@@ -23,7 +23,10 @@
  *               isPublished 恒定）；匹配逻辑抽至 src/lib/log-search.ts 的 matchLog 纯函数
  * - 2026-11-12: 新增 hasPublishedTag（F26 标签聚合页 proxy 前置判定：标签是否有已发布日志，
  *               select id 保持索引层，与 isPublishedLogSlug 同构）
+ * - 2026-11-13: O1/O2 查询层：抽 buildLogWhere 单源、新增 getLogList/getLogFacets（本轮无调用方，
+ *               页面行为不变；新查询不取正文）
  */
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { matchLog } from "@/lib/log-search";
 import { resolveUserId } from "@/lib/projects";
@@ -40,24 +43,55 @@ const projectSelect = {
   select: { name: true, slug: true, kind: true, status: true },
 } as const;
 
+// 列表/搜索的默认页大小。查询层与将来的页面分页共用这一个值，避免页面与查询各写一套。
+export const LOG_PAGE_SIZE = 50;
+
+// handle → userId 的异步解析单独放这里：where 构造保持同步纯函数，
+// 三个查询（getSafeLogs / getLogList / getLogFacets）都走同一条解析路径。
+type ResolvedLogFilter = {
+  userId?: string | null;
+  project?: string;
+  tag?: string;
+  // 列表/聚合口径要跳过无主行（历史遗留），与 getSafeLogs 的内存过滤保持同一可见集合
+  requireOwner?: boolean;
+};
+
+async function resolveLogFilter(filter: SafeLogFilter): Promise<ResolvedLogFilter | null> {
+  if (!filter.handle) {
+    return { project: filter.project, tag: filter.tag };
+  }
+
+  const userId = await resolveUserId(filter.handle);
+
+  if (!userId) {
+    return null;
+  }
+
+  return { userId, project: filter.project, tag: filter.tag };
+}
+
+// 公开可见口径的唯一构造点（D10）：isPublished 恒定，其余条件按传入收窄。
+// 新增查询必须调这个函数，不得另写 where——漏一处就可能让草稿进前台。
+function buildLogWhere(params: ResolvedLogFilter): Prisma.LogWhereInput {
+  return {
+    isPublished: true,
+    ...(params.userId ? { userId: params.userId } : {}),
+    ...(params.project ? { project: { slug: params.project } } : {}),
+    ...(params.tag ? { tags: { has: params.tag } } : {}),
+    // 无主行前台从不展示：getSafeLogs 在内存里跳过，列表/聚合直接在这里排除
+    ...(params.requireOwner ? { user: { isNot: null } } : {}),
+  };
+}
+
 export async function getSafeLogs(filter: SafeLogFilter = {}) {
-  let userId: string | null = null;
+  const resolved = await resolveLogFilter(filter);
 
-  if (filter.handle) {
-    userId = await resolveUserId(filter.handle);
-
-    if (!userId) {
-      return [];
-    }
+  if (!resolved) {
+    return [];
   }
 
   const rows = await db.log.findMany({
-    where: {
-      isPublished: true,
-      ...(userId ? { userId } : {}),
-      ...(filter.project ? { project: { slug: filter.project } } : {}),
-      ...(filter.tag ? { tags: { has: filter.tag } } : {}),
-    },
+    where: buildLogWhere(resolved),
     orderBy: { beforeDate: "desc" },
     // 大厅行要拼 /u/[handle]/logs/[slug] 的跳转链接，owner 的 handle 属于公开标识，随 select 白名单带出
     include: { project: projectSelect, user: { select: { handle: true } } },
@@ -86,6 +120,87 @@ export async function searchLogs(filter: SafeLogFilter & { q?: string }) {
   if (!q) return base;
 
   return base.filter((log) => matchLog(log, q));
+}
+
+const logListSelect = {
+  id: true,
+  title: true,
+  slug: true,
+  tags: true,
+  beforeDate: true,
+  afterDate: true,
+  publishedAt: true,
+  project: { select: { name: true, slug: true, kind: true, status: true } },
+  user: { select: { handle: true } },
+} as const;
+
+export type LogListItem = Prisma.LogGetPayload<{ select: typeof logListSelect }> & {
+  user: { handle: string };
+};
+
+export type LogListPage = { items: LogListItem[]; nextCursor: string | null };
+
+/**
+ * 大厅列表查询（O1）：只取列表需要的列，不取 beforeContent/afterContent。
+ * 调用方：下一步的 /logs 页面接入；本轮无调用方。
+ * 分页：id 游标（orderBy beforeDate desc, id desc 保证稳定），多取一条判断是否还有下一页。
+ */
+export async function getLogList(
+  params: SafeLogFilter & { cursor?: string | null; take?: number } = {},
+): Promise<LogListPage> {
+  const resolved = await resolveLogFilter(params);
+
+  if (!resolved) {
+    return { items: [], nextCursor: null };
+  }
+
+  const take = Math.min(Math.max(params.take ?? LOG_PAGE_SIZE, 1), LOG_PAGE_SIZE);
+  const rows = await db.log.findMany({
+    where: buildLogWhere({ ...resolved, requireOwner: true }),
+    // beforeDate 可重复，故加 id 做二级游标，避免同刻日志跳条或重复。
+    orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
+    select: logListSelect,
+  });
+
+  // where 已带 user isNot null，这里收窄只为类型（运行时不存在无主行）
+  const items = rows.slice(0, take) as LogListItem[];
+  const nextCursor = rows.length > take ? items[items.length - 1]?.id ?? null : null;
+
+  return { items, nextCursor };
+}
+
+export type LogFacets = {
+  projects: { slug: string; name: string }[];
+  tags: string[];
+};
+
+/**
+ * 大厅筛选项（O2）：只取 tags 与 project 两列，不碰正文。
+ * 调用方：下一步的 /logs 页面接入；本轮无调用方。
+ * 排序固定（项目按名称、标签按拼音），保证同一数据每次渲染顺序一致。
+ */
+export async function getLogFacets(): Promise<LogFacets> {
+  const rows = await db.log.findMany({
+    where: buildLogWhere({ requireOwner: true }),
+    select: { tags: true, project: { select: { slug: true, name: true } } },
+  });
+
+  const projects = new Map<string, string>();
+  const tags = new Set<string>();
+
+  for (const row of rows) {
+    projects.set(row.project.slug, row.project.name);
+    for (const tag of row.tags) tags.add(tag);
+  }
+
+  return {
+    projects: [...projects]
+      .map(([slug, name]) => ({ slug, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "zh-CN")),
+    tags: [...tags].sort((a, b) => a.localeCompare(b, "zh-CN")),
+  };
 }
 
 // 首页「最新日志」口径：beforeDate 是"哪天做的决策"，publishedAt 才是"什么时候写出来的"，
