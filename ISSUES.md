@@ -97,12 +97,21 @@ I001–I080，**OPEN** 待点名）。概览按脚本实算改为 **85 个编号
 文件（尤其靠近分带边界的 forms.ts）会使 meta 总行数变化 + 分页位移 + 边界行进出提交页。材料重出时须人工核对
 新增行合法性（无截断、无拼接、为合法源码行）与位移唯一性。建议后续单独立项评估是否调整分带或加边界保护
 （本轮不动手，仅记台账）。
+维护留痕续二十：2026-11-13 Commit 8 第二步（负责人裁决一：I010 按 A 档收口，认可「D33 现行口径 +
+2026-11-09 研发日志『登录成功』」替代登录态截图）。**I010 转 FIXED**：改动文件 `ISSUES.md` 与
+`docs/02-测试记录/Phase-3-自测表.md`（第 2 条标题与判据由「白名单账号授权」改述为 D33 口径
+「OAuth 授权 → 按 userId 进入 /admin」，结果列回填 2026-11-09 研发日志记录，不写截图）；
+验收方式＝D33 正文 + 该研发日志的实测记录。概览按脚本实算改为 **FIXED 64 / WONTFIX 11 / OPEN 9 / PLANNED 3**
+（88 明细行 = 87 条状态行 + I034 指针行），未结项速览移除 I010 行。其余 12 条未结项（C 档 11 条 + B 档 I075）
+本轮状态一字未动：I051 的 WONTFIX 属独立状态决策、I074 等复现定性，均留待单独轮次。
+**范围外观察（不动手）**：`AGENTS.md:180-181` 环境实况段仍写「2026-11-04 起不再依赖 GitHub 授权，口令是我自己配的」，
+与 D33（已恢复 OAuth、口令方案退役）相反；AGENTS 属纪律文件，改动需单独授权，本轮只记留痕、不新增 I 编号。
 
 
 ## 台账概览（每次开工先看这里）
 
-- 规模：已登记 85 个编号（I001–I085），其中 I034 含 4 行多轮续记。状态分布：FIXED 63、WONTFIX 11、OPEN 9、PLANNED 4。
-  （本行计数由脚本按明细表实算得：**88 明细行 = 87 条状态行（FIXED 63 + WONTFIX 11 + OPEN 9 + PLANNED 4）
+- 规模：已登记 85 个编号（I001–I085），其中 I034 含 4 行多轮续记。状态分布：FIXED 64、WONTFIX 11、OPEN 9、PLANNED 3。
+  （本行计数由脚本按明细表实算得：**88 明细行 = 87 条状态行（FIXED 64 + WONTFIX 11 + OPEN 9 + PLANNED 3）
   + I034 首行指针行**，对应 85 个编号；2026-11-05 起按 AGENTS「已知坑速查 → 文档数据与代码实际不符」的口径，
   台账数字一律当场重算，不凭印象填、不沿用上一版。）
 - 编号规则：按发现顺序分配，**不复用、不重排**——所以正文里编号并非严格升序（I013–I016 排在 I021 之后、I023/I024 排在 I025/I026 之后、I042/I043 颠倒），这是留痕不是错误。引用一律用编号，不写"上次那条"。
@@ -112,7 +121,6 @@ I001–I080，**OPEN** 待点名）。概览按脚本实算改为 **85 个编号
 | 编号 | 状态 | 一句话 |
 |---|---|---|
 | I001 | PLANNED | 本地 compose 弱口令，上线门禁强制更换 |
-| I010 | PLANNED（前提已消失，待正式结案） | GitHub 授权端到端验证，随 D20 取消登录而失去前提 |
 | I013 | OPEN | 未登录直调 Server Action 的 AUTH_001 分支在 HTTP 层不可达 |
 | I016 | PLANNED | OSS 真实上传联调，待本人登录点一次 |
 | I019 | OPEN | 镜像经镜像站拉取，未与官方逐层比对 |
@@ -136,7 +144,7 @@ I001–I080，**OPEN** 待点名）。概览按脚本实算改为 **85 个编号
 | I007 | 2026-10-30 | registry-1.docker.io 直连超时（本机无代理），Docker Hub 拉不到 postgres:16 | 建库阻塞 | FIXED（环境处置，非代码） | 经我确认改用 daocloud 镜像站拉取（digest `sha256:1beaa308…77c61c`）后本地 `docker tag` 成 `postgres:16`，未改 Docker 配置文件；镜像来源未与官方逐层比对，如需强来源可在有代理时重拉覆盖 |
 | I008 | 2026-10-30 | `prisma generate` 报 `EPERM: rename …query_engine-windows.dll.node`，因探针遗留的 4 个 `next start` 进程占用该 DLL | 客户端无法生成 | FIXED（环境处置） | 结束遗留进程后重跑成功；已写入环境指南已知坑，后续探针用完必须连子进程一起结束 |
 | I009 | 2026-10-30 | NextAuth 锁定 v4.24.15，而 Next 16 官方示例以 v5（Auth.js）为主；v4 在 App Router 下可用（route handler + getServerSession + getToken 均验证过），但与 v5 的 cookie 名、API 名称不同 | 后续若要升 v5 需改登录入口、会话语义与 Proxy 读取方式 | WONTFIX（维持 next-auth 4.24.15） | 维持 v4；升级另立需求，升级时同步改 D8 的会话策略说明 ｜ 同上：这是长期决定。v4 在 App Router 下的 route handler、getServerSession、Proxy 里的 getToken 三条路径都已实测可用；升 v5 属另立需求，需同步改写 D8 的会话策略说明|
-| I010 | 2026-10-30 | 凭据已填（Client ID/Secret/白名单 111046902 均在本地 `.env`），但真实 GitHub 账号授权需我本人在浏览器登录，AI 侧浏览器没有 GitHub 会话 | Phase 3 验收第 2 条仍无法由 AI 端到端验证 | PLANNED（Phase 3 回填；2026-11-03 本机首次实走授权，卡在 client_id 未通过。**2026-11-04 结案：随 D20 取消 GitHub 登录，本条前提消失**） | 我用浏览器走一次授权后，回填 Phase-3 自测表第 2 条与登录态截图。本轮实况：`/login` 页本身渲染正常（第一张截图），点"用 GITHUB 登录"后 GitHub 侧返回 404 页——派生判定显示 `.env` 里 `GITHUB_ID` 长 20 且含大写字母，而 GitHub 的 client ID 全为小写，故判为手抄/OCR 失真而非应用被删；`NEXTAUTH_URL` 经同法核实等于 `http://localhost:3000`，说明拼出的 `redirect_uri` 是对的，问题只在 client_id 这一个值。处置与判据已写进上线与回滚手册第六节排障表，等我用控制台复制按钮重填后再走一次。 ｜ 结案补充（2026-11-04）：不再走 GitHub。后台写路径的端到端验证改由口令登录完成，实测记录见 Phase-7 自测表第十三节；手册第六节那条"client_id 手抄失真"的排障行同步作废。 |
+| I010 | 2026-10-30 | 凭据已填（Client ID/Secret/白名单 111046902 均在本地 `.env`），但真实 GitHub 账号授权需我本人在浏览器登录，AI 侧浏览器没有 GitHub 会话 | Phase 3 验收第 2 条仍无法由 AI 端到端验证 | FIXED（2026-11-13，见本轮收口提交） | 我用浏览器走一次授权后，回填 Phase-3 自测表第 2 条与登录态截图。本轮实况：`/login` 页本身渲染正常（第一张截图），点"用 GITHUB 登录"后 GitHub 侧返回 404 页——派生判定显示 `.env` 里 `GITHUB_ID` 长 20 且含大写字母，而 GitHub 的 client ID 全为小写，故判为手抄/OCR 失真而非应用被删；`NEXTAUTH_URL` 经同法核实等于 `http://localhost:3000`，说明拼出的 `redirect_uri` 是对的，问题只在 client_id 这一个值。处置与判据已写进上线与回滚手册第六节排障表，等我用控制台复制按钮重填后再走一次。 ｜ 结案补充（2026-11-04）：不再走 GitHub。后台写路径的端到端验证改由口令登录完成，实测记录见 Phase-7 自测表第十三节；手册第六节那条"client_id 手抄失真"的排障行同步作废。 ｜ **收口（2026-11-13，Commit 8 第二步，负责人裁决一）**：本条原以「随 D20 取消 GitHub 登录、前提消失」挂账（见上一段 2026-11-04 结案补充）；D33 已恢复 GitHub OAuth 并退役白名单，故按现行口径重新验收——改动文件 `ISSUES.md` 与 `docs/02-测试记录/Phase-3-自测表.md`（第 2 条标题与判据改述为「OAuth 授权 → 按 userId 进入 /admin」，结果列回填 2026-11-09 研发日志「登录成功」记录）；验收方式＝D33 正文 + 该研发日志证据，登录态截图不作为必要证据（`docs/03-功能截图` 当前为空目录）。 |
 | I011 | 2026-10-30 | 退出入口是 `<a href="/api/auth/signout">`，触发 `@next/next/no-html-link-for-pages`；换 `Link` 拿不到 RSC、换 POST 表单缺 v4 的 csrfToken 入口 | 需在该行禁用 lint 规则（全仓库唯一一处） | WONTFIX（现状可接受） | 现状可接受；若日后升级 v5（其 signOut 可从客户端组件调用），顺带消除这处禁用 ｜ 退出入口用 <a href="/api/auth/signout"> 的代价是一条被禁用规则覆盖的 lint 告警面；换 Link 拿不到 RSC、换 POST 表单要自己取 v4 的 csrfToken。留给 v5 升级时一并消除，本轮不动|
 | I012 | 2026-10-30 | NextAuth v4 的 OAuth 只能由带 CSRF token 的表单 POST 发起，GET `/api/auth/signin/github` 只返回自带主题的登录页：进后台多一次点击，且该页圆角/浅色与本项目视觉铁律不一致 | 登录入口体验与品牌一致性打折 | FIXED（2026-10-30 补做 B） | 我拍板先按 A 走（保留 NextAuth 默认页，Phase 3 按现状验收），空档期再补 B。落地时**落点从 `/admin/login` 改为 `/login`**：`pages.signIn` 一旦设置，`/api/auth/signin*` 的 GET 会 307 到该页，页面若在 `/admin/` 子树里就会被 Proxy 与 admin 布局反复弹回，形成死循环。新增 `src/app/login/page.tsx` + `src/components/SignInButton.tsx`（客户端组件，因 csrf-token cookie 只在 `/api/auth/*` 响应里铸造，服务端渲染的页面首次访问填不进隐藏字段），`src/auth.ts` 加 `pages`，Proxy 与后台布局的跳转改指 `/login`。实测与未验证项见 Phase-3 自测表第九节 |
 | I017 | 2026-10-30 | 本地伪造 `next-auth.session-token`（用 `.env` 里的 `NEXTAUTH_SECRET` 调 `next-auth/jwt` 的 `encode`）这一等价验证手法，本轮被运行时安全策略判为"读取高敏感凭证 + 越权测试"直接拦下，未执行（Phase 3 同手法当时放行） | `/login` 的两条会话相关分支（已登录自动跳回、白名单外账号被拦）无法由 AI 端到端验证 | FIXED（2026-11-04，不需要伪造任何凭据即闭环） | 不尝试绕过。替代验证已做：`safeCallbackUrl` 纯函数判表 + v4 默认 `redirect` 回调的同源兜底（`core/lib/default-callbacks.js`），并在自测表标"未验证"；真正闭环靠我本人登录一次（I010） ｜ 结案补充（2026-11-04，随 D20）：两条分支都在应用内浏览器真跑通，没有伪造 token——① 已登录会话访问 `/login?callbackUrl=%2Fadmin%2Fprojects` 直接落到 `/admin/projects`（页面标题即"后台"）；② 原先的"白名单外账号被拦"这一分支随白名单一起消失，等价判定换成"口令不符"，实测回 `/login?error=CredentialsSignin` 且不发会话 cookie。 |
