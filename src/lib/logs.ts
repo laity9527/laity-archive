@@ -31,6 +31,8 @@
  *               不新增查询、不改数据模型
  * - 2026-11-13: 显著升级 B2：新增 getLogContext——一次查询取本租户全部已发布日志的
  *               邻接所需列，再交给 src/lib/related.ts 的纯函数挑前后篇与相关阅读
+ * - 2026-11-13: 首页主题入口：新增 getTopicCounts——只取 tags 一列，按 topics.ts 的
+ *               8 个主题计数；首页因此为 3 次查询，仍在 O8 的 ≤3 预算内
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -43,6 +45,7 @@ import {
 } from "@/lib/related";
 import {
   TOPICS,
+  countTopics,
   isTopicKey,
   topicTags,
   topicsOfTags,
@@ -375,6 +378,32 @@ export async function getLogContext(current: {
   const { items, reason } = pickRelated(rows, current, 3, excludeIds);
 
   return { older, newer, related: items, relatedReason: reason };
+}
+
+export type TopicCount = {
+  key: TopicKey;
+  label: string;
+  count: number;
+};
+
+/**
+ * 首页「按主题」的计数（B 阶段补充）：只取已发布日志的 tags 一列，
+ * 与大厅的 getLogFacets 分开——首页不需要项目/标签全集，少算一点。
+ * 一条日志在同一主题里只计一次，口径见 topics.ts 的 countTopics。
+ */
+export async function getTopicCounts(): Promise<TopicCount[]> {
+  const rows = await db.log.findMany({
+    where: { isPublished: true, user: { isNot: null } },
+    select: { tags: true },
+  });
+
+  const counts = countTopics(rows.map((row) => row.tags));
+
+  return TOPICS.map((topic) => ({
+    key: topic.key,
+    label: topic.label,
+    count: counts.get(topic.key) ?? 0,
+  }));
 }
 
 // 首页「最新日志」口径：beforeDate 是"哪天做的决策"，publishedAt 才是"什么时候写出来的"，

@@ -90,6 +90,10 @@
  *               调用方 feed 路由下一步同段登记），①+② 零余量防线不动，出件看护栏
  * - 2026-11-12: F27 RSS 订阅 Commit 2：登记 src/app/feed.xml/route.ts 进折走段 ③（与 sitemap/robots/export route
  *               同族的对外出口层）；layout.tsx 属 ④ 段内行数增长，出件看护栏
+ * - 2026-11-13: 显著升级 A–B4 收尾：登记 5 个新文件进 ③（topics / reading-time / related / CopyButton / LoadingRows）；
+ *               B1 大厅、B2 详情、B4 骨架让 ④ 涨到 1610 行，后窗口起点越过 globals.css 头部（护栏拒件），
+ *               按“折排版不折逻辑”把 src/app/logs/page.tsx 平移进 ③——取数/主题/时间轴均在窗口内，
+ *               折走的是列表排版。出件：12158 行 / 244 页 / 收录 90 / 后窗口余量 244
  * - 2026-11-12: F26 标签聚合 Commit 4：登记 src/app/tags/[tag]/page.tsx 进 ④ 段（访客可见界面，与大厅/详情同类）；
  *               大厅与详情页标签链接接线属 ④ 段内行数增长，出件看护栏
  */
@@ -147,6 +151,9 @@ const BANDS = [
       // 它不进 ② 是为了不动 ①+② 的行数（proxy.ts 被前窗口切开过三次），
       // 而它的三个调用方（首页、看板、日志大厅）都在 ④，排版上读得通
       "src/lib/labels.ts",
+      // topics 是 8 主题 × 56 标签的常量表 + 纯函数（topicOfTag / topicsOfTags / countTopics），
+      // 与 labels 同类；调用方大厅页与首页都在窗口内，登记 ③ 不动 ①+② 零余量防线
+      "src/lib/topics.ts",
       "src/lib/time.ts",
       // package.json 从 ① 让位进折走段（2026-11-05 第七轮）：next.config.ts 加 CSP 与 poweredByHeader
       // 涨行，proxy.ts（1358–1509）被 1500 切口打断；package.json 是依赖清单与脚本表，无程序逻辑
@@ -170,6 +177,12 @@ const BANDS = [
       // log-search 是 V2.1 全局搜索的匹配纯函数（四字段大小写不敏感子串匹配），
       // 调用方 searchLogs 在 logs.ts 内、页面在 ④；与 ai-prompt/object-key 同类放 ③，不动 ①+② 行数
       "src/lib/log-search.ts",
+      // reading-time 是 B2 的阅读时长纯函数（剥离 Markdown → 中文字数 + 英文词数 → 400 字/分钟），
+      // 与 highlight/log-search 同族；调用方详情页在 ④，登记 ③ 不动 ①+② 防线
+      "src/lib/reading-time.ts",
+      // related 是 B2 的前后篇与相关阅读纯函数（同标签优先 → 同项目兜底，排除已展示的前后篇），
+      // 与 toc/log-search 同族；调用方 logs.ts 与详情页已在可见载体，登记 ③
+      "src/lib/related.ts",
       // highlight 是 F24 搜索关键词高亮的纯函数（indexOf 切段 + 片段窗口提取，不构造正则），
       // 与 log-search/toc 同族；调用方页面在 ④，登记 ③ 不动 ①+② 零余量防线
       "src/lib/highlight.ts",
@@ -246,6 +259,9 @@ const BANDS = [
       // 印章组件在这里：它只是把 contentHash 与发布时间排版出来，存证的真逻辑在
       // publish.ts / content-hash.ts（前窗口）与详情页（后窗口，含 <Seal /> 的调用处）
       "src/components/Seal.tsx",
+      // CopyButton 是 B2 内容摘要卡的复制客户端组件（clipboard 写入 + 两秒回显 / 失败文案），
+      // 与 Seal 成对；调用方 Seal 在本段，登记 ③
+      "src/components/CopyButton.tsx",
       // 部署产物集中放这里：生产编排与多阶段构建文件都是配置而非程序逻辑，
       // 而 ② 段新增的 sensitive-scan 必须留在前窗口——它是这一轮的程序实质
       "docker-compose.prod.yml",
@@ -271,6 +287,9 @@ const BANDS = [
       // 最能代表本站界面，不折；看板只是把 getArchiveBoard() 的结果排版成若干行，
       // 而该取数口在 ② 段（src/lib/projects.ts）整份可见——折走的是排版，不是逻辑。
       "src/components/StatusBoard.tsx",
+      // LoadingRows 是 B4 的 Suspense 暖线骨架（零 JS / 零动画），只负责排版，
+      // 与 StatusBoard 同类；调用方首页/大厅在 ④，登记 ③
+      "src/components/LoadingRows.tsx",
       // 隐私页是一份静态承诺文案（数据全在页面内的常量数组，无算法）；本轮 globals.css 为正文标题补了
       // 一段样式，④ 涨到把 globals.css 头部切在后窗口外，按 assertWindowFit 的建议由它让位（收录不减）
       "src/app/privacy/page.tsx",
@@ -292,6 +311,11 @@ const BANDS = [
       // 首页/日志大厅/租户主页/关于在窗口内
       "src/components/SiteFooter.tsx",
       "src/app/projects/page.tsx",
+      // 日志大厅页自 ④ 平移进折走段（2026-11-13，B1–B4 收尾）：B2 详情页、B1 大厅左栏与
+      // B4 骨架使 ④ 涨到 1610 行，后窗口起点 10701 已越过 globals.css 头部（10349），护栏拒件。
+      // 本页是列表排版外壳：取数在 logs.ts、主题映射在 topics.ts、时间轴在 Timeline.tsx，
+      // 均已在前窗口或可见载体；按“折排版不折逻辑”让位，④ 保留外壳/首页/详情三块。
+      "src/app/logs/page.tsx",
       // 租户主页 / 关于页 / 登录页自 ④ 平移进来（F23/D34，负责人裁定 Option 2，见 ④ 段注释）：
       // 与 projects 大厅同类——租户主页复用看板取数（②）、关于页静态文案、登录页是后台交互层外壳，
       // 折走的是排版与外壳，不是逻辑；移入后 ④ 从 1879 回到 1439 行，装进后窗口 1498
@@ -329,7 +353,8 @@ const BANDS = [
       // StatusBoard.tsx 于本轮自 ④ 平移进折走段 ③（2026-11-05，D30 A1，见 ③ 段注释）
       "src/components/Timeline.tsx",
       "src/app/page.tsx",
-      "src/app/logs/page.tsx",
+      // 日志大厅页已于 2026-11-13 平移进折走段 ③（B1–B4 收尾，见 ③ 段注释）：
+      // 取数/主题/时间轴均在窗口内，折走的是列表排版；首页与详情页仍整份保留在后窗口。
       // V2.0 Step 3 阶段一：日志详情路由迁至 /u/[handle]/logs/[slug]，收录路径随目录迁移
       "src/app/u/[handle]/logs/[slug]/page.tsx",
       // 标签聚合页（F26）已于 2026-11-13 平移进折走段 ③（Commit 10 A1，见 ③ 段末注释）：

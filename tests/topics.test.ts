@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   TOPICS,
+  countTopics,
   isTopicKey,
   topicLabel,
   topicOfTag,
@@ -76,4 +77,17 @@ test("主题 key 可校验，topicTags 返回该主题的全部标签", () => {
     "折行",
     "assertWindowFit",
   ]);
+});
+
+test("主题计数按日志去重，同一日志多个同主题标签只计一次", () => {
+  const counts = countTopics([
+    ["视觉令牌", "WCAG"],
+    ["@container"],
+    ["视觉令牌", "SHA-256"],
+    ["未登记的标签"],
+  ]);
+
+  assert.equal(counts.get("frontend"), 3);
+  assert.equal(counts.get("data"), 1);
+  assert.equal(counts.get("deploy"), undefined);
 });

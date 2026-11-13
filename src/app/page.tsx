@@ -27,6 +27,8 @@
  *               零新增查询）；精选行加 mono 索引 01–03；两处「全部」入口统一 12px；项目链接改走
  *               publicProjectHref()（原先手拼，与看板同一处 404 根因）；版心首页放宽到 1200px
  * - 2026-11-13: 显著升级 B4：Suspense fallback 由「加载中…」文本改为暖线骨架（LoadingRows）
+ * - 2026-11-13: 首页主题入口：新增「按主题」区块（8 个主题 + 计数），计数来自 getTopicCounts
+ *               的单列 tags 查询；首页自此为 3 次查询，仍在 O8 预算内
  */
 import Link from "next/link";
 import { Suspense } from "react";
@@ -34,15 +36,16 @@ import { LoadingRows } from "@/components/LoadingRows";
 import { StatusBoard } from "@/components/StatusBoard";
 import { Timeline } from "@/components/Timeline";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
-import { getLatestLogs } from "@/lib/logs";
+import { getLatestLogs, getTopicCounts } from "@/lib/logs";
 import { getArchiveBoard } from "@/lib/projects";
 import { publicProjectHref } from "@/lib/routes";
 
 async function ArchiveOverview() {
   // 首页的最新日志只要 3 条，按发布时间交给数据库取（D13 修订），不再全表捞回内存再切
-  const [board, latestLogs] = await Promise.all([
+  const [board, latestLogs, topics] = await Promise.all([
     getArchiveBoard(),
     getLatestLogs(3),
+    getTopicCounts(),
   ]);
 
   // 精选规则（本轮定的，无数据库字段）：有已发布日志的项目按「日志数优先、再按最近更新」
@@ -185,6 +188,40 @@ async function ArchiveOverview() {
         </section>
       </div>
       </div>
+
+      <section className="mt-20 border-t border-ink pt-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div>
+            <h2 className="font-sans text-[10px] text-ink-soft">按主题</h2>
+            <p className="mt-1 font-sans text-[11px] text-ink-soft">
+              从主题进入日志大厅
+            </p>
+          </div>
+          <Link
+            href="/logs"
+            className="border-b border-ink font-sans text-xs"
+          >
+            全部日志 →
+          </Link>
+        </div>
+        <ul className="mt-4 grid grid-cols-2 gap-x-8 sm:grid-cols-4">
+          {topics
+            .filter((topic) => topic.count > 0)
+            .map((topic) => (
+              <li key={topic.key} className="border-b border-hairline">
+                <Link
+                  href={`/logs?topic=${topic.key}`}
+                  className="flex items-baseline justify-between gap-3 py-2.5 text-xs"
+                >
+                  <span>{topic.label}</span>
+                  <span className="font-mono text-[9px] text-ink-soft">
+                    {topic.count}
+                  </span>
+                </Link>
+              </li>
+            ))}
+        </ul>
+      </section>
     </>
   );
 }

@@ -155,3 +155,19 @@ export function topicsOfTags(tags: readonly string[]): TopicKey[] {
 export function topicLabel(key: TopicKey): string {
   return TOPIC_LABELS.get(key) ?? key;
 }
+
+// 一组日志（每项是 tags 数组）落成主题计数：同一条日志在同一主题里只计一次；
+// 供首页「按主题」与后台统计复用，不让调用方各写一遍循环
+export function countTopics(
+  tagLists: readonly (readonly string[])[],
+): Map<TopicKey, number> {
+  const counts = new Map<TopicKey, number>();
+
+  for (const tags of tagLists) {
+    for (const key of topicsOfTags(tags)) {
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+
+  return counts;
+}
