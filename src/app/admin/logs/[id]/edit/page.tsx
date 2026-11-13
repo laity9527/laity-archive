@@ -22,6 +22,7 @@
  *               项目下拉只列本租户；「看前台」链接补 Step 3 遗留——/logs/<slug> 改 /u/<handle>/logs/<slug>
  * - 2026-11-13: Phase C 编辑器：保存/发布按钮从表单底部提到顶部粘性操作条；
  *               新增「发布检查」摘要（标题 / BEFORE / 敏感扫描 / 摘要），口径仍以服务端保存时为准
+ * - 2026-11-13: 发布检查改实时（PublishCheck 监听表单 input/change）；服务端仍会在保存/发布时再校验
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -33,6 +34,7 @@ import {
 } from "@/app/admin/log-actions";
 import { requireAdminSession } from "@/auth";
 import { Editor } from "@/components/Editor";
+import { PublishCheck } from "@/components/PublishCheck";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { ID_PATTERN, LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
@@ -201,7 +203,11 @@ export default async function EditLogPage({
         </div>
       )}
 
-      <form action={saveLogAction} className="mt-10 grid gap-6 md:grid-cols-2">
+      <form
+        id="log-edit-form"
+        action={saveLogAction}
+        className="mt-10 grid gap-6 md:grid-cols-2"
+      >
         <input type="hidden" name="id" value={log.id} />
 
         <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-hairline bg-paper/95 px-1 py-3 md:col-span-2">
@@ -239,22 +245,17 @@ export default async function EditLogPage({
           )}
         </div>
 
-        <div className="border border-hairline px-4 py-3 md:col-span-2">
-          <p className="font-sans text-[10px] text-ink-soft">
-            发布检查 · 保存时口径
-          </p>
-          <ul className="mt-2 flex flex-wrap gap-x-6 gap-y-1 font-sans text-[11px] text-ink-soft">
-            <li>标题 {log.title.trim() ? "✓" : "缺失"}</li>
-            <li>BEFORE 正文 {log.beforeContent.trim() ? "✓" : "缺失"}</li>
-            <li>
-              敏感扫描{" "}
-              {blocking.length === 0
-                ? "0 类阻断"
-                : `${blocking.length} 类阻断`}
-            </li>
-            <li>{log.contentHash ? "摘要将在发布时重算" : "发布时生成摘要"}</li>
-          </ul>
-        </div>
+        <PublishCheck
+          formId="log-edit-form"
+          initial={{
+            title: log.title,
+            beforeContent: log.beforeContent,
+            afterContent: log.afterContent ?? "",
+            lessonLearned: log.lessonLearned ?? "",
+            tags: log.tags.join(", "),
+            hasHash: Boolean(log.contentHash),
+          }}
+        />
 
         <label className="flex flex-col gap-2">
           <span className="font-sans text-[10px] text-ink-soft">标题</span>

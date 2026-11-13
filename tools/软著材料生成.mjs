@@ -95,7 +95,8 @@
  *               按“折排版不折逻辑”把 src/app/logs/page.tsx 平移进 ③——取数/主题/时间轴均在窗口内，
  *               折走的是列表排版。出件：12158 行 / 244 页 / 收录 90 / 后窗口余量 244
  * - 2026-11-13: Phase C 登记：新增 AdminNav 与 admin/logs/page（均 ③），后台壳层与列表排版不折逻辑；
- *               AI 帮写回退/错误码改动已在 ③ 的 ai-prompt/ai-client/ai-actions 内，行数变化出件看护栏
+ *               AI 帮写回退/错误码改动已在 ③ 的 ai-prompt/ai-client/ai-actions 内，行数变化出件看护栏；
+ *               编辑器实时发布检查 PublishCheck 同批登记 ③
  * - 2026-11-12: F26 标签聚合 Commit 4：登记 src/app/tags/[tag]/page.tsx 进 ④ 段（访客可见界面，与大厅/详情同类）；
  *               大厅与详情页标签链接接线属 ④ 段内行数增长，出件看护栏
  */
@@ -258,6 +259,9 @@ const BANDS = [
       // V2.0 Step 3 阶段一：路由迁至 /u/[handle]/projects/[slug]，收录路径随目录迁移
       "src/app/u/[handle]/projects/[slug]/page.tsx",
       "src/components/Editor.tsx",
+      // PublishCheck 是编辑器的实时发布检查（客户端，监听表单 input/change；复用
+      // sensitive-scan / reading-time 两个纯函数），与 Editor 同属后台交互层，登记 ③
+      "src/components/PublishCheck.tsx",
       "src/components/SignInButton.tsx",
       "src/components/SignOutButton.tsx",
       // 提交按钮与编辑器、登录表单同属后台交互层：这一层整体在折走段是第八轮起定的口径
