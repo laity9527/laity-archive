@@ -5,10 +5,11 @@
  * 创建日期：2026-11-11
  * 修改记录：
  * - 2026-11-11: 初始创建（V2.1 全局搜索的匹配口径：四字段子串匹配，纯函数化便于未来换 SQL 全文检索实现）
+ * - 2026-11-13: 补 escapeLikePattern 用例（% _ \ 与单引号）
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { matchLog } from "../src/lib/log-search.ts";
+import { escapeLikePattern, matchLog } from "../src/lib/log-search.ts";
 
 const log = {
   title: "重构日志大厅筛选",
@@ -45,4 +46,17 @@ test("无命中返回 false；空关键词与纯空白视为不过滤", () => {
   assert.equal(matchLog(log, "不存在的关键词"), false);
   assert.equal(matchLog(log, ""), true);
   assert.equal(matchLog(log, "   "), true);
+});
+
+test("escapeLikePattern：单引号原样保留（防注入靠参数化，不靠转义）", () => {
+  assert.equal(escapeLikePattern("it's"), "it's");
+});
+
+test("escapeLikePattern：% 与 _ 被转义成字面量", () => {
+  assert.equal(escapeLikePattern("50%"), "50\\%");
+  assert.equal(escapeLikePattern("a_b"), "a\\_b");
+});
+
+test("escapeLikePattern：反斜杠自身被转义", () => {
+  assert.equal(escapeLikePattern("a\\b"), "a\\\\b");
 });

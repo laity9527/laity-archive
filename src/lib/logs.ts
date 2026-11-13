@@ -25,10 +25,11 @@
  *               select id 保持索引层，与 isPublishedLogSlug 同构）
  * - 2026-11-13: O1/O2 查询层：抽 buildLogWhere 单源、新增 getLogList/getLogFacets（本轮无调用方，
  *               页面行为不变；新查询不取正文）
+ * - 2026-11-13: 新增 searchLogsLimited（保真 F24 四字段子串；tags 走参数化原生 SQL）
  */
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { matchLog } from "@/lib/log-search";
+import { escapeLikePattern, matchLog } from "@/lib/log-search";
 import { resolveUserId } from "@/lib/projects";
 
 export type SafeLogFilter = {
@@ -158,6 +159,69 @@ export async function getLogList(
   const rows = await db.log.findMany({
     where: buildLogWhere({ ...resolved, requireOwner: true }),
     // beforeDate 可重复，故加 id 做二级游标，避免同刻日志跳条或重复。
+    orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
+    select: logListSelect,
+  });
+
+  // where 已带 user isNot null，这里收窄只为类型（运行时不存在无主行）
+  const items = rows.slice(0, take) as LogListItem[];
+  const nextCursor = rows.length > take ? items[items.length - 1]?.id ?? null : null;
+
+  return { items, nextCursor };
+}
+
+/**
+ * 限量搜索（O1 查询层，保真 F24 的四字段子串语义）。
+ * - title / beforeContent / afterContent：Prisma `contains` + `mode: "insensitive"`；
+ * - tags 是 String[]，Prisma 只支持元素级精确匹配，子串必须落到原生 SQL 的
+ *   array_to_string(tags, ' ') ILIKE；pattern 经 escapeLikePattern 转义 \ % _，
+ *   并以 `Prisma.sql` 参数化传入（不做字符串拼接）。
+ * - 原生 SQL 的 tags 分支无法与 Prisma 的 OR 写进同一条查询，故拆两步：先取 tags 命中的 id，
+ *   再把 id 作为 OR 的一支并入最终查询；基础可见性仍只由 buildLogWhere 提供（不在 SQL 里重写条件）。
+ * - 上限 50（LOG_PAGE_SIZE）与列表一致，避免搜索把整库正文拉回内存。
+ * 调用方：下一步的 /logs 页面接入；本轮无调用方。
+ */
+export async function searchLogsLimited(
+  params: SafeLogFilter & { q: string; cursor?: string | null; take?: number },
+): Promise<LogListPage> {
+  const resolved = await resolveLogFilter(params);
+
+  if (!resolved) {
+    return { items: [], nextCursor: null };
+  }
+
+  const q = params.q.trim();
+
+  if (!q) {
+    return { items: [], nextCursor: null };
+  }
+
+  const take = Math.min(Math.max(params.take ?? LOG_PAGE_SIZE, 1), LOG_PAGE_SIZE);
+  // LIKE 的 % _ \ 必须转义；pattern 作为参数传给原生 SQL，不拼字符串
+  const pattern = `%${escapeLikePattern(q)}%`;
+  const tagHits = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT "id" FROM "Log"
+    WHERE "isPublished" = true
+      AND array_to_string("tags", ' ') ILIKE ${pattern} ESCAPE '\\'
+  `);
+  const tagIds = tagHits.map((row) => row.id);
+
+  const rows = await db.log.findMany({
+    where: {
+      AND: [
+        buildLogWhere({ ...resolved, requireOwner: true }),
+        {
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { beforeContent: { contains: q, mode: "insensitive" } },
+            { afterContent: { contains: q, mode: "insensitive" } },
+            ...(tagIds.length > 0 ? [{ id: { in: tagIds } }] : []),
+          ],
+        },
+      ],
+    },
     orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
     take: take + 1,
     ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),

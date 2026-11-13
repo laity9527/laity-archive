@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-11-11: 初始创建（V2.1 全局搜索；纯函数化便于单测，未来换 SQL 全文检索实现时页面无感；
  *               tags 用子串——Prisma 数组过滤只做元素级精确匹配，做不到子串，故搜索在内存层完成）
+ * - 2026-11-13: 新增 escapeLikePattern（原生 SQL 的 tags 子串分支用；转义 \\ % _，配套 ESCAPE）
  */
 
 export type SearchableLog = {
@@ -24,4 +25,13 @@ export function matchLog(log: SearchableLog, q: string): boolean {
     .join("\n")
     .toLowerCase()
     .includes(needle);
+}
+
+/**
+ * 把搜索词转成可安全用于 `ILIKE ... ESCAPE '\'` 的字面量：
+ * `\` / `%` / `_` 三个字符逐个加反斜杠。否则 `50%` 会当通配符、`a_b` 会匹配任意字符。
+ * 注意：转义只决定匹配语义；防注入靠调用处的 Prisma.sql 参数化，不靠本函数。
+ */
+export function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 }
