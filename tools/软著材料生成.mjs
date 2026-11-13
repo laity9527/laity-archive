@@ -309,6 +309,14 @@ const BANDS = [
       // 累计到 1533 行、proxy.ts（1350-1533）被前窗口 1500 切口打断。输入校验口径仍经页面 select/pattern
       // 属性与 ③ 的 error-text 可见（折的是排版与常量表，不是校验逻辑本身）
       "src/lib/forms.ts",
+      // 标签聚合页（F26）自 ④ 平移进折走段（2026-11-13，Commit 10 A1，负责人裁决）：纯列表排版，
+      // 列表行复用大厅形态；标签判定与数据层在 ③ 的 logs.ts / forms.ts（normalizeTag/hasPublishedTag）
+      // 整份可见，与已在 ③ 的 /projects、/about、/login 同族，符合“折排版不折逻辑”。
+      // 平移后 ④ 由 1457 降到 1336 行、后窗口余量由 42 行回到 163 行（margin 断言阈值 100 得以成立）；
+      // 总行数 10699、总页数 214、提交 60 页均不变。
+      // 语义降级（已知并接受）：本页不再“必须整份可见”；将来后窗口切口若进入本页，其头部会被静默折走，
+      // 属“折排版”口径的正常结果，不是漏登记（它仍在收录清单里、assertComplete 仍会核到）。
+      "src/app/tags/[tag]/page.tsx",
     ],
   },
   {
@@ -324,9 +332,8 @@ const BANDS = [
       "src/app/logs/page.tsx",
       // V2.0 Step 3 阶段一：日志详情路由迁至 /u/[handle]/logs/[slug]，收录路径随目录迁移
       "src/app/u/[handle]/logs/[slug]/page.tsx",
-      // 标签聚合页（F26）：访客可见界面，列表行复用大厅形态；
-      // Timeline 容器查询的第六个调用点，ul 必须带 @container
-      "src/app/tags/[tag]/page.tsx",
+      // 标签聚合页（F26）已于 2026-11-13 平移进折走段 ③（Commit 10 A1，见 ③ 段末注释）：
+      // 它占 121 行；A1 前后后窗口余量由 42 行回到 163 行，差值正好是这 121 行。不再登记在此。
       // 租户主页 / 关于页 / 登录页于本轮（F23/D34，负责人裁定 Option 2）自 ④ 平移进折走段 ③：
       // ArticleToc + 详情页接线 + globals.css 进度条/rail/面板样式把 ④ 顶到 1879 行（后窗口仅 1498），
       // 移出这三页（190+158+92=440）后 ④ 回到 1439 行。三者皆排版/交互外壳——租户主页复用 getArchiveBoard（②）、
@@ -433,6 +440,52 @@ function assertWindowFit(lines) {
     );
   }
 
+  // 边界保护（2026-11-13，Commit 10 B）：余量下限 + 切口行合法性。
+  // 余量 = 后窗口内第一个“必须整份可见”文件的起点 − 后窗口起点。小于阈值时，
+  // 一次微小的行数增长（页数按 50 行翻动）就可能把该文件头部切进折走段。
+  // 实测：A1 前 42 行（离页数翻转只差 2 行），A1 后 163 行。阈值取 100：
+  // 跨过一个页数翻转（50 行）后仍保留一轮缓冲，且不靠调页数/每页行数绕开口径。
+  const BOUNDARY_MARGIN = 100;
+  const wholeInBack = spans
+    .filter((s) => mustBeWhole.has(s.file) && s.end >= back.from && s.start <= back.to)
+    .sort((a, b) => a.start - b.start);
+  const firstWhole = wholeInBack[0];
+  const margin = firstWhole ? firstWhole.start - back.from : Number.POSITIVE_INFINITY;
+
+  if (margin < BOUNDARY_MARGIN) {
+    throw new Error(
+      `后窗口边界余量不足 ${BOUNDARY_MARGIN} 行（当前 ${margin} 行：首个必须整份可见的 ` +
+        `${firstWhole?.file ?? "?"} 起于第 ${firstWhole?.start ?? "?"} 行，后窗口起于第 ${back.from} 行），拒绝生成。\n` +
+        `处置：把 ③ 段里行数最少、最不重要的一页继续平移进折走段（如纯列表/静态文案页），` +
+        `或把 ④ 段里纯排版的页面下移；不要靠加大页数或减少每页行数绕开（那是软著提交口径）。`
+    );
+  }
+
+  // 切口行不得是空行、自动折行续行（↳）或文件分隔行：这三种行出现在提交页首行时，
+  // 读起来像“源码残缺”或“文件从中间开始”。
+  const cutKind = (row) => {
+    const text = lines[row - 1] ?? "";
+
+    if (text === "") return "空行";
+    if (text.startsWith("↳")) return "自动折行的续行（↳）";
+    if (/^—— 文件：.*——$/.test(text)) return "文件分隔行";
+
+    return "";
+  };
+  const badCuts = [
+    ["前窗口切口", front.to],
+    ["后窗口切口", back.from],
+  ]
+    .map(([name, row]) => ({ name, row, kind: cutKind(row) }))
+    .filter((c) => c.kind);
+
+  if (badCuts.length > 0) {
+    throw new Error(
+      `切口行不合法，拒绝生成：${badCuts.map((c) => `${c.name}第 ${c.row} 行是${c.kind}`).join("；")}。\n` +
+        `处置：在 ③ 段内小幅平移文件或增减注释行数，让切口落在完整的源码行上。`
+    );
+  }
+
   return {
     需要折页: true,
     总行数: total,
@@ -443,6 +496,8 @@ function assertWindowFit(lines) {
     后窗口起于: `第 ${back.from} 行（该行属于 ${at(back.from)?.file ?? "?"}）`,
     必须整份可见文件数: mustBeWhole.size,
     折走段行数: back.from - 1 - front.to,
+    后窗口余量: `${margin} 行（首个必须整份可见：${firstWhole?.file ?? "?"} 起于第 ${firstWhole?.start ?? "?"} 行）`,
+    边界签名: `前窗口止于第 ${front.to} 行（${at(front.to)?.file ?? "?"} 第 ${front.to - (at(front.to)?.start ?? front.to)} 个排版行）；后窗口起于第 ${back.from} 行（${at(back.from)?.file ?? "?"} 第 ${back.from - (at(back.from)?.start ?? back.from)} 个排版行）`,
   };
 }
 
@@ -628,7 +683,10 @@ body { margin: 0; background: #fff; color: #000; }
 @media print { body { -webkit-print-color-adjust: exact; } }
 `;
 
-function coverPage(kind, stats) {
+function coverPage(kind, stats, fit) {
+  const boundary =
+    kind === "code" && fit?.边界签名 ? `窗口边界：${fit.边界签名}<br>` : "";
+
   return `<section class="page cover"><div class="body">
 <div class="t1">${SOFT_NAME} ${SOFT_VERSION}</div>
 <div class="t2">${kind === "code" ? "源程序文档" : "软件操作说明书"}</div>
@@ -640,7 +698,7 @@ function coverPage(kind, stats) {
     stats.skipped ? `，中间省略 ${stats.skipped} 页` : "，不足 60 页全部提交"
   }）<br>
 每页行数：${kind === "code" ? CODE_LINES_PER_PAGE : DOC_LINES_PER_PAGE} 行<br>
-${
+${boundary}${
     kind === "code"
       ? "排版说明：文件之间以「—— 文件：路径 ——」分隔；行首 ↳ 表示上一行超出页宽自动折行，该符号不属于源码内容<br>"
       : ""
@@ -748,6 +806,7 @@ writeFileSync(
   `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>${SOFT_NAME} ${SOFT_VERSION} 源程序文档</title><style>${STYLE}</style></head><body>${coverPage(
     "code",
     code,
+    windowFit,
   )}${code.pages.join("\n")}</body></html>`,
 );
 
