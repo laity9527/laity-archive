@@ -28,14 +28,17 @@
  *               Markdown 渲染器）；q 为空时列表行为不变
  * - 2026-11-12: F26 标签聚合：列表行标签改 Link 指向 /tags/[tag]；筛选区 tagChip 与 details
  *               一字不动（筛选是 F03 点名交互，改成跳转会破坏功能）
+ * - 2026-11-13: O1/O2 页面接入：列表改游标分页（50 条/页）、筛选项改 getLogFacets、
+ *               搜索改限量 50 条候选池（searchLogsLimited）+ 当前页二次取正文算片段
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Timeline } from "@/components/Timeline";
-import { pickParam } from "@/lib/forms";
+import { db } from "@/lib/db";
+import { ID_PATTERN, pickParam } from "@/lib/forms";
 import { extractSnippet, highlightSegments } from "@/lib/highlight";
-import { getSafeLogs, searchLogs } from "@/lib/logs";
+import { getLogFacets, getLogList, searchLogsLimited } from "@/lib/logs";
 
 export const metadata: Metadata = {
   title: "开发日志",
@@ -48,19 +51,32 @@ type LogsPageProps = {
     project?: string | string[];
     tag?: string | string[];
     q?: string | string[];
+    cursor?: string | string[];
   }>;
 };
 
 // 标签筛选区默认可见的上限，超出部分收进原生 details 折叠
 const TAG_LIMIT = 12;
 
-function logsHref(params: { project?: string; tag?: string; q?: string }) {
+function logsHref(params: {
+  project?: string;
+  tag?: string;
+  q?: string;
+  cursor?: string;
+}) {
   const search = new URLSearchParams();
   if (params.project) search.set("project", params.project);
   if (params.tag) search.set("tag", params.tag);
   if (params.q) search.set("q", params.q);
+  if (params.cursor) search.set("cursor", params.cursor);
   const query = search.toString();
   return query ? `/logs?${query}` : "/logs";
+}
+
+// cursor 来自 URL：只接受库 id 形状（cuid 小写字母数字），非法值按首屏处理，
+// 避免把脏值送进 Prisma 的 cursor
+function parseCursor(value: string | undefined) {
+  return value && ID_PATTERN.test(value) ? value : undefined;
 }
 
 function filterClass(active: boolean) {
@@ -71,22 +87,39 @@ function filterClass(active: boolean) {
 }
 
 async function LogBoard({ searchParams }: LogsPageProps) {
-  const { project, tag, q } = await searchParams;
+  const { project, tag, q, cursor: rawCursor } = await searchParams;
   const projectFilter = pickParam(project);
   const tagFilter = pickParam(tag);
   const qFilter = pickParam(q);
+  const cursor = parseCursor(pickParam(rawCursor));
 
-  const all = await getSafeLogs();
-  const logs = qFilter
-    ? await searchLogs({ q: qFilter, project: projectFilter, tag: tagFilter })
-    : projectFilter || tagFilter
-      ? await getSafeLogs({ project: projectFilter, tag: tagFilter })
-      : all;
+  const facets = await getLogFacets();
+  const page = qFilter
+    ? await searchLogsLimited({
+        q: qFilter,
+        project: projectFilter,
+        tag: tagFilter,
+        cursor,
+      })
+    : await getLogList({ project: projectFilter, tag: tagFilter, cursor });
+  const items = page.items;
 
-  const projectOptions = [
-    ...new Map(all.map((log) => [log.project.slug, log.project.name])),
-  ];
-  const tagOptions = [...new Set(all.flatMap((log) => log.tags))];
+  // 搜索片段的正文只在展示层二次取：查询层白名单不含正文（O1），
+  // 按当前页 id 取回三列即可；不把 beforeContent/afterContent 塞回列表查询。
+  const bodies =
+    qFilter && items.length > 0
+      ? new Map(
+          (
+            await db.log.findMany({
+              where: { id: { in: items.map((item) => item.id) } },
+              select: { id: true, beforeContent: true, afterContent: true },
+            })
+          ).map((row) => [row.id, row]),
+        )
+      : null;
+
+  const projectOptions = facets.projects;
+  const tagOptions = facets.tags;
   // 标签已有 52 个，全量渲染会堆成六七行文字墙；默认只留前 TAG_LIMIT 个，其余收进原生 details
   const shownTags = tagOptions.slice(0, TAG_LIMIT);
   let hiddenTags = tagOptions.slice(TAG_LIMIT);
@@ -167,7 +200,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           >
             全部
           </Link>
-          {projectOptions.map(([slug, name]) => (
+          {projectOptions.map(({ slug, name }) => (
             <Link
               key={slug}
               href={logsHref({
@@ -204,7 +237,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         )}
       </nav>
 
-      {logs.length === 0 ? (
+      {items.length === 0 ? (
         <div>
           {qFilter ? (
             <>
@@ -234,7 +267,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         </div>
       ) : (
         <ul className="@container border-t border-ink">
-          {logs.map((log) => (
+          {items.map((log) => (
             <li
               key={log.id}
               className="flex flex-col gap-6 border-b border-hairline py-10 md:flex-row md:gap-10"
@@ -271,12 +304,28 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                     ))}
                   </p>
                 )}
-                {snippetRow("BEFORE", log.beforeContent)}
-                {snippetRow("AFTER", log.afterContent ?? "")}
+                {snippetRow("BEFORE", bodies?.get(log.id)?.beforeContent ?? "")}
+                {snippetRow("AFTER", bodies?.get(log.id)?.afterContent ?? "")}
               </article>
             </li>
           ))}
         </ul>
+      )}
+
+      {page.nextCursor && (
+        <nav className="mt-12 flex justify-end border-t border-hairline pt-6">
+          <Link
+            href={logsHref({
+              project: projectFilter,
+              tag: tagFilter,
+              q: qFilter,
+              cursor: page.nextCursor,
+            })}
+            className="border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+          >
+            下一页 →
+          </Link>
+        </nav>
       )}
     </>
   );

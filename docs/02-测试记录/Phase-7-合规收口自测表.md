@@ -464,7 +464,7 @@ GET  /login                          → http=200，正文含"管理员口令"�
 1. **节流桶回收（I063）**：`admin-password.ts` 记账前清窗口走光的桶，再加 512 硬上限按最旧淘汰。测试两条：过期桶被清（用 `loginBucketCount()` 基线排除既有桶干扰）、伪造 600 键后计数 ≤512。**防线自己变内存无界增长点、且触发条件正是它要防的场景**（直连暴露时攻击者可每次换 XFF 值），这是本轮最值得改的一条。
 2. **错误码不回显任意串（I064）**：两处后台横幅接 `errorCodeChip()`——`/admin/projects?error=BOGUS` 应显示"未收录的错误码"。`errorTextOf()` 未知码回落不动（既有测试钉着）。
 3. **后台"记录不存在"留在后台里（I065）**：编辑页对库里没有的 id 不再 `notFound()`（公共 404 只有 /logs、/projects 两个出口，回不了后台），改在后台外壳内渲染 `LOG_002` 面板，回显的 id 先过 `ID_PATTERN`。
-4. **首页不全表捞**：`getSafeLogs` 加可选 `take`，首页改数据库 `take: 3`；`/logs` 筛选仍走全量，不受影响。
+4. **首页不全表捞**：`getSafeLogs` 加可选 `take`，首页改数据库 `take: 3`；**`/logs` 已改游标分页（50 条/页），筛选走 `getLogFacets` + `getLogList` 两次轻量查询**（2026-11-13 O1/O2 页面接入，不再全量取全文）；搜索同步改为**限量 50 条候选池**（`searchLogsLimited`），四字段子串语义保真（tags 走参数化原生 SQL）；**分页后搜索只在当前候选池内生效**，不是全库扫描；**本轮只支持向后翻页（下一页），上一页下轮补**。
 5. **卫生**：`/login` 重复的第二处 `await connection()` 删掉（I059），dev 日志 `blocking-prerender-random` 删前删后均 0；后台导航 `<nav>` 补 `aria-label="后台导航"`。
 
 `npm run lint` 0、`npx tsc --noEmit` 0、`npm test` **73/73**、`npm run build` 0。窗口护栏**第六次**拦下出件（`src/proxy.ts` 被 1500 行前窗口切开），按处置把 `markdown.tsx` 平移进折走段；出件 6392 行 / 128 页 / 收录 66，两次生成 MD5 相同，`whole-check` 的 MUST 清单第三次同步，凭据扫描产物 7 处命中仍全是键名与规则描述。
