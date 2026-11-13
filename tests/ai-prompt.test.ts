@@ -7,10 +7,11 @@
  * 修改记录：
  * - 2026-11-10: 初始创建（Step 6 Commit 1）
  * - 2026-11-10: Step 6 Commit 2：补 extractCommits 的提取/去重/别名顺序用例
+ * - 2026-11-13: 补 buildContextPrompt：无 Commit 列表时按标题与现有正文续写
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildPrompt, extractCommits, parseAiResponse } from "../src/lib/ai-prompt.ts";
+import { AI_MAX_COMMITS, buildContextPrompt, buildPrompt, extractCommits, parseAiResponse } from "../src/lib/ai-prompt.ts";
 
 const commits = [
   "fix(auth): 修正 GitHub 认领逻辑读取 profile 参数",
@@ -33,6 +34,29 @@ test("buildPrompt 先过滤空行再编号，区间连续", () => {
   assert.match(prompt, /1\. 第一笔/);
   assert.match(prompt, /2\. 第二笔/);
   assert.doesNotMatch(prompt, /3\. /);
+});
+
+test("buildContextPrompt 在无提交列表时包含标题与现有正文", () => {
+  const prompt = buildContextPrompt({
+    title: "Docker 编排收口",
+    beforeContent: "旧编排散落在多处",
+    afterContent: "收口到一份 compose",
+  });
+
+  assert.ok(prompt.includes("Docker 编排收口"));
+  assert.ok(prompt.includes("旧编排散落在多处"));
+  assert.ok(prompt.includes("收口到一份 compose"));
+  assert.match(prompt, /【BEFORE】/);
+  assert.match(prompt, /【AFTER】/);
+});
+
+test("buildContextPrompt 对空字段用占位，不当作事实", () => {
+  const prompt = buildContextPrompt({ title: "", beforeContent: "", afterContent: "" });
+  assert.ok(prompt.includes("（空）"));
+});
+
+test("单次 Commit 上限锁定为 20", () => {
+  assert.equal(AI_MAX_COMMITS, 20);
 });
 
 test("parseAiResponse 解析标准 JSON", () => {

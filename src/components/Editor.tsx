@@ -21,6 +21,7 @@
  *               失败只出 role=alert 横幅（正文保持现状）；保存/发布按钮不受任何阻塞
  * - 2026-11-10: Step 6 Commit 3：AI 成功后在表单内渲染隐藏域 isAiAssisted=true（随保存落库）；
  *               编辑页传 initialAiAssisted 保持既有标记；暂存同步带该位（服务端打回时不丢）
+ * - 2026-11-13: 没有「- 提交」行时不再禁用，按标题与现有正文续写；全空时由服务端回 AI_006
  */
 "use client";
 
@@ -110,6 +111,8 @@ export function Editor({
   const fileRef = useRef<HTMLInputElement>(null);
   const active = tab === "before" ? before : after;
   const dirty = before !== initialBefore || after !== initialAfter;
+  // AI 只依据「- 提交」列表生成：没有列表时客户端先禁用，服务端仍会再校一次（AI_006）
+  const hasCommits = /^[ \t]*- /m.test(before) || /^[ \t]*- /m.test(after);
   const dirtyRef = useRef(false);
 
   // 用 ref 而不是把 dirty 放进监听依赖：监听只挂一次，值每次渲染同步进去
@@ -296,12 +299,14 @@ export function Editor({
             type="button"
             onClick={handleAiWrite}
             disabled={ai.kind === "busy"}
-            className="border border-ink px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
+            className="border border-ink px-4 py-2 font-sans text-[11px] text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
           >
             {ai.kind === "busy" ? "生成中…" : "AI 帮我写"}
           </button>
-          <span className="font-mono text-[10px] text-ink-soft">
-            依据正文里的 Commit 列表生成
+          <span className="font-sans text-[10px] text-ink-soft">
+            {hasCommits
+              ? "依据正文里的 Commit 列表生成"
+              : "没有提交列表，将按标题与现有正文续写"}
           </span>
           <input
             ref={fileRef}

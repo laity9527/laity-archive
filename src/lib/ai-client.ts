@@ -7,12 +7,14 @@
  * 创建日期：2026-11-10
  * 修改记录：
  * - 2026-11-10: 初始创建（Step 6 Commit 1）
+ * - 2026-11-13: AI 帮写故障可诊断化：超时 30s → 60s；补 user 消息（部分兼容端点不接受只有 system）；
+ *               AiError 增加 kind（config / upstream / empty），调用方据此给不同错误码，不再一律 AI_001
  */
 
 const DEFAULT_AI_API_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_AI_MODEL_NAME = "qwen-plus";
-/** 单次请求超时：30 秒内等不到就中止（长文生成给足往返，但不让一次失败无限挂起） */
-const AI_REQUEST_TIMEOUT_MS = 30_000;
+/** 单次请求超时：60 秒内等不到就中止（长文生成给足往返，但不让一次失败无限挂起） */
+const AI_REQUEST_TIMEOUT_MS = 60_000;
 
 export interface AiConfig {
   apiKey: string;
@@ -29,7 +31,10 @@ function readEnv(name: string): string {
 export function resolveAiConfig(): AiConfig {
   const apiKey = readEnv("AI_API_KEY");
   if (!apiKey) {
-    throw new Error("AI_API_KEY 未配置（AI 辅助生成功能不可用），请在环境变量里补齐");
+    throw new AiError(
+      "AI_API_KEY 未配置（AI 辅助生成功能不可用），请在环境变量里补齐",
+      "config",
+    );
   }
   return {
     apiKey,
@@ -38,10 +43,15 @@ export function resolveAiConfig(): AiConfig {
   };
 }
 
+export type AiErrorKind = "config" | "upstream" | "empty";
+
 export class AiError extends Error {
-  constructor(message: string) {
+  readonly kind: AiErrorKind;
+
+  constructor(message: string, kind: AiErrorKind = "upstream") {
     super(message);
     this.name = "AiError";
+    this.kind = kind;
   }
 }
 
@@ -52,28 +62,45 @@ export class AiError extends Error {
 export async function generateAiDraft(prompt: string): Promise<string> {
   const config = resolveAiConfig();
 
-  const response = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.modelName,
-      messages: [{ role: "system", content: prompt }],
-    }),
-    signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.modelName,
+        // 部分 OpenAI 兼容端点要求至少一条 user 消息；只有 system 会被 400
+        messages: [
+          { role: "system", content: prompt },
+          { role: "user", content: "请严格按系统要求输出 JSON，不要附加解释。" },
+        ],
+      }),
+      signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const timeout = error instanceof Error && error.name === "TimeoutError";
+    throw new AiError(
+      timeout ? "AI 请求超时" : "AI 请求失败（网络或端点不可达）",
+      "upstream",
+    );
+  }
 
   if (!response.ok) {
     const body = await response.text().catch(() => "响应体读取失败");
-    throw new AiError(`AI 接口返回 ${response.status}：${body.slice(0, 200)}`);
+    throw new AiError(
+      `AI 接口返回 ${response.status}：${body.slice(0, 200)}`,
+      "upstream",
+    );
   }
 
   const data: unknown = await response.json().catch(() => null);
   const content = extractMessageContent(data);
   if (!content) {
-    throw new AiError("AI 接口响应里没有可用的生成内容");
+    throw new AiError("AI 接口响应里没有可用的生成内容", "empty");
   }
   return content;
 }

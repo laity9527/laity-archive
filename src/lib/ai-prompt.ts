@@ -9,6 +9,10 @@
  * - 2026-11-10: 初始创建（Step 6 Commit 1）
  * - 2026-11-10: Step 6 Commit 2：补 extractCommits（"- 消息"列表行解析、去重去空）与
  *               AI_MAX_COMMITS（单次 12 条上限，超限动作层返回 AI_002）
+ * - 2026-11-13: 新增 buildContextPrompt——没有 Commit 列表时，按标题与现有正文续写；
+ *               输出契约与 buildPrompt 完全一致（JSON BEFORE/AFTER），解析层不变
+ * - 2026-11-13: 按负责人要求把单次 Commit 上限 12 → 20（最新同步草稿已有 14 条，
+ *               原上限会把正常的同步草稿挡在 AI_002）
  */
 
 export interface AiDraft {
@@ -19,7 +23,7 @@ export interface AiDraft {
 const PLACEHOLDER = "（等待补充）";
 
 /** F22 成本边界：单次生成最多处理的 Commit 条数（AI_002 的判定阈值） */
-export const AI_MAX_COMMITS = 12;
+export const AI_MAX_COMMITS = 20;
 
 /**
  * 从列表形态正文（github-sync 生成的草稿把提交列表写在 AFTER 里，每行 "- 消息"）中提取提交信息。
@@ -97,6 +101,44 @@ export function buildPrompt(commitMessages: string[], repoName: string): string 
     "要求：",
     "- 只依据上面给出的提交信息做合理推断，不虚构具体代码细节、文件名或数字。",
     "- 语气克制，像工程师写复盘；不要营销腔，不要复述提交信息本身。",
+    "- 信息不足的字段填「（等待补充）」，不编造。",
+    `- 输出必须是一行 JSON 对象：{"BEFORE":"", "AFTER":""}，不要输出任何其它文字。`,
+  ].join("\n");
+}
+
+export interface AiContextInput {
+  title: string;
+  beforeContent: string;
+  afterContent: string;
+}
+
+/**
+ * 无 Commit 列表时的回退提示词：只依据标题与现有正文续写/改写。
+ * 与 buildPrompt 共用同一输出契约（JSON BEFORE/AFTER），调用方解析逻辑不变。
+ * 每段正文截到 4000 字，避免把整篇长文塞进上下文。
+ */
+export function buildContextPrompt(input: AiContextInput): string {
+  const clip = (value: string) => {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed.slice(0, 4000) : "（空）";
+  };
+
+  return [
+    "你是一名资深软件工程师，正在为个人开发复盘档案补全一条条目正文。",
+    `标题：${input.title.trim() || "（空）"}`,
+    "现有 BEFORE（可能为空）：",
+    clip(input.beforeContent),
+    "现有 AFTER（可能为空）：",
+    clip(input.afterContent),
+    "",
+    "请据此补全或改写两段 Markdown 正文：",
+    "【BEFORE】这次工作之前存在什么问题或分歧、当时的取舍与出发点。",
+    "【AFTER】最终怎么做、实施重心、方案取舍与可复用的复盘结论。",
+    "",
+    "要求：",
+    "- 只依据标题与现有正文做合理补全，不虚构具体代码细节、文件名或数字。",
+    "- 已有正文中的事实要保留，不推翻作者已经写下的判断。",
+    "- 语气克制，像工程师写复盘；不要营销腔。",
     "- 信息不足的字段填「（等待补充）」，不编造。",
     `- 输出必须是一行 JSON 对象：{"BEFORE":"", "AFTER":""}，不要输出任何其它文字。`,
   ].join("\n");

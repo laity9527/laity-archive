@@ -7,17 +7,22 @@
  * 创建日期：2026-11-10
  * 修改记录：
  * - 2026-11-10: 初始创建（Step 6 Commit 2）
+ * - 2026-11-13: 把笼统的 AI_001 拆开：AI_003 未配置密钥 / AI_004 上游失败或超时 /
+ *               AI_005 返回无法解析 / AI_006 正文没有提交列表；失败原因写服务端日志（不回显密钥）
  */
 "use server";
 
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
-import { generateAiDraft } from "@/lib/ai-client";
-import { AI_MAX_COMMITS, buildPrompt, extractCommits, parseAiResponse } from "@/lib/ai-prompt";
+import { AiError, generateAiDraft } from "@/lib/ai-client";
+import { AI_MAX_COMMITS, buildContextPrompt, buildPrompt, extractCommits, parseAiResponse } from "@/lib/ai-prompt";
 
 export type AiDraftActionResult =
   | { ok: true; data: { beforeContent: string; afterContent: string } }
-  | { ok: false; code: "AI_001" | "AI_002" };
+  | {
+      ok: false;
+      code: "AI_001" | "AI_002" | "AI_003" | "AI_004" | "AI_005" | "AI_006";
+    };
 
 function readText(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
@@ -50,11 +55,21 @@ export async function generateAiDraftAction(formData: FormData): Promise<AiDraft
   }
 
   if (commits.length === 0) {
-    // 没有可依据的提交信息，任何输出都是无依据编造——直接拒绝，等同步入库更多 commit 后再来
-    return { ok: false, code: "AI_001" };
+    // 没有 Commit 列表并不等于不能用：普通日志按标题与现有正文续写；
+    // 但标题与两段正文全空时，没有任何可依据的事实，直接拒绝
+    const hasContext = Boolean(
+      title.trim() || beforeContent.trim() || afterContent.trim(),
+    );
+
+    if (!hasContext) {
+      return { ok: false, code: "AI_006" };
+    }
   }
 
-  const prompt = buildPrompt(commits, repoNameFromTitle(title));
+  const prompt =
+    commits.length > 0
+      ? buildPrompt(commits, repoNameFromTitle(title))
+      : buildContextPrompt({ title, beforeContent, afterContent });
 
   try {
     const raw = await generateAiDraft(prompt);
@@ -62,11 +77,27 @@ export async function generateAiDraftAction(formData: FormData): Promise<AiDraft
 
     // 失败不重试：调用方（编辑器）降级为横幅提示，正文保持现状
     if (!draft) {
-      return { ok: false, code: "AI_001" };
+      console.error("[ai] 返回无法解析：", raw.slice(0, 200));
+      return { ok: false, code: "AI_005" };
     }
 
     return { ok: true, data: draft };
-  } catch {
+  } catch (error) {
+    if (error instanceof AiError) {
+      console.error(`[ai] ${error.kind}：${error.message}`);
+
+      if (error.kind === "config") {
+        return { ok: false, code: "AI_003" };
+      }
+
+      if (error.kind === "empty") {
+        return { ok: false, code: "AI_005" };
+      }
+
+      return { ok: false, code: "AI_004" };
+    }
+
+    console.error("[ai] 未知错误：", error);
     return { ok: false, code: "AI_001" };
   }
 }
