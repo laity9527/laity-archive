@@ -141,6 +141,10 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     ? errorTextOf(errorCode, "project", errorField)
     : null;
   const bad = (field: string) => errorCode === "VAL_001" && errorField === field;
+  const totalLogs = projects.reduce(
+    (sum, project) => sum + project._count.logs,
+    0,
+  );
 
   return (
     <>
@@ -158,6 +162,10 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           新建项目
         </a>
       </header>
+
+      <p className="mt-3 font-sans text-[11px] text-ink-soft">
+        共 {projects.length} 个项目 · {totalLogs} 条日志（含草稿）
+      </p>
 
       {errorText && (
         <p
@@ -180,61 +188,100 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
         </p>
       )}
 
-      <ul className="mt-10 border-t border-ink">
-        {projects.length === 0 && (
-          <li className="border-b border-hairline py-6 font-sans text-xs text-ink-soft">
-            暂无项目
-          </li>
-        )}
-        {projects.map((project) => (
-          <li
-            key={project.id}
-            className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-hairline py-4"
-          >
-            <span aria-hidden className="font-mono text-[10px] text-ink">
-              {project.status === "LIVE" ? "●" : "○"}
+      <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section aria-labelledby="project-list-title">
+          <div className="flex items-baseline justify-between border-b border-ink pb-3">
+            <h2
+              id="project-list-title"
+              className="font-sans text-[10px] text-ink-soft"
+            >
+              项目列表
+            </h2>
+            <span className="font-mono text-[10px] text-ink-soft">
+              {String(projects.length).padStart(2, "0")}
             </span>
-            <span className="text-base">{project.name}</span>
-            <span className="font-mono text-[11px] text-ink-soft">
-              {project.slug}
-            </span>
-            <span className="font-sans text-[11px] text-ink-soft">
-              {kindLabel(project.kind)} · {statusLabel(project.status)}
-            </span>
-            <span className="font-sans text-[11px] text-ink-soft">
-              {logsCountLabel(project._count.logs)}
-            </span>
-            <span className="ml-auto flex items-baseline gap-4 font-mono text-[11px]">
-              <Link
-                href={`/admin/projects?edit=${project.id}`}
-                className="border-b border-ink text-ink"
-              >
-                编辑
-              </Link>
-              <form action={deleteProjectAction}>
-                <input type="hidden" name="id" value={project.id} />
-                <SubmitButton
-                  label="删除"
-                  pendingLabel="删除中…"
-                  confirmMessage="确认要彻底删除吗？此操作不可恢复。"
-                  className="border-b border-ink text-ink disabled:text-ink-soft"
-                />
-              </form>
-            </span>
-          </li>
-        ))}
-      </ul>
+          </div>
 
-      <section id="project-form" className="mt-16 scroll-mt-6 border-t border-ink pt-8">
-        <h2 className="font-sans text-[10px] text-ink-soft">
-          {editing ? "编辑项目" : "新建项目"}
-        </h2>
+          {projects.length === 0 ? (
+            <p className="border-b border-hairline py-6 font-sans text-xs text-ink-soft">
+              暂无项目，可在表单里新建第一个。
+            </p>
+          ) : (
+            <ul>
+              {projects.map((project, index) => (
+                <li
+                  key={project.id}
+                  className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-hairline py-4"
+                >
+                  <span
+                    aria-hidden
+                    className="font-mono text-[10px] text-ink-soft"
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span
+                    aria-hidden
+                    className="font-mono text-[10px] text-ink"
+                  >
+                    {project.status === "LIVE" ? "●" : "○"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base">{project.name}</p>
+                    <p className="mt-1 font-mono text-[10px] text-ink-soft">
+                      {project.slug}
+                    </p>
+                  </div>
+                  <span className="font-sans text-[11px] text-ink-soft">
+                    {kindLabel(project.kind)} · {statusLabel(project.status)}
+                  </span>
+                  <span className="font-sans text-[11px] text-ink-soft">
+                    {logsCountLabel(project._count.logs)}
+                  </span>
+                  <span className="ml-auto flex items-baseline gap-4 font-sans text-[11px]">
+                    <Link
+                      href={`/admin/projects?edit=${project.id}`}
+                      className="border-b border-ink text-ink"
+                    >
+                      编辑
+                    </Link>
+                    <form action={deleteProjectAction}>
+                      <input type="hidden" name="id" value={project.id} />
+                      <SubmitButton
+                        label="删除"
+                        pendingLabel="删除中…"
+                        confirmMessage="确认要彻底删除吗？此操作不可恢复。"
+                        className="border-b border-ink text-ink disabled:text-ink-soft"
+                      />
+                    </form>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-        <form
-          key={editing?.id ?? "new"}
-          action={saveProjectAction}
-          className="mt-6 grid gap-6 md:grid-cols-2"
+        <section
+          id="project-form"
+          aria-labelledby="project-form-title"
+          className="scroll-mt-6 border border-hairline p-5 lg:sticky lg:top-6 lg:self-start"
         >
+          <h2
+            id="project-form-title"
+            className="font-sans text-[10px] text-ink-soft"
+          >
+            {editing ? "编辑项目" : "新建项目"}
+          </h2>
+          <p className="mt-2 font-sans text-[11px] leading-relaxed text-ink-soft">
+            {editing
+              ? `正在编辑「${editing.name}」，保存后回到列表。`
+              : "保存后出现在左侧列表；公开口径由查询层白名单决定。"}
+          </p>
+
+          <form
+            key={editing?.id ?? "new"}
+            action={saveProjectAction}
+            className="mt-5 grid gap-5"
+          >
           {editing && <input type="hidden" name="id" value={editing.id} />}
           <Field
             label="标识"
@@ -283,7 +330,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             invalid={bad("repoUrl")}
           />
 
-          <div className="flex items-baseline gap-6 md:col-span-2">
+          <div className="flex flex-wrap items-baseline gap-6">
             <SubmitButton
               label={editing ? "保存修改" : "新建项目"}
               pendingLabel="提交中…"
@@ -299,7 +346,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             )}
           </div>
         </form>
-      </section>
+        </section>
+      </div>
     </>
   );
 }
