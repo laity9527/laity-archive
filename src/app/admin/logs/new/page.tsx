@@ -123,7 +123,9 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
           </label>
 
           <label className="flex flex-col gap-2">
-            <span className="font-sans text-[10px] text-ink-soft">标签（逗号分隔，可空）</span>
+            <span className="font-sans text-[10px] text-ink-soft">{
+              `标签（逗号分隔，最多 ${LIMITS.tags} 个，可空）`
+            }</span>
             <input
               name="tags"
               placeholder="search, prisma"

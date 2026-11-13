@@ -28,7 +28,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
 import type { LogField } from "@/lib/error-text";
-import { ID_PATTERN, LIMITS, SLUG_PATTERN, readField } from "@/lib/forms";
+import { ID_PATTERN, LIMITS, SLUG_PATTERN, parseTagList, readField } from "@/lib/forms";
 import { listProjectIds } from "@/lib/projects";
 import {
   deleteLog,
@@ -49,10 +49,7 @@ function parseDate(raw: string) {
 }
 
 function parseTags(raw: string) {
-  return raw
-    .split(/[,，]/)
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0);
+  return parseTagList(raw);
 }
 
 type ParseResult = { ok: true; input: LogInput } | { ok: false; field: LogField };

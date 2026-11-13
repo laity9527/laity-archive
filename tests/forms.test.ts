@@ -15,7 +15,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { LIMITS, REPO_URL_PATTERN, REPO_URL_SOURCE, SLUG_PATTERN, SLUG_SOURCE, ID_PATTERN, decodeTagParam, normalizeTag, pickParam, readField, safeCallbackUrl } from "../src/lib/forms.ts";
+import { LIMITS, REPO_URL_PATTERN, REPO_URL_SOURCE, SLUG_PATTERN, SLUG_SOURCE, ID_PATTERN, decodeTagParam, normalizeTag, normalizeTagList, parseTagList, pickParam, readField, safeCallbackUrl } from "../src/lib/forms.ts";
 
 test("pickParam 只认非空字符串", () => {
   assert.equal(pickParam("abc"), "abc");
@@ -107,9 +107,36 @@ test("id 规则挡得住拼进 redirect 的脏值", () => {
 });
 
 // 这些数字同时被服务端校验、HTML 的 maxLength 与文案表引用；改一处要三处一致，所以钉在这里
+test("parseTagList 去 @ 前缀并按中英文逗号拆分", () => {
+  assert.deepEqual(parseTagList("@container, 部署，Docker"), [
+    "container",
+    "部署",
+    "Docker",
+  ]);
+});
+
+test("parseTagList 忽略大小写去重，保留第一次写法", () => {
+  assert.deepEqual(parseTagList("Docker, docker, DOCKER"), ["Docker"]);
+});
+
+test("parseTagList 剔除空值与纯 @", () => {
+  assert.deepEqual(parseTagList(" , @, @@ , 部署 "), ["部署"]);
+});
+
+test("parseTagList 不静默截断；上限由调用方校验", () => {
+  assert.equal(parseTagList("a,b,c,d,e,f").length, 6);
+});
+
+test("normalizeTagList 覆盖同步数组入口：去 @、忽略大小写去重", () => {
+  assert.deepEqual(
+    normalizeTagList(["Docker", "docker", "@container", "  "]),
+    ["Docker", "container"],
+  );
+});
+
 test("LIMITS 与 SPEC 写的上限一致", () => {
   assert.equal(LIMITS.title, 120);
-  assert.equal(LIMITS.tags, 10);
+  assert.equal(LIMITS.tags, 5);
   assert.equal(LIMITS.tag, 24);
   assert.equal(LIMITS.lesson, 500);
   assert.equal(LIMITS.projectName, 80);

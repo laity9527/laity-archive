@@ -60,7 +60,7 @@ import { LIMITS } from "./forms.ts";
 
 // VAL_001 的细则取决于出错的是哪张表单，不能合成一句
 const VAL_001_TEXT: Record<"log" | "project", string> = {
-  log: `参数不合法：标题必填（≤${LIMITS.title} 字）、slug 用小写字母数字连字符、BEFORE 不能为空、AFTER 不早于 BEFORE。`,
+  log: `参数不合法：标题必填（≤${LIMITS.title} 字）、slug 用小写字母数字连字符、标签最多 ${LIMITS.tags} 个且每个 ≤${LIMITS.tag} 字、BEFORE 不能为空、AFTER 不早于 BEFORE。`,
   project: "参数不合法：slug 只能用小写字母、数字与连字符（2–64 位），名称必填。",
 };
 

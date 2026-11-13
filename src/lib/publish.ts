@@ -13,10 +13,13 @@
  *               只在显式提供时写入（条件展开），表单编辑不清掉已同步草稿的锚点
  * - 2026-11-10: V2.0 Step 6 Commit 3：LogInput 加 isAiAssisted（AI 辅助生成标记）；
  *               仅当显式为 true 时落库，缺省（未点过 AI 按钮的表单）保持默认 false
+ * - 2026-11-13: 写入时标签收口统一到 normalizeTagList（表单 + GitHub 同步两条路径）；
+ *               去 @ 前缀、忽略大小写去重，条数上限仍由动作层校验
  */
 import { Prisma } from "@prisma/client";
 import { computeContentHash } from "@/lib/content-hash";
 import { db } from "@/lib/db";
+import { normalizeTagList } from "@/lib/forms";
 import { hasBlockingHit, scanSensitive } from "@/lib/sensitive-scan";
 
 export type LogInput = {
@@ -74,7 +77,7 @@ export async function saveLog(
     projectId: input.projectId,
     slug: input.slug,
     title: input.title,
-    tags: input.tags,
+    tags: normalizeTagList(input.tags),
     beforeContent: input.beforeContent,
     afterContent: input.afterContent || null,
     beforeDate: input.beforeDate,

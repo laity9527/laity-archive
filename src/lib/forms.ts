@@ -12,6 +12,8 @@
  * - 2026-11-12: 新增 decodeTagParam（F26 修正：App Router 实测向页面交付编码原样的 path 参数，
  *               入口解码一次，解码失败回退原值；与 normalizeTag 组合使用）
  * - 2026-11-12: 修正 normalizeTag 上方注释（I084 结案），改述为编码原样参数口径，函数体未动
+ * - 2026-11-13: 新增 parseTagList/normalizeTagList（写入时收口：去 @ 前缀、忽略大小写去重、空值剔除）；
+ *               LIMITS.tags 10 → 5（现有 33 条日志最多 5 个，无超限存量）
  */
 
 // ?error= / ?saved= 这类参数被框架给成数组时按缺省处理，只认非空字符串
@@ -43,6 +45,40 @@ export function decodeTagParam(value: string) {
   }
 }
 
+/**
+ * 写入时的标签收口（标签治理 §三）：去首尾空白与开头的 @，忽略大小写去重（保留第一次出现的写法），
+ * 空值剔除。数组入口给 saveLog 用，覆盖表单与 GitHub 同步两条写入路径；
+ * 条数上限由动作层用 LIMITS.tags 校验，本函数不静默截断。
+ */
+export function normalizeTagList(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const tags: string[] = [];
+
+  for (const raw of values) {
+    const tag = raw.trim().replace(/^@+/, "").trim();
+
+    if (!tag) {
+      continue;
+    }
+
+    const key = tag.toLocaleLowerCase("zh-CN");
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    tags.push(tag);
+  }
+
+  return tags;
+}
+
+/** 表单字符串入口：按中英文逗号拆分后走同一套数组归一化。 */
+export function parseTagList(raw: string): string[] {
+  return normalizeTagList(raw.split(/[,，]/));
+}
+
 export function readField(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -68,7 +104,7 @@ export const ID_PATTERN = /^[a-z0-9]{1,64}$/;
 // 上限一处定义：服务端校验、HTML 的 maxLength 与测试对拍共用同一份数字
 export const LIMITS = {
   title: 120,
-  tags: 10,
+  tags: 5,
   tag: 24,
   lesson: 500,
   projectName: 80,
