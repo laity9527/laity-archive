@@ -27,12 +27,16 @@
  *               随认领/建号落库（新建即带 githubId，不再等二次登录补绑）；token 不进 JWT/session
  * - 2026-11-10: Step 5 修复轮：authorization.params.scope 补 public_repo（默认只有 read:user user:email，
  *               读 commits 接口全部 404）；用户需重新登录一次以获得新 scope
+ * - 2026-11-13: 临时本地调试登录：仅在非 production 且 DEV_LOGIN_PASSWORD 存在时注册 Credentials
+ *               provider（用户名默认 admin，可 DEV_LOGIN_USER 覆盖）；不在源码里写死口令，生产不注册
  */
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 import GitHubProvider from "next-auth/providers/github";
 import { db } from "@/lib/db";
+import { isDevLoginEnabled, verifyDevCredentials } from "@/lib/dev-login";
 import { encryptToken } from "@/lib/token-crypto";
 
 // 配置体检每个进程只做一次：只报"哪一项不合格"，不回显任何值
@@ -56,25 +60,69 @@ function adviseConfiguration() {
   }
 }
 
+const providers: NextAuthOptions["providers"] = [
+  GitHubProvider({
+    // v4 类型要求 string，未配置时回落空串——OAuth 握手会在运行期失败并把错露出来
+    clientId: process.env.GITHUB_ID ?? "",
+    clientSecret: process.env.GITHUB_SECRET ?? "",
+    // RFC 9207：GitHub 回调带 iss 参数，openid-client 会与 issuer 比对；
+    // 4.24.15 的内置默认值即此，显式钉住防漂移（缺了它 iss 校验抛 TypeError）
+    issuer: "https://github.com/login/oauth",
+    // Step 5 修复：补 public_repo scope——默认只有 read:user user:email，
+    // 读 commits 接口全部 404。public_repo 足以读公开仓库所有数据，不需要完整 repo 权限
+    authorization: {
+      params: { scope: "read:user user:email public_repo" },
+    },
+  }),
+];
+
+// 临时调试入口：生产环境不注册；密码不在源码里，必须由 .env 的 DEV_LOGIN_PASSWORD 提供。
+// 登录后仍落到真实的 zhanglei 账号，后台读写与 GitHub 登录同一条 userId 隔离链路。
+if (isDevLoginEnabled()) {
+  providers.push(
+    CredentialsProvider({
+      id: "dev-admin",
+      name: "本地调试登录",
+      credentials: {
+        username: { label: "用户名", type: "text" },
+        password: { label: "密码", type: "password" },
+      },
+      async authorize(credentials) {
+        const username =
+          typeof credentials?.username === "string" ? credentials.username : "";
+        const password =
+          typeof credentials?.password === "string" ? credentials.password : "";
+
+        if (!verifyDevCredentials(username, password)) {
+          return null;
+        }
+
+        const handle =
+          (process.env.DEV_LOGIN_HANDLE ?? "zhanglei").trim() || "zhanglei";
+        const admin = await db.user.findFirst({
+          where: { handle },
+          select: { id: true, name: true, email: true },
+        });
+
+        if (!admin) {
+          return null;
+        }
+
+        return {
+          id: admin.id,
+          name: admin.name ?? "本地调试",
+          email: admin.email ?? "dev@local",
+        };
+      },
+    }),
+  );
+}
+
 export const authOptions: NextAuthOptions = {
   // 登录页、错误页与退出页都指向自建页：默认页带圆角与浅色主题且是英文，与视觉铁律不符（I012-B / D23）
   // pages.signOut 管的是"直接访问 /api/auth/signout"这条 UI 之外的路径——按钮本身已改走 signOut()
   pages: { signIn: "/login", signOut: "/login", error: "/login" },
-  providers: [
-    GitHubProvider({
-      // v4 类型要求 string，未配置时回落空串——OAuth 握手会在运行期失败并把错露出来
-      clientId: process.env.GITHUB_ID ?? "",
-      clientSecret: process.env.GITHUB_SECRET ?? "",
-      // RFC 9207：GitHub 回调带 iss 参数，openid-client 会与 issuer 比对；
-      // 4.24.15 的内置默认值即此，显式钉住防漂移（缺了它 iss 校验抛 TypeError）
-      issuer: "https://github.com/login/oauth",
-      // Step 5 修复：补 public_repo scope——默认只有 read:user user:email，
-      // 读 commits 接口全部 404。public_repo 足以读公开仓库所有数据，不需要完整 repo 权限
-      authorization: {
-        params: { scope: "read:user user:email public_repo" },
-      },
-    }),
-  ],
+  providers,
   // 会话寿命从 v4 默认的 30 天收到 12 小时：换 NEXTAUTH_SECRET 仍是唯一的即时吊销手段
   session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
   callbacks: {
@@ -85,6 +133,12 @@ export const authOptions: NextAuthOptions = {
     // 注意：user 是 provider.profile() 归一化后的 {id,name,email,image}，没有 login；
     // GitHub 原始资料（含 login）在独立的 profile 参数里——读错对象会让认领静默跳过
     async jwt({ token, user, account, profile }) {
+      if (user && account?.provider === "dev-admin") {
+        // 调试登录已在 authorize 里解析到真实账号；直接复用其 id 作为数据归属
+        token.userId = user.id;
+        return token;
+      }
+
       if (user && account?.provider === "github") {
         adviseConfiguration();
 

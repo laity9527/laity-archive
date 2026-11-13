@@ -21,12 +21,16 @@
  *               说明文案改 GitHub 登录口径；会话判定仍走 requireAdminSession（4-B 把 /admin 改个人控制台后退役）
  * - 2026-11-13: 显著升级 B3：单列居中改左右分栏（说明 + 登录卡），补「访客无需登录」与品牌收口；
  *               中文标签从 Mono 改回 Inter（视觉铁律 2026-11-06 口径），鉴权逻辑与 callbackUrl 校验一字未动
+ * - 2026-11-13: 临时本地调试登录：仅当服务端启用 dev-admin（非 production + DEV_LOGIN_PASSWORD）时
+ *               在右栏渲染账号密码表单；生产不出现
  */
 import Link from "next/link";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { DevLoginForm } from "@/components/DevLoginForm";
 import { SignInButton } from "@/components/SignInButton";
 import { requireAdminSession } from "@/auth";
+import { isDevLoginEnabled } from "@/lib/dev-login";
 import { ERROR_TEXT } from "@/lib/error-text";
 import { pickParam, safeCallbackUrl } from "@/lib/forms";
 
@@ -48,6 +52,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   if (session) {
     redirect(callbackUrl);
   }
+
+  const devLoginEnabled = isDevLoginEnabled();
 
   return (
     <main
@@ -104,6 +110,12 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <p className="mt-3 font-sans text-[11px] leading-relaxed text-ink-soft">
             登录后回到你刚才想去的页面。
           </p>
+
+          {devLoginEnabled && (
+            <div className="mt-6 border-t border-hairline pt-5">
+              <DevLoginForm callbackUrl={callbackUrl} />
+            </div>
+          )}
 
           <p className="mt-8 border-t border-hairline pt-4 font-sans text-[11px] leading-relaxed text-ink-soft">
             无账号？前台内容无需登录。
