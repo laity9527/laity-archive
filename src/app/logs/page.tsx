@@ -1,6 +1,6 @@
 /**
  * 文件：src/app/logs/page.tsx
- * 描述：日志大厅：项目 + 标签双层筛选，左侧 BEFORE/AFTER 时间轴列表
+ * 描述：日志大厅：项目 + 主题 + 标签三层筛选，左侧固定筛选栏，右侧结果与激活筛选摘要
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
@@ -31,6 +31,10 @@
  * - 2026-11-13: O1/O2 页面接入：列表改游标分页（50 条/页）、筛选项改 getLogFacets、
  *               搜索改限量 50 条候选池（searchLogsLimited）+ 当前页二次取正文算片段
  * - 2026-11-13: 显著升级 A：版心 1080 → 1200，与导航 / 首页同步；筛选与搜索逻辑未动
+ * - 2026-11-13: 显著升级 B1：横排筛选改左侧 180px 固定栏（项目 / 主题 / 全部标签），
+ *               结果区顶部给激活筛选摘要与逐项清除；新增 topic 参数（主题 key → 标签集合 hasSome），
+ *               点主题会清掉单标签、点单标签会清掉主题；标签全量收进 details，不再默认铺 12 个。
+ *               计数在同一次 facets 查询里派生，首屏仍为 2 次数据库查询（O8）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -40,6 +44,7 @@ import { db } from "@/lib/db";
 import { ID_PATTERN, pickParam } from "@/lib/forms";
 import { extractSnippet, highlightSegments } from "@/lib/highlight";
 import { getLogFacets, getLogList, searchLogsLimited } from "@/lib/logs";
+import { isTopicKey, topicLabel, type TopicKey } from "@/lib/topics";
 
 export const metadata: Metadata = {
   title: "开发日志",
@@ -51,23 +56,23 @@ type LogsPageProps = {
   searchParams: Promise<{
     project?: string | string[];
     tag?: string | string[];
+    topic?: string | string[];
     q?: string | string[];
     cursor?: string | string[];
   }>;
 };
 
-// 标签筛选区默认可见的上限，超出部分收进原生 details 折叠
-const TAG_LIMIT = 12;
-
 function logsHref(params: {
   project?: string;
   tag?: string;
+  topic?: string;
   q?: string;
   cursor?: string;
 }) {
   const search = new URLSearchParams();
   if (params.project) search.set("project", params.project);
   if (params.tag) search.set("tag", params.tag);
+  if (params.topic) search.set("topic", params.topic);
   if (params.q) search.set("q", params.q);
   if (params.cursor) search.set("cursor", params.cursor);
   const query = search.toString();
@@ -88,9 +93,13 @@ function filterClass(active: boolean) {
 }
 
 async function LogBoard({ searchParams }: LogsPageProps) {
-  const { project, tag, q, cursor: rawCursor } = await searchParams;
+  const { project, tag, topic, q, cursor: rawCursor } = await searchParams;
   const projectFilter = pickParam(project);
   const tagFilter = pickParam(tag);
+  const rawTopic = pickParam(topic);
+  // 主题 key 来自 URL：只接受 topics.ts 里登记的 8 个值，脏值按未筛选处理
+  const topicFilter: TopicKey | undefined =
+    rawTopic && isTopicKey(rawTopic) ? rawTopic : undefined;
   const qFilter = pickParam(q);
   const cursor = parseCursor(pickParam(rawCursor));
 
@@ -100,9 +109,15 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         q: qFilter,
         project: projectFilter,
         tag: tagFilter,
+        topic: topicFilter,
         cursor,
       })
-    : await getLogList({ project: projectFilter, tag: tagFilter, cursor });
+    : await getLogList({
+        project: projectFilter,
+        tag: tagFilter,
+        topic: topicFilter,
+        cursor,
+      });
   const items = page.items;
 
   // 搜索片段的正文只在展示层二次取：查询层白名单不含正文（O1），
@@ -121,13 +136,57 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
   const projectOptions = facets.projects;
   const tagOptions = facets.tags;
-  // 标签已有 52 个，全量渲染会堆成六七行文字墙；默认只留前 TAG_LIMIT 个，其余收进原生 details
-  const shownTags = tagOptions.slice(0, TAG_LIMIT);
-  let hiddenTags = tagOptions.slice(TAG_LIMIT);
-  // 选中的标签若落在折叠区里，收起态就看不出"当前筛的是哪一个"，所以并进可见组
-  if (tagFilter && hiddenTags.includes(tagFilter)) {
-    shownTags.push(tagFilter);
-    hiddenTags = hiddenTags.filter((item) => item !== tagFilter);
+  const totalLogs = projectOptions.reduce((sum, item) => sum + item.count, 0);
+  const hasFilter = Boolean(projectFilter || tagFilter || topicFilter || qFilter);
+
+  // 激活筛选摘要：每一项都能单独撤掉，撤掉时保留其它条件
+  const activeChips: { key: string; label: string; href: string }[] = [];
+
+  if (projectFilter) {
+    const name =
+      projectOptions.find((item) => item.slug === projectFilter)?.name ??
+      projectFilter;
+    activeChips.push({
+      key: "project",
+      label: `项目：${name}`,
+      href: logsHref({ tag: tagFilter, topic: topicFilter, q: qFilter }),
+    });
+  }
+
+  if (topicFilter) {
+    activeChips.push({
+      key: "topic",
+      label: `主题：${topicLabel(topicFilter)}`,
+      href: logsHref({
+        project: projectFilter,
+        tag: tagFilter,
+        q: qFilter,
+      }),
+    });
+  }
+
+  if (tagFilter) {
+    activeChips.push({
+      key: "tag",
+      label: `标签：${tagFilter}`,
+      href: logsHref({
+        project: projectFilter,
+        topic: topicFilter,
+        q: qFilter,
+      }),
+    });
+  }
+
+  if (qFilter) {
+    activeChips.push({
+      key: "q",
+      label: `关键词：${qFilter}`,
+      href: logsHref({
+        project: projectFilter,
+        tag: tagFilter,
+        topic: topicFilter,
+      }),
+    });
   }
 
   const tagChip = (item: string) => (
@@ -135,13 +194,151 @@ async function LogBoard({ searchParams }: LogsPageProps) {
       key={item}
       href={logsHref({
         project: projectFilter,
+        // 点单标签时清掉主题：两者是不同层级的同一维度，叠在一起会得到空集
         tag: tagFilter === item ? undefined : item,
         q: qFilter,
       })}
+      aria-current={tagFilter === item ? "true" : undefined}
       className={filterClass(tagFilter === item)}
     >
       {item}
     </Link>
+  );
+
+  const railLabel = (active: boolean) =>
+    active
+      ? "border-b border-ink text-ink"
+      : "border-b border-transparent text-ink-soft hover:border-ink hover:text-ink";
+
+  const rail = (
+    <nav aria-label="日志筛选">
+      <div>
+        <div className="mb-3 font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+          项目
+        </div>
+        <ul className="space-y-1.5">
+          <li>
+            <Link
+              href={logsHref({
+                tag: tagFilter,
+                topic: topicFilter,
+                q: qFilter,
+              })}
+              aria-current={!projectFilter ? "true" : undefined}
+              className="flex items-baseline justify-between gap-3 text-xs"
+            >
+              <span className={railLabel(!projectFilter)}>全部</span>
+              <span className="font-mono text-[9px] text-ink-soft">
+                {totalLogs}
+              </span>
+            </Link>
+          </li>
+          {projectOptions.map(({ slug, name, count }) => (
+            <li key={slug}>
+              <Link
+                href={logsHref({
+                  project: projectFilter === slug ? undefined : slug,
+                  tag: tagFilter,
+                  topic: topicFilter,
+                  q: qFilter,
+                })}
+                aria-current={projectFilter === slug ? "true" : undefined}
+                className="flex items-baseline justify-between gap-3 text-xs"
+              >
+                <span className={railLabel(projectFilter === slug)}>
+                  {name}
+                </span>
+                <span className="font-mono text-[9px] text-ink-soft">
+                  {count}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-7 border-t border-hairline pt-4">
+        <div className="mb-3 font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+          主题
+        </div>
+        <ul className="space-y-1.5">
+          <li>
+            <Link
+              href={logsHref({
+                project: projectFilter,
+                tag: tagFilter,
+                q: qFilter,
+              })}
+              aria-current={!topicFilter ? "true" : undefined}
+              className="flex items-baseline justify-between gap-3 text-xs"
+            >
+              <span className={railLabel(!topicFilter)}>全部主题</span>
+              <span className="font-mono text-[9px] text-ink-soft">
+                {totalLogs}
+              </span>
+            </Link>
+          </li>
+          {facets.topics.map((item) => (
+            <li key={item.key}>
+              <Link
+                href={logsHref({
+                  project: projectFilter,
+                  // 点主题时清掉单标签：主题是标签的上层，叠着查会互相收窄
+                  topic: topicFilter === item.key ? undefined : item.key,
+                  q: qFilter,
+                })}
+                aria-current={topicFilter === item.key ? "true" : undefined}
+                className="flex items-baseline justify-between gap-3 text-xs"
+              >
+                <span className={railLabel(topicFilter === item.key)}>
+                  {item.label}
+                </span>
+                <span className="font-mono text-[9px] text-ink-soft">
+                  {item.count}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-7 border-t border-hairline pt-4">
+        <div className="mb-3 font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+          标签
+        </div>
+        {tagFilter && (
+          <p className="mb-2 text-[11px]">
+            <Link
+              href={logsHref({
+                project: projectFilter,
+                topic: topicFilter,
+                q: qFilter,
+              })}
+              className="border-b border-ink text-ink"
+            >
+              {tagFilter} ×
+            </Link>
+          </p>
+        )}
+        <details className="group">
+          <summary className="cursor-pointer list-none font-mono text-[10px] text-ink-soft hover:text-ink [&::-webkit-details-marker]:hidden">
+            [ 全部 {tagOptions.length} 个标签 ]
+          </summary>
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-[11px]">
+            {tagOptions.map(tagChip)}
+          </div>
+        </details>
+      </div>
+
+      {hasFilter && (
+        <Link
+          href="/logs"
+          className="mt-7 inline-block border-b border-ink text-[11px] text-ink"
+        >
+          清除全部筛选 ×
+        </Link>
+      )}
+    </nav>
   );
 
   // F24：命中字段的片段行。仅当 q 非空且该字段内存在命中时渲染；
@@ -169,8 +366,11 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
   return (
     <>
-      <form method="get" className="mb-8 flex items-baseline gap-4">
-        <label htmlFor="log-search" className="font-sans text-[10px] text-ink-soft">
+      <form method="get" className="mb-10 flex items-baseline gap-4">
+        <label
+          htmlFor="log-search"
+          className="font-sans text-[10px] text-ink-soft"
+        >
           搜索
         </label>
         <input
@@ -184,6 +384,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         />
         <input type="hidden" name="project" value={projectFilter ?? ""} />
         <input type="hidden" name="tag" value={tagFilter ?? ""} />
+        <input type="hidden" name="topic" value={topicFilter ?? ""} />
         <button
           type="submit"
           className="border-b border-ink font-sans text-sm text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
@@ -192,142 +393,165 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         </button>
       </form>
 
-      <nav className="mb-12 flex flex-col gap-4 border-y border-hairline py-4 md:flex-row md:items-baseline md:gap-10">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-3">
-          <span className="font-sans text-[10px] text-ink-soft">项目</span>
-          <Link
-            href={logsHref({ tag: tagFilter, q: qFilter })}
-            className={filterClass(!projectFilter)}
-          >
-            全部
-          </Link>
-          {projectOptions.map(({ slug, name }) => (
-            <Link
-              key={slug}
-              href={logsHref({
-                project: projectFilter === slug ? undefined : slug,
-                tag: tagFilter,
-                q: qFilter,
-              })}
-              className={filterClass(projectFilter === slug)}
-            >
-              {name}
-            </Link>
-          ))}
-        </div>
-        {tagOptions.length > 0 && (
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-3 md:ml-auto">
-            <span className="font-sans text-[10px] text-ink-soft">标签</span>
-            {shownTags.map(tagChip)}
-            {hiddenTags.length > 0 && (
-              <details className="group basis-full">
-                <summary
-                  className={`${filterClass(false)} w-fit cursor-pointer list-none font-mono text-[11px] [&::-webkit-details-marker]:hidden`}
-                >
-                  <span className="group-open:hidden">[ + 展开全部标签 ]</span>
-                  <span className="hidden group-open:inline">
-                    [ − 收起全部标签 ]
-                  </span>
-                </summary>
-                <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-3">
-                  {hiddenTags.map(tagChip)}
-                </div>
-              </details>
+      <div className="grid gap-10 lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-12">
+        <aside className="lg:sticky lg:top-6 lg:self-start">
+          <details className="group border-y border-hairline py-3 lg:hidden">
+            <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 font-sans text-xs text-ink [&::-webkit-details-marker]:hidden">
+              <span>
+                筛选
+                {activeChips.length > 0 ? ` · ${activeChips.length} 项` : ""}
+              </span>
+              <span className="font-mono text-[10px] text-ink-soft group-open:hidden">
+                [ 展开 ]
+              </span>
+              <span className="hidden font-mono text-[10px] text-ink-soft group-open:inline">
+                [ 收起 ]
+              </span>
+            </summary>
+            <div className="mt-5">{rail}</div>
+          </details>
+          <div className="hidden lg:block">{rail}</div>
+        </aside>
+
+        <div className="min-w-0">
+          <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-hairline pb-3 text-[11px] text-ink-soft">
+            <span className="font-mono text-[10px]">
+              本页 {items.length} 条
+              {page.nextCursor ? " · 还有下一页" : " · 已到末页"}
+            </span>
+            {activeChips.map((chip) => (
+              <Link
+                key={chip.key}
+                href={chip.href}
+                className="border-b border-transparent text-ink-soft hover:border-ink hover:text-ink"
+              >
+                {chip.label} ×
+              </Link>
+            ))}
+            {activeChips.length > 0 && (
+              <Link
+                href="/logs"
+                className="ml-auto border-b border-ink text-ink"
+              >
+                清除全部 ×
+              </Link>
             )}
           </div>
-        )}
-      </nav>
 
-      {items.length === 0 ? (
-        <div>
-          {qFilter ? (
-            <>
-              <p className="font-sans text-xs text-ink-soft">
-                没有找到包含「<code className="font-mono">{qFilter}</code>」的日志
-              </p>
-              <Link
-                href={logsHref({ project: projectFilter, tag: tagFilter })}
-                className="mt-5 inline-block border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
-              >
-                清除搜索，看全部日志 →
-              </Link>
-            </>
-          ) : projectFilter || tagFilter ? (
-            <>
-              <p className="font-sans text-xs text-ink-soft">没有符合条件的日志</p>
-              <Link
-                href={logsHref({})}
-                className="mt-5 inline-block border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
-              >
-                清除筛选，看全部日志 →
-              </Link>
-            </>
+          {items.length === 0 ? (
+            <div>
+              {qFilter ? (
+                <>
+                  <p className="font-sans text-xs text-ink-soft">
+                    没有找到包含「
+                    <code className="font-mono">{qFilter}</code>」的日志
+                  </p>
+                  <Link
+                    href={logsHref({
+                      project: projectFilter,
+                      tag: tagFilter,
+                      topic: topicFilter,
+                    })}
+                    className="mt-5 inline-block border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                  >
+                    清除搜索，看全部日志 →
+                  </Link>
+                </>
+              ) : projectFilter || tagFilter || topicFilter ? (
+                <>
+                  <p className="font-sans text-xs text-ink-soft">
+                    没有符合条件的日志
+                  </p>
+                  <Link
+                    href="/logs"
+                    className="mt-5 inline-block border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                  >
+                    清除筛选，看全部日志 →
+                  </Link>
+                </>
+              ) : (
+                <p className="font-sans text-xs text-ink-soft">还没有日志</p>
+              )}
+            </div>
           ) : (
-            <p className="font-sans text-xs text-ink-soft">还没有日志</p>
+            <ul className="@container border-t border-ink">
+              {items.map((log) => (
+                <li
+                  key={log.id}
+                  className="flex flex-col gap-6 border-b border-hairline py-10 md:flex-row md:gap-10"
+                >
+                  <Timeline
+                    beforeDate={log.beforeDate}
+                    afterDate={log.afterDate}
+                  />
+                  <article className="flex-1">
+                    <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
+                      {log.project.name}
+                    </p>
+                    <h2 className="mt-2 text-xl font-medium">
+                      <Link
+                        href={`/u/${log.user.handle}/logs/${log.slug}`}
+                        className="hover:underline hover:decoration-1 hover:underline-offset-4"
+                      >
+                        {qFilter
+                          ? highlightSegments(log.title, qFilter).map(
+                              (seg, i) =>
+                                seg.match ? (
+                                  <mark key={i}>{seg.text}</mark>
+                                ) : (
+                                  seg.text
+                                ),
+                            )
+                          : log.title}
+                      </Link>
+                    </h2>
+                    {log.tags.length > 0 && (
+                      <p className="mt-3 font-mono text-[11px] text-ink-soft">
+                        {log.tags.map((item, i) => (
+                          <span key={item}>
+                            {i > 0 && " · "}
+                            <Link
+                              href={`/tags/${encodeURIComponent(item)}`}
+                              className="hover:text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                            >
+                              {item}
+                            </Link>
+                          </span>
+                        ))}
+                      </p>
+                    )}
+                    {snippetRow(
+                      "BEFORE",
+                      bodies?.get(log.id)?.beforeContent ?? "",
+                    )}
+                    {snippetRow(
+                      "AFTER",
+                      bodies?.get(log.id)?.afterContent ?? "",
+                    )}
+                  </article>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {page.nextCursor && (
+            <nav className="mt-12 flex justify-end border-t border-hairline pt-6">
+              <Link
+                href={logsHref({
+                  project: projectFilter,
+                  tag: tagFilter,
+                  topic: topicFilter,
+                  q: qFilter,
+                  cursor: page.nextCursor,
+                })}
+                className="border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+              >
+                下一页 →
+              </Link>
+            </nav>
           )}
         </div>
-      ) : (
-        <ul className="@container border-t border-ink">
-          {items.map((log) => (
-            <li
-              key={log.id}
-              className="flex flex-col gap-6 border-b border-hairline py-10 md:flex-row md:gap-10"
-            >
-              <Timeline beforeDate={log.beforeDate} afterDate={log.afterDate} />
-              <article className="flex-1">
-                <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
-                  {log.project.name}
-                </p>
-                <h2 className="mt-2 text-2xl font-medium">
-                  <Link
-                    href={`/u/${log.user.handle}/logs/${log.slug}`}
-                    className="hover:underline hover:decoration-1 hover:underline-offset-4"
-                  >
-                    {qFilter
-                      ? highlightSegments(log.title, qFilter).map((seg, i) =>
-                          seg.match ? <mark key={i}>{seg.text}</mark> : seg.text,
-                        )
-                      : log.title}
-                  </Link>
-                </h2>
-                {log.tags.length > 0 && (
-                  <p className="mt-3 font-mono text-[11px] text-ink-soft">
-                    {log.tags.map((item, i) => (
-                      <span key={item}>
-                        {i > 0 && " · "}
-                        <Link
-                          href={`/tags/${encodeURIComponent(item)}`}
-                          className="hover:text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
-                        >
-                          {item}
-                        </Link>
-                      </span>
-                    ))}
-                  </p>
-                )}
-                {snippetRow("BEFORE", bodies?.get(log.id)?.beforeContent ?? "")}
-                {snippetRow("AFTER", bodies?.get(log.id)?.afterContent ?? "")}
-              </article>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {page.nextCursor && (
-        <nav className="mt-12 flex justify-end border-t border-hairline pt-6">
-          <Link
-            href={logsHref({
-              project: projectFilter,
-              tag: tagFilter,
-              q: qFilter,
-              cursor: page.nextCursor,
-            })}
-            className="border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
-          >
-            下一页 →
-          </Link>
-        </nav>
-      )}
+      </div>
     </>
   );
 }

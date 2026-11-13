@@ -121,6 +121,16 @@ const TOPIC_LABELS = new Map<TopicKey, string>(
   TOPICS.map((topic) => [topic.key, topic.label]),
 );
 
+const TOPIC_KEYS = new Set<TopicKey>(TOPICS.map((topic) => topic.key));
+
+export function isTopicKey(value: string): value is TopicKey {
+  return TOPIC_KEYS.has(value as TopicKey);
+}
+
+export function topicTags(key: TopicKey): readonly string[] {
+  return TOPICS.find((topic) => topic.key === key)?.tags ?? [];
+}
+
 export function topicOfTag(tag: string): TopicKey | null {
   return TAG_TO_TOPIC.get(tag.trim()) ?? null;
 }

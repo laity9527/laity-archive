@@ -26,15 +26,27 @@
  * - 2026-11-13: O1/O2 查询层：抽 buildLogWhere 单源、新增 getLogList/getLogFacets（本轮无调用方，
  *               页面行为不变；新查询不取正文）
  * - 2026-11-13: 新增 searchLogsLimited（保真 F24 四字段子串；tags 走参数化原生 SQL）
+ * - 2026-11-13: 显著升级 B1：筛选新增 topic（主题 key → 该主题标签集合的 hasSome），
+ *               与 tag 同一层 AND；getLogFacets 同一次查询内派生项目计数与主题计数，
+ *               不新增查询、不改数据模型
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { escapeLikePattern, matchLog } from "@/lib/log-search";
 import { resolveUserId } from "@/lib/projects";
+import {
+  TOPICS,
+  isTopicKey,
+  topicTags,
+  topicsOfTags,
+  type TopicKey,
+} from "@/lib/topics";
 
 export type SafeLogFilter = {
   project?: string;
   tag?: string;
+  // 主题 key（见 src/lib/topics.ts）：与 tag 同一层 AND；非法 key 在 buildLogWhere 里忽略
+  topic?: string;
   // Step 3：给了 handle 先解析成 userId 注入 where（项目详情页用它挡住同名 slug 的跨租户日志）；
   // 不给维持全局大厅口径（裁定 ①：/logs 是全站公共大厅，严格 isPublished）
   handle?: string;
@@ -53,13 +65,14 @@ type ResolvedLogFilter = {
   userId?: string | null;
   project?: string;
   tag?: string;
+  topic?: string;
   // 列表/聚合口径要跳过无主行（历史遗留），与 getSafeLogs 的内存过滤保持同一可见集合
   requireOwner?: boolean;
 };
 
 async function resolveLogFilter(filter: SafeLogFilter): Promise<ResolvedLogFilter | null> {
   if (!filter.handle) {
-    return { project: filter.project, tag: filter.tag };
+    return { project: filter.project, tag: filter.tag, topic: filter.topic };
   }
 
   const userId = await resolveUserId(filter.handle);
@@ -68,17 +81,36 @@ async function resolveLogFilter(filter: SafeLogFilter): Promise<ResolvedLogFilte
     return null;
   }
 
-  return { userId, project: filter.project, tag: filter.tag };
+  return {
+    userId,
+    project: filter.project,
+    tag: filter.tag,
+    topic: filter.topic,
+  };
 }
 
 // 公开可见口径的唯一构造点（D10）：isPublished 恒定，其余条件按传入收窄。
 // 新增查询必须调这个函数，不得另写 where——漏一处就可能让草稿进前台。
 function buildLogWhere(params: ResolvedLogFilter): Prisma.LogWhereInput {
+  const topic = params.topic && isTopicKey(params.topic) ? params.topic : null;
+
+  // StringNullableListFilter 一次只接受一个参数（has / hasSome 二选一），
+  // 同时按单标签与主题筛选时必须拆成两个条件再用 AND 合并
+  const tagConditions: Prisma.LogWhereInput[] = [];
+
+  if (params.tag) {
+    tagConditions.push({ tags: { has: params.tag } });
+  }
+
+  if (topic) {
+    tagConditions.push({ tags: { hasSome: [...topicTags(topic)] } });
+  }
+
   return {
     isPublished: true,
     ...(params.userId ? { userId: params.userId } : {}),
     ...(params.project ? { project: { slug: params.project } } : {}),
-    ...(params.tag ? { tags: { has: params.tag } } : {}),
+    ...(tagConditions.length > 0 ? { AND: tagConditions } : {}),
     // 无主行前台从不展示：getSafeLogs 在内存里跳过，列表/聚合直接在这里排除
     ...(params.requireOwner ? { user: { isNot: null } } : {}),
   };
@@ -236,14 +268,16 @@ export async function searchLogsLimited(
 }
 
 export type LogFacets = {
-  projects: { slug: string; name: string }[];
+  projects: { slug: string; name: string; count: number }[];
   tags: string[];
+  topics: { key: TopicKey; label: string; count: number }[];
 };
 
 /**
  * 大厅筛选项（O2）：只取 tags 与 project 两列，不碰正文。
- * 调用方：下一步的 /logs 页面接入；本轮无调用方。
+ * 调用方：/logs 页面。
  * 排序固定（项目按名称、标签按拼音），保证同一数据每次渲染顺序一致。
+ * B1 起在同一次查询的返回行上派生计数：项目计数与主题计数不额外查库。
  */
 export async function getLogFacets(): Promise<LogFacets> {
   const rows = await db.log.findMany({
@@ -251,19 +285,35 @@ export async function getLogFacets(): Promise<LogFacets> {
     select: { tags: true, project: { select: { slug: true, name: true } } },
   });
 
-  const projects = new Map<string, string>();
+  const projects = new Map<string, { name: string; count: number }>();
   const tags = new Set<string>();
+  const topicCounts = new Map<TopicKey, number>();
 
   for (const row of rows) {
-    projects.set(row.project.slug, row.project.name);
+    const current = projects.get(row.project.slug);
+    projects.set(row.project.slug, {
+      name: row.project.name,
+      count: (current?.count ?? 0) + 1,
+    });
+
     for (const tag of row.tags) tags.add(tag);
+
+    // 一条日志在同一主题里可能有多个标签，只计一次
+    for (const key of topicsOfTags(row.tags)) {
+      topicCounts.set(key, (topicCounts.get(key) ?? 0) + 1);
+    }
   }
 
   return {
     projects: [...projects]
-      .map(([slug, name]) => ({ slug, name }))
+      .map(([slug, value]) => ({ slug, name: value.name, count: value.count }))
       .sort((a, b) => a.name.localeCompare(b.name, "zh-CN")),
     tags: [...tags].sort((a, b) => a.localeCompare(b, "zh-CN")),
+    topics: TOPICS.map((topic) => ({
+      key: topic.key,
+      label: topic.label,
+      count: topicCounts.get(topic.key) ?? 0,
+    })),
   };
 }
 

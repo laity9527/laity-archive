@@ -11,8 +11,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   TOPICS,
+  isTopicKey,
   topicLabel,
   topicOfTag,
+  topicTags,
   topicsOfTags,
 } from "../src/lib/topics.ts";
 
@@ -62,4 +64,16 @@ test("主题名可回读，未知 key 原样返回不抛错", () => {
   assert.equal(topicLabel("data"), "数据与存证");
   // @ts-expect-error 故意传越界值，验证运行期兜底
   assert.equal(topicLabel("nope"), "nope");
+});
+
+test("主题 key 可校验，topicTags 返回该主题的全部标签", () => {
+  assert.equal(isTopicKey("frontend"), true);
+  assert.equal(isTopicKey("nope"), false);
+  assert.ok(topicTags("frontend").includes("@container"));
+  assert.deepEqual(topicTags("copyright"), [
+    "软著材料",
+    "打印分页",
+    "折行",
+    "assertWindowFit",
+  ]);
 });
