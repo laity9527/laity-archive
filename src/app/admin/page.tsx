@@ -25,6 +25,7 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { syncGithubAction } from "@/app/admin/sync-actions";
 import { requireAdminSession } from "@/auth";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -53,6 +54,7 @@ export default async function AdminHomePage({
   const synced = pickParam(query.synced);
   const skipped = pickParam(query.skipped);
   const errorCode = pickParam(query.error);
+  await connection();
   const session = await requireAdminSession();
 
   if (!session) {

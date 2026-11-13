@@ -27,6 +27,7 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
 import { requireAdminSession } from "@/auth";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -129,6 +130,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const editId = pickParam(params.edit);
   const saved = pickParam(params.saved);
   const deleted = pickParam(params.deleted);
+  await connection();
   const session = await requireAdminSession();
 
   if (!session) {

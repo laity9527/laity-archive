@@ -17,6 +17,7 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { saveLogAction } from "@/app/admin/log-actions";
 import { requireAdminSession } from "@/auth";
 import { Editor } from "@/components/Editor";
@@ -42,6 +43,7 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
   const errorCode = pickParam(params.error);
   const errorField = pickParam(params.field);
   const errorText = errorCode ? errorTextOf(errorCode, "log", errorField) : null;
+  await connection();
   const session = await requireAdminSession();
 
   if (!session) {

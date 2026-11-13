@@ -26,6 +26,7 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import {
   deleteLogAction,
   publishLogAction,
@@ -64,6 +65,7 @@ export default async function EditLogPage({
 }: EditLogPageProps) {
   const { id } = await params;
   const query = await searchParams;
+  await connection();
   const session = await requireAdminSession();
 
   if (!session) {

@@ -17,6 +17,7 @@
  *               登录校验仍走 requireAdminSession；移动端侧栏变顶部横滚，不引入抽屉/图标库
  */
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
 import { AdminNav } from "@/components/AdminNav";
@@ -35,6 +36,9 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // 先声明请求期渲染，再读会话：预渲染里 NextAuth 会生成 csrf cookie，
+  // Cache Components 判为不稳定值（blocking-prerender-random）。
+  await connection();
   const session = await requireAdminSession();
 
   if (!session) {

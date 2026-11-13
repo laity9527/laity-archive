@@ -11,6 +11,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { requireAdminSession } from "@/auth";
 import { pickParam } from "@/lib/forms";
 import {
@@ -82,6 +83,7 @@ export default async function AdminLogsPage({
   const status = parseStatus(pickParam(params.status));
   const q = pickParam(params.q);
   const page = parsePage(pickParam(params.page));
+  await connection();
   const session = await requireAdminSession();
 
   if (!session) {
