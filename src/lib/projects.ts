@@ -243,26 +243,27 @@ export async function isProjectSlug(slug: string, handle: string) {
 }
 
 export async function getAdminOverview(userId: string) {
-  const [projectCount, publishedCount, draftCount, recentLogs] = await Promise.all([
-    db.project.count({ where: { userId } }),
-    db.log.count({ where: { userId, isPublished: true } }),
-    db.log.count({ where: { userId, isPublished: false } }),
-    db.log.findMany({
-      where: { userId },
-      orderBy: { updatedAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        isPublished: true,
-        updatedAt: true,
-        project: { select: { name: true } },
-      },
-    }),
-  ]);
+  const [projectCount, publishedCount, draftCount, recentDrafts] =
+    await Promise.all([
+      db.project.count({ where: { userId } }),
+      db.log.count({ where: { userId, isPublished: true } }),
+      db.log.count({ where: { userId, isPublished: false } }),
+      db.log.findMany({
+        where: { userId, isPublished: false },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          isPublished: true,
+          updatedAt: true,
+          project: { select: { name: true } },
+        },
+      }),
+    ]);
 
-  return { projectCount, publishedCount, draftCount, recentLogs };
+  return { projectCount, publishedCount, draftCount, recentDrafts };
 }
 
 export async function saveProject(

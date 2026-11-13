@@ -13,12 +13,13 @@
  *               样式也是 I012-B 当年替掉的默认卡片（源码 next-auth/core/pages/signout.js 里的 "Are you sure…"）
  * - 2026-11-13: 修标题重复——元信息原为「后台 · Laity 项目档案库」，叠上根布局的模板后输出两次站名；
  *               改回「后台」，由模板补一次站名
+ * - 2026-11-13: Phase C 后台外壳——深墨侧栏（AdminNav）+ 右侧内容区，导航从横排改为侧栏，
+ *               登录校验仍走 requireAdminSession；移动端侧栏变顶部横滚，不引入抽屉/图标库
  */
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
-import { SignOutButton } from "@/components/SignOutButton";
+import { AdminNav } from "@/components/AdminNav";
 
 // 后台读会话与数据库，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
@@ -41,40 +42,19 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="mx-auto max-w-[1080px] px-6 py-12">
+    <div className="min-h-screen md:flex">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-10 focus:border focus:border-ink focus:bg-paper focus:px-3 focus:py-2 focus:font-mono focus:text-xs"
       >
         跳到正文
       </a>
-      <header className="flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-4">
-        <nav aria-label="后台导航" className="flex items-baseline gap-6">
-          <Link
-            href="/admin"
-            className="font-mono text-[11px] tracking-[0.2em] text-ink"
-          >
-            后台
-          </Link>
-          <Link
-            href="/admin/projects"
-            className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
-          >
-            项目
-          </Link>
-          <Link
-            href="/"
-            className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
-          >
-            ↗ 前台
-          </Link>
-        </nav>
-        <div className="flex items-baseline gap-4 font-mono text-[11px] text-ink-soft">
-          <span>{session.user?.name ?? "已登录"}</span>
-          <SignOutButton />
-        </div>
-      </header>
-      <main id="main" className="mt-10">{children}</main>
+      <AdminNav userName={session.user?.name ?? "已登录"} />
+      <div className="min-w-0 flex-1">
+        <main id="main" className="mx-auto max-w-[1080px] px-6 py-10 md:py-12">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -20,6 +20,8 @@
  * - 2026-11-09: 彻底删除按钮加 confirmMessage 原生弹窗（取消即不提交）；回填 slug 的服务端判据（LOG_004）未动
  * - 2026-11-09: V2.0 Step 4-B：取数带 session.userId（别人的日志与不存在同判 LOG_002）；
  *               项目下拉只列本租户；「看前台」链接补 Step 3 遗留——/logs/<slug> 改 /u/<handle>/logs/<slug>
+ * - 2026-11-13: Phase C 编辑器：保存/发布按钮从表单底部提到顶部粘性操作条；
+ *               新增「发布检查」摘要（标题 / BEFORE / 敏感扫描 / 摘要），口径仍以服务端保存时为准
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -202,6 +204,58 @@ export default async function EditLogPage({
       <form action={saveLogAction} className="mt-10 grid gap-6 md:grid-cols-2">
         <input type="hidden" name="id" value={log.id} />
 
+        <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-hairline bg-paper/95 px-1 py-3 md:col-span-2">
+          <div className="flex flex-wrap items-center gap-4">
+            <SubmitButton
+              label="保存修改"
+              pendingLabel="保存中…"
+              className="border-b border-ink font-sans text-xs text-ink disabled:text-ink-soft"
+            />
+            {!log.isPublished && (
+              <SubmitButton
+                label="保存并发布"
+                pendingLabel="发布中…"
+                formAction={publishLogAction}
+                className="border border-ink px-4 py-2 font-sans text-xs text-ink disabled:text-ink-soft"
+              />
+            )}
+          </div>
+          <span className="font-sans text-[10px] text-ink-soft">
+            {log.isPublished
+              ? "已发布的日志一保存就退回草稿，需要重新发布"
+              : "发布 = 先保存这张表单里的内容，再按它算 SHA-256 并记服务器时间"}
+          </span>
+          {!log.isPublished && blocking.length > 0 && (
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="sensitiveConfirmed"
+                className="border border-ink"
+              />
+              <span className="font-sans text-[11px] text-ink">
+                已核对上述 {blocking.length} 类命中，仍要发布
+              </span>
+            </label>
+          )}
+        </div>
+
+        <div className="border border-hairline px-4 py-3 md:col-span-2">
+          <p className="font-sans text-[10px] text-ink-soft">
+            发布检查 · 保存时口径
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-x-6 gap-y-1 font-sans text-[11px] text-ink-soft">
+            <li>标题 {log.title.trim() ? "✓" : "缺失"}</li>
+            <li>BEFORE 正文 {log.beforeContent.trim() ? "✓" : "缺失"}</li>
+            <li>
+              敏感扫描{" "}
+              {blocking.length === 0
+                ? "0 类阻断"
+                : `${blocking.length} 类阻断`}
+            </li>
+            <li>{log.contentHash ? "摘要将在发布时重算" : "发布时生成摘要"}</li>
+          </ul>
+        </div>
+
         <label className="flex flex-col gap-2">
           <span className="font-sans text-[10px] text-ink-soft">标题</span>
           <input
@@ -301,10 +355,10 @@ export default async function EditLogPage({
 
         {hits.length > 0 && (
           <div className="md:col-span-2 border border-ink px-4 py-3">
-            <p className="font-mono text-[10px] tracking-[0.2em] text-ink">
+            <p className="font-sans text-[10px] text-ink">
               发布前核对 · 命中 {hits.length} 类形态
             </p>
-            <ul className="mt-3 grid gap-1 font-mono text-[11px] leading-relaxed text-ink-soft">
+            <ul className="mt-3 grid gap-1 font-sans text-[11px] leading-relaxed text-ink-soft">
               {hits.map((hit) => (
                 <li key={hit.code}>
                   {hit.advisory ? "提示" : "阻截"} · {hit.label} ×{hit.count} ·{" "}
@@ -314,45 +368,10 @@ export default async function EditLogPage({
             </ul>
             <p className="mt-3 text-[11px] leading-relaxed text-ink-soft">
               这只是形态判断，会误报（示例数据、占位串都算）。阻截类请先删改；
-              确认没有可撤回的公开内容时，勾选下面的确认再发布。
+              确认没有可撤回的公开内容时，勾选上面的确认再发布。
             </p>
           </div>
         )}
-
-        <div className="flex flex-wrap items-baseline gap-6 md:col-span-2">
-          <SubmitButton
-            label="保存修改"
-            pendingLabel="保存中…"
-            className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
-          />
-          {!log.isPublished && (
-            <>
-              {blocking.length > 0 && (
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    name="sensitiveConfirmed"
-                    className="border border-ink"
-                  />
-                  <span className="font-mono text-[11px] text-ink">
-                    已核对上述 {blocking.length} 类命中，仍要发布
-                  </span>
-                </label>
-              )}
-              <SubmitButton
-                label="保存并发布"
-                pendingLabel="发布中…"
-                formAction={publishLogAction}
-                className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink disabled:text-ink-soft"
-              />
-            </>
-          )}
-          <span className="font-mono text-[10px] text-ink-soft">
-            {log.isPublished
-              ? "已发布的日志一保存就退回草稿，需要重新发布"
-              : "发布 = 先保存这张表单里的内容，再按它算 SHA-256 并记服务器时间；草稿对外不可见"}
-          </span>
-        </div>
       </form>
 
       {log.isPublished && (

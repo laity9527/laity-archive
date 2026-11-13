@@ -5,6 +5,7 @@
  * 创建日期：2026-11-04
  * 修改记录：
  * - 2026-11-04: 初始创建（I012-B 只替换了登录页，退出仍落框架默认页）
+ * - 2026-11-13: 后台侧栏改为深墨底，新增 tone="dark" 变体；中文按钮文案改走 Inter
  */
 "use client";
 
@@ -13,9 +14,13 @@ import { useState } from "react";
 
 type SignOutButtonProps = {
   callbackUrl?: string;
+  tone?: "light" | "dark";
 };
 
-export function SignOutButton({ callbackUrl = "/" }: SignOutButtonProps) {
+export function SignOutButton({
+  callbackUrl = "/",
+  tone = "light",
+}: SignOutButtonProps) {
   const [pending, setPending] = useState(false);
 
   async function onClick() {
@@ -33,13 +38,18 @@ export function SignOutButton({ callbackUrl = "/" }: SignOutButtonProps) {
     }
   }
 
+  const toneClass =
+    tone === "dark"
+      ? "border-paper/40 text-paper hover:text-paper/70 disabled:border-paper/20 disabled:text-paper/40"
+      : "border-ink text-ink hover:text-ink-soft disabled:border-hairline disabled:text-ink-soft";
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={pending}
       aria-busy={pending ? true : undefined}
-      className="border-b border-ink font-mono text-[11px] text-ink hover:text-ink-soft disabled:border-hairline disabled:text-ink-soft"
+      className={`border-b font-sans text-xs ${toneClass}`}
     >
       {pending ? "退出中…" : "退出"}
     </button>

@@ -1,6 +1,6 @@
 /**
  * 文件：src/app/admin/page.tsx
- * 描述：后台概览：项目数、已发布与草稿日志数、最近改动的 5 条日志
+ * 描述：后台概览：项目、已发布、草稿三项存量；继续处理草稿；同步与导出动作
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
@@ -19,15 +19,18 @@
  * - 2026-11-12: F25：概览加 [ 导出所有数据 ] 下载入口（与同步按钮同一行）与 EXPORT_001 横幅
  * - 2026-11-12: F25 收口：导出入口由客户端按钮（动作返回 Response）改为锚点指向 /admin/export
  *               路由处理器——动作返回值走 RSC 序列化通道无法承载 Response，按官方下载范例改
+ * - 2026-11-13: Phase C 概览重排：标题区补「新建日志」主入口；三项计数改卡片；
+ *               「最近动态」改「继续处理」只列草稿（getAdminOverview 同步改 recentDrafts），
+ *               同步/导出/项目入口收进「数据与发布」区；横幅与动作语义未动
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { syncGithubAction } from "@/app/admin/sync-actions";
 import { requireAdminSession } from "@/auth";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
 import { pickParam } from "@/lib/forms";
 import { getAdminOverview } from "@/lib/projects";
-import { syncGithubAction } from "@/app/admin/sync-actions";
 
 // 概览统计走未缓存查询，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
@@ -56,7 +59,7 @@ export default async function AdminHomePage({
     redirect("/login?callbackUrl=%2Fadmin");
   }
 
-  const { projectCount, publishedCount, draftCount, recentLogs } =
+  const { projectCount, publishedCount, draftCount, recentDrafts } =
     await getAdminOverview(session.userId);
 
   const stats = [
@@ -67,79 +70,115 @@ export default async function AdminHomePage({
 
   return (
     <>
-      <h1 className="text-3xl font-medium tracking-tight">概览</h1>
+      <header className="flex flex-wrap items-baseline justify-between gap-4 border-b border-ink pb-5">
+        <div>
+          <p className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+            OVERVIEW
+          </p>
+          <h1 className="mt-2 text-3xl font-medium tracking-tight">概览</h1>
+        </div>
+        <Link
+          href="/admin/logs/new"
+          className="border border-ink px-4 py-2 font-sans text-xs text-ink hover:bg-ink hover:text-paper"
+        >
+          新建日志
+        </Link>
+      </header>
 
       {deleted && (
-        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p
+          role="alert"
+          className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink"
+        >
           该条日志已彻底删除，正文与摘要都不再保留
         </p>
       )}
 
       {synced !== undefined && (
-        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p
+          role="alert"
+          className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink"
+        >
           成功同步 {synced} 条，跳过 {skipped ?? 0} 条
         </p>
       )}
 
       {errorCode === "SYNC_001" && (
-        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p
+          role="alert"
+          className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink"
+        >
           请先退出并重新登录以绑定 GitHub 授权
         </p>
       )}
 
       {errorCode === "EXPORT_001" && (
-        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p
+          role="alert"
+          className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink"
+        >
           导出失败，请稍后重试
         </p>
       )}
 
       {errorCode && errorCode !== "SYNC_001" && errorCode !== "EXPORT_001" && (
-        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+        <p
+          role="alert"
+          className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink"
+        >
           {errorCode} · {errorTextOf(errorCode, "log")}
         </p>
       )}
 
-      <ul className="mt-10 border-t border-ink">
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
         {stats.map((item) => (
-          <li
-            key={item.label}
-            className="flex items-baseline justify-between border-b border-hairline py-4"
-          >
-            <span className="font-sans text-[11px] text-ink-soft">
-              {item.label}
-            </span>
-            <span className="font-mono text-2xl text-ink">{item.value}</span>
-          </li>
+          <div key={item.label} className="border border-hairline p-4">
+            <p className="font-sans text-[10px] text-ink-soft">{item.label}</p>
+            <p className="mt-2 font-mono text-3xl leading-none text-ink">
+              {item.value}
+            </p>
+          </div>
         ))}
-      </ul>
+      </div>
 
-      <section className="mt-16">
-        <h2 className="font-sans text-[10px] text-ink-soft">最近动态</h2>
-        {recentLogs.length === 0 ? (
+      <section className="mt-12">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="font-sans text-[10px] text-ink-soft">继续处理</h2>
+          <Link
+            href="/admin/logs?status=draft"
+            className="border-b border-ink font-sans text-[11px] text-ink"
+          >
+            全部草稿 →
+          </Link>
+        </div>
+
+        {recentDrafts.length === 0 ? (
           <p className="mt-4 border-t border-ink py-6 font-sans text-xs text-ink-soft">
-            暂无日志
+            暂无草稿
           </p>
         ) : (
           <ul className="mt-4 border-t border-ink">
-            {recentLogs.map((log) => (
+            {recentDrafts.map((log) => (
               <li
                 key={log.id}
                 className="flex flex-wrap items-baseline gap-x-6 gap-y-1 border-b border-hairline py-4"
               >
                 <span aria-hidden className="font-mono text-[10px] text-ink">
-                  {log.isPublished ? "●" : "○"}
+                  ○
                 </span>
-                <span className="text-base">{log.title}</span>
+                <span className="min-w-0 flex-1 text-base">{log.title}</span>
                 <span className="font-mono text-[11px] text-ink-soft">
                   {log.project.name}
                 </span>
                 <span className="ml-auto text-[11px] text-ink-soft">
-                  <span className="font-sans">{`${log.isPublished ? "已发布" : "草稿"} · `}</span>
-                  <span className="font-mono">{log.updatedAt.toISOString().slice(0, 10)}</span>
+                  <span className="font-sans">草稿 · </span>
+                  <span className="font-mono">
+                    {log.updatedAt.toISOString().slice(0, 10)}
+                  </span>
                 </span>
                 <Link
                   href={`/admin/logs/${log.id}/edit`}
-                  className="border-b border-ink font-mono text-[11px] text-ink"
+                  className="border-b border-ink font-sans text-[11px] text-ink"
                 >
                   编辑
                 </Link>
@@ -147,44 +186,36 @@ export default async function AdminHomePage({
             ))}
           </ul>
         )}
-        <p className="mt-6 font-mono text-[11px] text-ink-soft">
-          <Link href="/admin/logs/new" className="border-b border-ink text-ink">
-            新建日志
-          </Link>
-          <span className="ml-4">草稿对外不可见，发布后前台立即可见</span>
-        </p>
-
-        <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-3">
-          <form action={syncGithubAction} className="inline">
-            <SubmitButton
-              label="[ 从 GitHub 同步 ]"
-              pendingLabel="同步中…"
-              className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
-            />
-            <span className="ml-4 font-mono text-[10px] text-ink-soft">
-              拉取公开仓库的提交，生成草稿挂在 github-sync 项目下
-            </span>
-          </form>
-          <div className="flex items-baseline gap-3">
-            <a
-              href="/admin/export"
-              className="border border-ink px-4 py-2 font-sans text-sm text-ink hover:bg-ink hover:text-paper"
-            >
-              导出所有数据
-            </a>
-            <span className="font-mono text-[10px] text-ink-soft">
-              导出当前账号全部项目与日志（含草稿）
-            </span>
-          </div>
-        </div>
       </section>
 
-      <p className="mt-16">
-        <Link href="/admin/projects" className="border-b border-ink text-sm">
-          去管理项目 →
-        </Link>
-      </p>
+      <section className="mt-12 border-t border-hairline pt-6">
+        <h2 className="font-sans text-[10px] text-ink-soft">数据与发布</h2>
+        <div className="mt-4 flex flex-wrap items-baseline gap-x-8 gap-y-4">
+          <form action={syncGithubAction} className="inline">
+            <SubmitButton
+              label="从 GitHub 同步"
+              pendingLabel="同步中…"
+              className="border border-ink px-4 py-2 font-sans text-xs text-ink hover:bg-ink hover:text-paper disabled:border-hairline disabled:text-ink-soft disabled:hover:bg-transparent disabled:hover:text-ink-soft"
+            />
+          </form>
+          <a
+            href="/admin/export"
+            className="border border-ink px-4 py-2 font-sans text-xs text-ink hover:bg-ink hover:text-paper"
+          >
+            导出所有数据
+          </a>
+          <Link
+            href="/admin/projects"
+            className="border-b border-ink font-sans text-[11px] text-ink"
+          >
+            管理项目 →
+          </Link>
+        </div>
+        <p className="mt-4 max-w-xl font-sans text-[11px] leading-relaxed text-ink-soft">
+          同步会拉取公开仓库的提交生成草稿，挂在 github-sync 项目下；导出包含当前账号全部项目与日志（含草稿）。
+          草稿对外不可见，发布后前台立即可见。
+        </p>
+      </section>
     </>
   );
 }
-

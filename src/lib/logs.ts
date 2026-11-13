@@ -33,6 +33,8 @@
  *               邻接所需列，再交给 src/lib/related.ts 的纯函数挑前后篇与相关阅读
  * - 2026-11-13: 首页主题入口：新增 getTopicCounts——只取 tags 一列，按 topics.ts 的
  *               8 个主题计数；首页因此为 3 次查询，仍在 O8 的 ≤3 预算内
+ * - 2026-11-13: Phase C 后台日志列表：新增 getAdminLogList（状态筛选 + 标题搜索 + 页码分页），
+ *               只取列表列，不取正文；前台查询口径（isPublished）不用于后台
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -484,5 +486,69 @@ export async function getAdminLogById(id: string, userId: string) {
       user: { select: { handle: true } },
     },
   });
+}
+
+export type AdminLogStatus = "all" | "draft" | "published";
+
+export type AdminLogListParams = {
+  status?: AdminLogStatus;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+/**
+ * 后台日志列表（Phase C）：按状态与标题筛选，页码分页（10 条/页）。
+ * 与前台不同，这里必须看到草稿；userId 恒定，跨租户与不存在同表现。
+ * 只取列表列，正文留给编辑页。
+ */
+export async function getAdminLogList(
+  userId: string,
+  params: AdminLogListParams = {},
+) {
+  const pageSize = Math.min(Math.max(params.pageSize ?? 10, 1), 50);
+  const page = Math.max(params.page ?? 1, 1);
+  const q = params.q?.trim();
+
+  const where: Prisma.LogWhereInput = {
+    userId,
+    ...(params.status === "draft"
+      ? { isPublished: false }
+      : params.status === "published"
+        ? { isPublished: true }
+        : {}),
+    ...(q ? { title: { contains: q, mode: "insensitive" } } : {}),
+  };
+
+  const [items, total, all, published, draft] = await Promise.all([
+    db.log.findMany({
+      where,
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        isPublished: true,
+        updatedAt: true,
+        project: { select: { name: true } },
+        user: { select: { handle: true } },
+      },
+    }),
+    db.log.count({ where }),
+    db.log.count({ where: { userId } }),
+    db.log.count({ where: { userId, isPublished: true } }),
+    db.log.count({ where: { userId, isPublished: false } }),
+  ]);
+
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    pageCount: Math.max(1, Math.ceil(total / pageSize)),
+    counts: { all, published, draft },
+  };
 }
 
