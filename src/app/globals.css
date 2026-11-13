@@ -5,8 +5,9 @@
    致本页独有的 lg:grid / lg:grid-cols / lg:gap-10 / lg:mx-0 不生成、桌面右栏 grid 失效。
    按负责人裁定在 globals.css 内用 @source inline 强制生成这几个工具类（不动 .gitignore；
    实测 @source 登记目录仍受 gitignore 过滤，故用 inline 直接生成候选）。下列类须与本页布局类同步；
+   2026-11-13 B2 追加 sm:grid-cols-2 / sm:text-right / group-hover 三个前后篇与相关阅读用到的候选。
    I006/I014 同源的 ignore 隐患对该目录未来新文件仍在，根治需 .gitignore 否定规则——另记台账。 */
-@source inline("lg:grid lg:grid-cols-[minmax(0,720px)_minmax(0,1fr)] lg:gap-10 lg:mx-0 max-w-[1080px]");
+@source inline("lg:grid lg:grid-cols-[minmax(0,720px)_minmax(0,1fr)] lg:gap-10 lg:mx-0 max-w-[1080px] sm:grid-cols-2 sm:text-right group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4");
 
 :root {
   --background: #f4f1ec;

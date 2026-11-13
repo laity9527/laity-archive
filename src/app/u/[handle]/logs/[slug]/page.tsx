@@ -20,6 +20,8 @@
  *               在正文头部；BEFORE/AFTER 经 extractToc 抽锚点、总标题数 ≥2 才画；进度条为整页口径 CSS 滚动驱动动画（零 JS）；
  *               经验总结段不索引；无目录时 main 放宽到 1080px 但正文仍 mx-auto 限宽 720px，与改前观感一致
  * - 2026-11-12: F26 标签聚合：header 标签改 Link 指向 /tags/[tag]
+ * - 2026-11-13: 显著升级 B2：头部加阅读时长（纯函数 reading-time）；印章升级为档案凭据卡（复制链接 / 哈希）；
+ *               尾部加前后篇与相关阅读（同标签优先、同项目兜底，见 lib/related.ts）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -31,8 +33,9 @@ import {
 } from "@/components/ArticleToc";
 import { Seal } from "@/components/Seal";
 import { Timeline } from "@/components/Timeline";
-import { getSafeLogBySlug } from "@/lib/logs";
+import { getLogContext, getSafeLogBySlug } from "@/lib/logs";
 import { Markdown } from "@/lib/markdown";
+import { estimateReadingMinutes } from "@/lib/reading-time";
 import { extractToc } from "@/lib/toc";
 
 // 列表页与搜索引擎要的摘要：优先用"经验总结"字段，它本身就是这条复盘的结论
@@ -72,6 +75,26 @@ export default async function LogDetailPage({
   if (!log) {
     notFound();
   }
+
+  // B2：前后篇与相关阅读共用一次列表查询；阅读时长是纯函数，不碰数据库
+  const context = await getLogContext({
+    id: log.id,
+    userId: log.userId,
+    tags: log.tags,
+    projectId: log.projectId,
+  });
+  const minutes = estimateReadingMinutes(
+    [log.beforeContent, log.afterContent ?? "", log.lessonLearned ?? ""].join(
+      "\n",
+    ),
+  );
+  const relatedLabel =
+    context.relatedReason === "tag"
+      ? "同标签相关"
+      : context.relatedReason === "project"
+        ? "同项目最近发布"
+        : "相关阅读";
+  const logPath = `/u/${handle}/logs/${slug}`;
 
   // F23：BEFORE/AFTER 各抽一组锚点（经验总结是短结论，不索引）；总标题数 ≥2 才画目录——
   // 单标题文章没有导航价值。两组前缀独立从 0 起，与 Markdown 的 tocIdPrefix 一一对应
@@ -132,6 +155,11 @@ export default async function LogDetailPage({
                 ))}
               </p>
             )}
+            {minutes > 0 && (
+              <p className="mt-4 font-sans text-[11px] text-ink-soft">
+                约 <span className="font-mono">{minutes}</span> 分钟读完
+              </p>
+            )}
           </header>
 
           {showToc && <ArticleTocPanel groups={tocGroups} />}
@@ -178,7 +206,11 @@ export default async function LogDetailPage({
           )}
 
           {log.contentHash && log.publishedAt ? (
-            <Seal contentHash={log.contentHash} publishedAt={log.publishedAt} />
+            <Seal
+              contentHash={log.contentHash}
+              publishedAt={log.publishedAt}
+              path={logPath}
+            />
           ) : (
             // 前台只渲染已发布日志，走到这里说明摘要字段缺失——宁可显式告警，也不能"安静地没有印章"
             <div className="mt-16 border border-ink p-5 font-mono text-[11px] leading-relaxed text-ink">
@@ -188,6 +220,71 @@ export default async function LogDetailPage({
                 请在后台重新发布一次补齐；缺失期间，本页不构成内容未被篡改的证明。
               </p>
             </div>
+          )}
+
+          {(context.older || context.newer) && (
+            <nav
+              aria-label="相邻日志"
+              className="mt-10 grid gap-6 border-t border-ink pt-6 sm:grid-cols-2"
+            >
+              {context.older ? (
+                <Link
+                  href={`/u/${handle}/logs/${context.older.slug}`}
+                  className="group block"
+                >
+                  <span className="font-mono text-[9px] tracking-[0.16em] text-ink-soft">
+                    ← 上一篇
+                  </span>
+                  <span className="mt-1 block text-sm font-medium group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">
+                    {context.older.title}
+                  </span>
+                </Link>
+              ) : (
+                <span aria-hidden />
+              )}
+
+              {context.newer ? (
+                <Link
+                  href={`/u/${handle}/logs/${context.newer.slug}`}
+                  className="group block sm:text-right"
+                >
+                  <span className="font-mono text-[9px] tracking-[0.16em] text-ink-soft">
+                    下一篇 →
+                  </span>
+                  <span className="mt-1 block text-sm font-medium group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">
+                    {context.newer.title}
+                  </span>
+                </Link>
+              ) : (
+                <span aria-hidden />
+              )}
+            </nav>
+          )}
+
+          {context.related.length > 0 && (
+            <section className="mt-10 border-t border-hairline pt-5">
+              <h2 className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+                {relatedLabel}
+              </h2>
+              <ul className="mt-2">
+                {context.related.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-hairline py-2.5"
+                  >
+                    <Link
+                      href={`/u/${handle}/logs/${item.slug}`}
+                      className="text-sm hover:underline hover:decoration-1 hover:underline-offset-4"
+                    >
+                      {item.title}
+                    </Link>
+                    <span className="font-mono text-[10px] text-ink-soft">
+                      {item.beforeDate.toISOString().slice(0, 10)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
         </article>
         {showToc && <ArticleTocRail groups={tocGroups} />}

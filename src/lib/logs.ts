@@ -29,11 +29,18 @@
  * - 2026-11-13: 显著升级 B1：筛选新增 topic（主题 key → 该主题标签集合的 hasSome），
  *               与 tag 同一层 AND；getLogFacets 同一次查询内派生项目计数与主题计数，
  *               不新增查询、不改数据模型
+ * - 2026-11-13: 显著升级 B2：新增 getLogContext——一次查询取本租户全部已发布日志的
+ *               邻接所需列，再交给 src/lib/related.ts 的纯函数挑前后篇与相关阅读
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { escapeLikePattern, matchLog } from "@/lib/log-search";
 import { resolveUserId } from "@/lib/projects";
+import {
+  pickNeighbors,
+  pickRelated,
+  type RelatedReason,
+} from "@/lib/related";
 import {
   TOPICS,
   isTopicKey,
@@ -315,6 +322,59 @@ export async function getLogFacets(): Promise<LogFacets> {
       count: topicCounts.get(topic.key) ?? 0,
     })),
   };
+}
+
+export type LogContextItem = {
+  id: string;
+  title: string;
+  slug: string;
+  beforeDate: Date;
+};
+
+export type LogContext = {
+  older: LogContextItem | null;
+  newer: LogContextItem | null;
+  related: LogContextItem[];
+  relatedReason: RelatedReason | null;
+};
+
+/**
+ * 详情页的相邻与相关（B2）：一次查询取本租户全部已发布日志的邻接所需列，
+ * 前后篇与相关阅读都在内存里挑（13 条规模，不值得为此加两条 SQL）。
+ * 时间序与大厅一致（beforeDate desc, id desc），保证从列表点进来时前后篇与所见顺序一致。
+ */
+export async function getLogContext(current: {
+  id: string;
+  userId: string | null;
+  tags: string[];
+  projectId: string;
+}): Promise<LogContext> {
+  // 无主行前台从不展示；类型上 userId 可空，这里提前返回，不把 null 送进 where
+  if (!current.userId) {
+    return { older: null, newer: null, related: [], relatedReason: null };
+  }
+
+  const rows = await db.log.findMany({
+    where: { isPublished: true, userId: current.userId },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      tags: true,
+      projectId: true,
+      beforeDate: true,
+    },
+    orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
+  });
+
+  const { older, newer } = pickNeighbors(rows, current.id);
+  // 前后篇已经在页面下方单独列出，相关阅读不再重复它们
+  const excludeIds = [older?.id, newer?.id].filter(
+    (id): id is string => Boolean(id),
+  );
+  const { items, reason } = pickRelated(rows, current, 3, excludeIds);
+
+  return { older, newer, related: items, relatedReason: reason };
 }
 
 // 首页「最新日志」口径：beforeDate 是"哪天做的决策"，publishedAt 才是"什么时候写出来的"，
