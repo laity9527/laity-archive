@@ -11,6 +11,8 @@
  *               后台此前没有地标，键盘用户要 Tab 过整条导航才碰到正文
  * - 2026-11-04: 退出从 <a href="/api/auth/signout"> 换成 SignOutButton：那张框架确认页是全站唯一的英文界面，
  *               样式也是 I012-B 当年替掉的默认卡片（源码 next-auth/core/pages/signout.js 里的 "Are you sure…"）
+ * - 2026-11-13: 修标题重复——元信息原为「后台 · Laity 项目档案库」，叠上根布局的模板后输出两次站名；
+ *               改回「后台」，由模板补一次站名
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -23,7 +25,7 @@ import { SignOutButton } from "@/components/SignOutButton";
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "后台 · Laity 项目档案库",
+  title: "后台",
   robots: { index: false, follow: false },
 };
 

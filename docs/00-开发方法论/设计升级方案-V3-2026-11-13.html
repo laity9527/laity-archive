@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laity 档案库 · 设计升级 V3（2026-11-13）</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   设计说明书自身的样式：纸白、墨黑、暖线、一枚封泥红。
+   零圆角、零阴影、零渐变；只用 1px 线与字号建立层级。
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --paper:#f4f1ec;
+  --paper-2:#eee8dd;
+  --white:#fffdf9;
+  --ink:#1a1a18;
+  --soft:#625d53;
+  --rule:#d9d2c5;
+  --rule-strong:#b9b0a0;
+  --brown:#7a5a3a;
+  --seal:#a03a33;
+  --sans:"Inter","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --serif:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun",serif;
+  --mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:14px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+button{font-family:inherit}
+a{color:inherit}
+::selection{background:var(--brown);color:var(--paper)}
+
+/* 外壳 */
+.app{display:grid;grid-template-columns:242px minmax(0,1fr);min-height:100vh}
+.side{
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  padding:26px 16px 20px;border-right:1px solid var(--rule);
+  background:var(--paper);display:flex;flex-direction:column;
+}
+.brand{padding:0 8px 20px;border-bottom:1px solid var(--rule)}
+.brand-mark{
+  font-family:var(--mono);font-size:12px;letter-spacing:.34em;
+  border-bottom:1px solid var(--brown);padding-bottom:4px;display:inline-block;
+}
+.brand-title{margin-top:12px;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.brand-sub{margin-top:4px;font-family:var(--mono);font-size:9px;color:var(--soft);letter-spacing:.12em}
+.nav{margin-top:10px;flex:1}
+.nav-group{
+  font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--soft);
+  margin:20px 8px 6px;text-transform:uppercase;
+}
+.nav button{
+  width:100%;display:grid;grid-template-columns:20px 1fr auto;align-items:start;gap:8px;
+  padding:7px 8px;border:0;border-left:2px solid transparent;background:transparent;
+  text-align:left;font-size:12.5px;line-height:1.4;color:var(--soft);cursor:pointer;
+}
+.nav button:hover{color:var(--ink);background:rgba(122,90,58,.04)}
+.nav button.active{color:var(--ink);border-left-color:var(--brown);background:rgba(122,90,58,.07)}
+.nav .no{font-family:var(--mono);font-size:9px;color:var(--soft);padding-top:3px}
+.nav button.active .no{color:var(--brown)}
+.nav .flag{font-family:var(--mono);font-size:9px;line-height:1.5;color:var(--seal);border:0;padding:0;margin-top:3px;min-width:0;text-align:right}
+.side-foot{
+  margin-top:18px;padding:14px 8px 0;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:9px;line-height:1.8;color:var(--soft);
+}
+.main{min-width:0;display:flex;flex-direction:column}
+.top{
+  position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
+  gap:16px;padding:12px 34px;border-bottom:1px solid var(--rule);background:rgba(244,241,236,.94);
+  backdrop-filter:blur(8px);
+}
+.crumb{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--soft)}
+.crumb b{font-weight:400;color:var(--ink)}
+.top-right{display:flex;align-items:center;gap:10px}
+.pill{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--brown);border:1px solid var(--brown);padding:3px 7px}
+.btn{
+  border:1px solid var(--ink);background:transparent;color:var(--ink);
+  padding:6px 12px;font-size:11px;cursor:pointer;transition:background .12s linear,color .12s linear;
+}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn.solid{background:var(--ink);color:var(--paper)}
+.btn.solid:hover{background:var(--brown);border-color:var(--brown)}
+.btn.red{border-color:var(--seal);color:var(--seal)}
+.btn.red:hover{background:var(--seal);color:var(--white)}
+.wrap{width:100%}
+.view{display:none;max-width:1120px;padding:34px 34px 90px}
+.view.active{display:block;animation:rise .32s cubic-bezier(.2,.7,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.view.active{animation:none}}
+
+/* 文字 */
+.eyebrow{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--brown);
+  text-transform:uppercase;margin-bottom:10px;
+}
+.vt{font-size:30px;font-weight:600;letter-spacing:-.025em;line-height:1.22;margin:0 0 12px}
+.vt em{font-style:normal;color:var(--brown)}
+.lede{max-width:760px;font-size:14px;line-height:1.85;color:var(--soft);margin:0}
+.h2{font-size:15px;font-weight:600;letter-spacing:-.01em;margin:34px 0 12px;display:flex;align-items:baseline;gap:10px}
+.h2 .idx{font-family:var(--mono);font-size:9px;color:var(--brown);letter-spacing:.1em}
+.h3{font-size:12px;font-weight:600;margin:0 0 6px}
+.small{font-size:11.5px;line-height:1.7;color:var(--soft)}
+.mono{font-family:var(--mono)}
+.serif{font-family:var(--serif)}
+.muted{color:var(--soft)}
+.brown{color:var(--brown)}
+.red{color:var(--seal)}
+.rule2{height:4px;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);margin:18px 0 26px}
+.hr{border:0;border-top:1px solid var(--rule);margin:26px 0}
+
+/* 栅格与卡 */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{border:1px solid var(--rule);background:var(--white);padding:18px 20px}
+.card.plain{background:transparent}
+.card.dark{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.card.dark .small{color:#b9b2a6}
+.card .k{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--soft);margin-bottom:6px}
+.kpi{font-family:var(--mono);font-size:30px;line-height:1.1;letter-spacing:-.03em}
+.kpi small{font-size:11px;color:var(--soft);letter-spacing:0;margin-left:4px}
+.card p{margin:0}
+.tag{
+  display:inline-block;font-size:10.5px;color:var(--soft);border:1px solid var(--rule);
+  padding:2px 7px;margin:0 4px 4px 0;background:transparent;
+}
+.tag.on{color:var(--brown);border-color:var(--brown)}
+.tag.red{color:var(--seal);border-color:var(--seal)}
+.note{
+  border-left:2px solid var(--brown);background:rgba(122,90,58,.055);
+  padding:12px 16px;font-size:12px;line-height:1.8;color:var(--ink);margin:14px 0;
+}
+.note .t{font-weight:600;display:block;margin-bottom:3px}
+.note.red{border-left-color:var(--seal);background:rgba(160,58,51,.05)}
+.anno{
+  border:1px solid var(--rule);border-left:3px solid var(--brown);background:var(--white);
+  padding:15px 18px;margin-top:16px;
+}
+.anno .head{display:flex;align-items:baseline;gap:9px;margin-bottom:8px}
+.anno .n{
+  font-family:var(--mono);font-size:9px;background:var(--brown);color:var(--white);
+  width:17px;height:17px;display:inline-grid;place-items:center;flex:none;
+}
+.anno .head b{font-size:12px;font-weight:600}
+.anno ul{margin:0;padding:0;list-style:none}
+.anno li{position:relative;padding-left:13px;font-size:11.5px;line-height:1.75;color:var(--soft)}
+.anno li+li{margin-top:4px}
+.anno li::before{content:"→";position:absolute;left:0;color:var(--brown);font-family:var(--mono);font-size:9px;top:2px}
+.anno li strong{color:var(--ink);font-weight:600}
+
+/* 表格 */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{
+  text-align:left;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--soft);
+  border-bottom:2px solid var(--ink);padding:8px 10px;background:var(--paper-2);font-weight:400;
+}
+.tbl td{border-bottom:1px solid var(--rule);padding:9px 10px;vertical-align:top;line-height:1.6}
+.tbl tr:hover td{background:var(--white)}
+.tbl .num{font-family:var(--mono);font-size:10px;color:var(--soft);white-space:nowrap}
+.tbl .fix{color:var(--ink)}
+.sev{font-family:var(--mono);font-size:9px;padding:1px 6px;border:1px solid;white-space:nowrap}
+.sev.p0{border-color:var(--seal);color:var(--seal)}
+.sev.p1{border-color:var(--brown);color:var(--brown)}
+.sev.p2{border-color:var(--soft);color:var(--soft)}
+
+/* 浏览器框 */
+.frame{border:1px solid var(--rule-strong);background:var(--white);margin-top:16px}
+.frame-bar{
+  display:flex;align-items:center;gap:8px;padding:7px 12px;
+  background:var(--paper-2);border-bottom:1px solid var(--rule);
+}
+.dots{display:flex;gap:4px}
+.dots i{width:6px;height:6px;border:1px solid var(--soft);border-radius:50%;display:block}
+.url{
+  flex:1;font-family:var(--mono);font-size:9.5px;color:var(--soft);
+  background:var(--paper);border:1px solid var(--rule);padding:2px 8px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.site{background:var(--paper)}
+
+/* 站点导航（mockup） */
+.snav{display:flex;align-items:baseline;gap:18px;padding:15px 30px;border-bottom:1px solid var(--rule)}
+.logo{font-family:var(--mono);font-size:10px;letter-spacing:.32em;border-bottom:1px solid var(--brown);padding-bottom:3px}
+.slinks{margin-left:auto;display:flex;gap:22px;font-size:11.5px;color:var(--soft)}
+.slinks span{cursor:default}
+.slinks .on{color:var(--brown);border-bottom:1px solid var(--brown);padding-bottom:2px}
+.spage{padding:32px 36px 40px}
+
+/* 首页 mockup */
+.hero{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:36px;align-items:end}
+.hero h2{font-size:38px;line-height:1.18;letter-spacing:-.035em;font-weight:600;margin:0 0 14px}
+.hero p{margin:0;font-size:13px;line-height:1.8;color:var(--soft);max-width:390px}
+.holds{border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:10px 0 8px}
+.holds .row{display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;font-size:10.5px;color:var(--soft)}
+.holds .row b{font-family:var(--mono);font-size:16px;font-weight:400;color:var(--ink);letter-spacing:-.02em}
+.holds .row span:last-child{font-family:var(--mono);font-size:9px}
+.sect{margin-top:30px}
+.sect-head{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--ink);padding-bottom:7px;margin-bottom:0}
+.sect-head .l{font-size:10px;letter-spacing:.16em;font-family:var(--mono);color:var(--soft)}
+.sect-head .r{font-size:10.5px;border-bottom:1px solid var(--ink);padding-bottom:1px}
+.entry{display:grid;grid-template-columns:38px minmax(0,1fr) 96px;gap:14px;padding:16px 0;border-bottom:1px solid var(--rule);align-items:start}
+.entry .no{font-family:var(--mono);font-size:10px;color:var(--soft);padding-top:5px}
+.entry h3{margin:0 0 3px;font-size:19px;font-weight:500;letter-spacing:-.01em}
+.entry .meta{font-family:var(--mono);font-size:9.5px;color:var(--soft)}
+.entry .desc{margin:6px 0 0;font-size:11.5px;line-height:1.65;color:var(--soft);max-width:420px}
+.entry .side{text-align:right;font-family:var(--mono);font-size:9px;color:var(--soft)}
+.entry .side b{display:block;font-size:12px;color:var(--ink);font-weight:400;margin-bottom:2px}
+.cols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:34px}
+.lrow{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;padding:12px 0;border-bottom:1px solid var(--rule)}
+.lrow .d{font-family:var(--mono);font-size:9px;color:var(--soft);line-height:1.6}
+.lrow .d b{display:block;color:var(--ink);font-weight:400;font-size:10px}
+.lrow h4{margin:0 0 3px;font-size:13.5px;font-weight:500;line-height:1.4}
+.lrow p{margin:0;font-size:10.5px;color:var(--soft);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.taglist{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.taglist .t{display:flex;align-items:baseline;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--rule);font-size:10.5px;color:var(--ink)}
+.taglist .t em{font-family:var(--mono);font-style:normal;font-size:9px;color:var(--soft)}
+
+/* 大厅 mockup */
+.hall-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;border-bottom:2px solid var(--ink);padding-bottom:14px}
+.hall-head h2{margin:0;font-size:27px;font-weight:600;letter-spacing:-.03em}
+.hall-head .stat{font-family:var(--mono);font-size:9.5px;color:var(--soft);text-align:right;line-height:1.8}
+.search{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--ink);padding:12px 0;margin-top:18px}
+.search .lbl{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--soft)}
+.search .box{flex:1;font-size:12px;color:var(--ink);display:flex;align-items:baseline;gap:6px}
+.search .caret{display:inline-block;width:1px;height:12px;background:var(--ink);animation:blink 1.2s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.search .go{font-size:11.5px;border-bottom:1px solid var(--ink)}
+.hall{display:grid;grid-template-columns:172px minmax(0,1fr);gap:30px;margin-top:20px}
+.rail{border-right:1px solid var(--rule);padding-right:20px}
+.rail .grp{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--soft);margin:16px 0 6px}
+.rail .grp:first-child{margin-top:0}
+.rail .f{display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;font-size:11px;color:var(--soft)}
+.rail .f.on{color:var(--ink)}
+.rail .f.on span:first-child{border-bottom:1px solid var(--ink)}
+.rail .f em{font-family:var(--mono);font-style:normal;font-size:9px;color:var(--soft)}
+.rail .more{font-family:var(--mono);font-size:9px;color:var(--soft);margin-top:8px}
+.rail .reset{margin-top:18px;border-top:1px solid var(--rule);padding-top:10px;font-size:10px;color:var(--soft)}
+.results .sum{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--soft);border-bottom:1px solid var(--rule);padding-bottom:9px}
+.results .sum b{font-family:var(--mono);color:var(--ink);font-weight:400}
+.results .sum .clear{margin-left:auto;font-size:10px;color:var(--ink);border-bottom:1px solid var(--ink)}
+.rrow{display:grid;grid-template-columns:88px minmax(0,1fr);gap:18px;padding:16px 0;border-bottom:1px solid var(--rule)}
+.rrow .tl{font-family:var(--mono);font-size:8.5px;color:var(--soft);line-height:1.7;border-left:1px solid var(--rule);padding-left:10px}
+.rrow .tl b{display:block;color:var(--ink);font-weight:400;font-size:9.5px}
+.rrow h3{margin:0 0 4px;font-size:16.5px;font-weight:500;letter-spacing:-.01em;line-height:1.35}
+.rrow .m{font-family:var(--mono);font-size:9px;color:var(--soft);margin-bottom:5px}
+.rrow p{margin:0;font-size:10.5px;line-height:1.65;color:var(--soft);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+mark{background:var(--brown);color:var(--paper);padding:0 2px}
+.pager{display:flex;align-items:baseline;justify-content:space-between;margin-top:18px;font-family:var(--mono);font-size:9.5px;color:var(--soft)}
+
+/* 详情 mockup */
+.progress{height:3px;background:var(--ink);width:38%}
+.detail{display:grid;grid-template-columns:minmax(0,1fr) 186px;gap:34px}
+.dhead{padding-bottom:18px;border-bottom:1px solid var(--rule)}
+.dhead .proj{font-family:var(--mono);font-size:9.5px;color:var(--soft);letter-spacing:.06em}
+.dhead h2{margin:8px 0 12px;font-size:27px;line-height:1.3;font-weight:600;letter-spacing:-.025em}
+.dmeta{display:flex;flex-wrap:wrap;gap:16px;font-family:var(--mono);font-size:9px;color:var(--soft)}
+.dmeta b{font-weight:400;color:var(--ink)}
+.dbody{margin-top:22px;font-family:var(--serif);font-size:14px;line-height:1.95;color:var(--ink)}
+.dbody p{margin:0 0 12px}
+.dbody h3{font-family:var(--serif);font-size:15px;font-weight:600;margin:20px 0 8px;letter-spacing:0}
+.dbody ul{margin:0 0 12px;padding-left:18px}
+.dbody li{margin-bottom:4px}
+.dsec{margin-top:24px}
+.dsec .lab{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--soft);margin-bottom:9px}
+.dsec .lab::after{content:"";height:1px;background:var(--rule);flex:1}
+.lesson{border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:14px 0;margin-top:26px}
+.lesson .lab{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--soft);margin-bottom:6px}
+.lesson p{margin:0;font-family:var(--serif);font-size:13px;line-height:1.9}
+.cred{border:1px solid var(--ink);padding:16px;margin-top:26px;display:grid;grid-template-columns:64px minmax(0,1fr);gap:16px;align-items:start}
+.stamp{
+  width:60px;height:60px;border:1px solid var(--seal);color:var(--seal);
+  display:grid;place-items:center;text-align:center;font-family:var(--mono);
+  font-size:8px;line-height:1.35;letter-spacing:.1em;transform:rotate(-1.2deg);
+}
+.cred .k{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--soft);margin-bottom:4px}
+.cred .hash{font-family:var(--mono);font-size:9px;line-height:1.6;word-break:break-all;color:var(--ink)}
+.cred .pub{font-family:var(--mono);font-size:9px;color:var(--soft);margin-top:5px}
+.cred .acts{display:flex;gap:12px;margin-top:8px;font-size:10px}
+.cred .acts span{border-bottom:1px solid var(--ink)}
+.pn{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink);margin-top:28px}
+.pn div{padding:14px 0}
+.pn div+div{text-align:right;border-left:1px solid var(--rule);padding-left:16px}
+.pn .k{font-family:var(--mono);font-size:8.5px;color:var(--soft);letter-spacing:.14em;margin-bottom:3px}
+.pn b{font-size:12px;font-weight:500}
+.rel{margin-top:20px;border-top:1px solid var(--rule);padding-top:12px}
+.rel .k{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--soft);margin-bottom:6px}
+.rel .i{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:10.5px;border-bottom:1px solid var(--rule)}
+.rel .i em{font-family:var(--mono);font-style:normal;font-size:8.5px;color:var(--soft)}
+.toc{border-left:1px solid var(--rule);padding-left:16px;position:sticky;top:18px;align-self:start}
+.toc .k{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--soft);margin-bottom:10px}
+.toc .grp{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;color:var(--soft);margin:12px 0 4px}
+.toc .it{font-size:10px;line-height:1.5;color:var(--soft);padding:4px 0 4px 8px;border-left:2px solid transparent;margin-left:-17px;padding-left:15px}
+.toc .it.on{color:var(--ink);border-left-color:var(--ink)}
+.toc .it em{font-family:var(--mono);font-style:normal;font-size:8.5px;color:var(--soft);margin-right:5px}
+
+/* 作品 / 关于 */
+.plist .p{display:grid;grid-template-columns:34px minmax(0,1fr) 120px;gap:14px;padding:18px 0;border-bottom:1px solid var(--rule)}
+.plist .p .no{font-family:var(--mono);font-size:10px;color:var(--soft);padding-top:4px}
+.plist h3{margin:0;font-size:18px;font-weight:500}
+.plist .m{font-family:var(--mono);font-size:9px;color:var(--soft);margin-top:3px}
+.plist p{margin:6px 0 0;font-size:11px;color:var(--soft);line-height:1.65;max-width:440px}
+.plist .side{text-align:right;font-family:var(--mono);font-size:9px;color:var(--soft);line-height:1.9}
+.plist .side b{display:block;color:var(--ink);font-weight:400;font-size:11px}
+.about{display:grid;grid-template-columns:150px minmax(0,1fr);gap:30px}
+.about .idx{border-right:1px solid var(--rule);padding-right:16px}
+.about .idx div{font-size:10.5px;color:var(--soft);padding:5px 0}
+.about .idx div.on{color:var(--ink);border-bottom:1px solid var(--ink);width:fit-content}
+.about h2{margin:0 0 8px;font-size:22px;font-weight:600;letter-spacing:-.02em}
+.about .p{font-size:12.5px;line-height:1.95;color:var(--ink);margin:0 0 10px;max-width:520px}
+.about .sec{margin-top:24px;border-top:1px solid var(--rule);padding-top:18px}
+.stack{display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px 16px;font-size:11px;line-height:1.7}
+.stack .g{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--soft);padding-top:2px}
+.stack .v b{color:var(--ink);font-weight:500}
+.stack .v span{color:var(--soft)}
+
+/* 登录 */
+.login{display:grid;grid-template-columns:minmax(0,1fr) 300px;min-height:440px}
+.login .left{padding:42px 40px;border-right:1px solid var(--rule);display:flex;flex-direction:column}
+.login .left h2{font-size:30px;font-weight:600;letter-spacing:-.03em;margin:0 0 10px;line-height:1.3}
+.login .left p{font-size:12px;color:var(--soft);line-height:1.85;max-width:360px;margin:0}
+.login .badge{margin-top:auto;font-family:var(--mono);font-size:9px;color:var(--soft);line-height:1.8}
+.login .right{padding:42px 28px;display:flex;flex-direction:column;justify-content:center}
+.login .right .k{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--soft);margin-bottom:10px}
+.ghbtn{border:1px solid var(--ink);padding:11px 14px;text-align:center;font-size:12px;background:transparent}
+.ghbtn:hover{background:var(--ink);color:var(--paper)}
+.login .hint{font-size:10px;color:var(--soft);line-height:1.7;margin-top:10px}
+
+/* 后台 mockup */
+.admin{display:grid;grid-template-columns:168px minmax(0,1fr);min-height:520px}
+.aside{background:var(--ink);color:var(--paper);padding:16px 12px;display:flex;flex-direction:column}
+.aside .b{font-family:var(--mono);font-size:9px;letter-spacing:.28em;color:#cfc6b8;padding:0 8px 12px;border-bottom:1px solid #33332e}
+.aside .g{font-family:var(--mono);font-size:8px;letter-spacing:.16em;color:#8f887c;margin:14px 8px 4px}
+.aside .n{padding:6px 8px;font-size:11px;color:#d8d1c5;border-left:2px solid transparent}
+.aside .n.on{color:#fff;border-left-color:var(--brown);background:#26261f}
+.aside .foot{margin-top:auto;font-family:var(--mono);font-size:8px;color:#8f887c;padding:10px 8px 0;border-top:1px solid #33332e;line-height:1.7}
+.acontent{padding:18px 22px 24px;background:var(--white)}
+.atop{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--rule);padding-bottom:10px;font-size:10px;color:var(--soft)}
+.atop b{font-size:16px;color:var(--ink);font-weight:600;letter-spacing:-.01em}
+.atop .user{font-family:var(--mono);font-size:9px}
+.astats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:16px}
+.astats .s{background:var(--white);padding:10px 12px}
+.astats .k{font-size:9px;color:var(--soft)}
+.astats .v{font-family:var(--mono);font-size:20px;line-height:1.3}
+.astats .v small{font-size:9px;color:var(--soft);margin-left:3px}
+.apanel{margin-top:16px;border-top:1px solid var(--ink)}
+.arow{display:grid;grid-template-columns:12px minmax(0,1fr) 78px 54px;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--rule);font-size:10.5px}
+.arow .dot{font-family:var(--mono);font-size:8px;color:var(--brown)}
+.arow .t b{font-weight:500}
+.arow .t span{display:block;font-family:var(--mono);font-size:8px;color:var(--soft)}
+.arow .d{font-family:var(--mono);font-size:8.5px;color:var(--soft);text-align:right}
+.arow .a{font-size:9px;text-align:right;border-bottom:1px solid var(--ink);width:fit-content;justify-self:end}
+.achk{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.achk .c{border:1px solid var(--rule);padding:10px 12px;font-size:9.5px;color:var(--soft);line-height:1.6}
+.achk .c b{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--ink);margin-bottom:3px}
+.achk .c.ok{border-left:3px solid var(--brown)}
+.adminlist .h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:14px;border-bottom:1px solid var(--ink);padding-bottom:8px}
+.adminlist .h .f{display:flex;gap:12px;font-size:10px;color:var(--soft)}
+.adminlist .h .f .on{color:var(--ink);border-bottom:1px solid var(--ink)}
+.ltable{width:100%;border-collapse:collapse;font-size:10.5px}
+.ltable th{text-align:left;font-family:var(--mono);font-size:8px;letter-spacing:.1em;color:var(--soft);font-weight:400;padding:7px 6px;border-bottom:1px solid var(--rule)}
+.ltable td{padding:8px 6px;border-bottom:1px solid var(--rule);vertical-align:middle}
+.ltable .st{font-family:var(--mono);font-size:8px;color:var(--brown)}
+.ltable .st.draft{color:var(--soft)}
+.ltable .tt{font-weight:500}
+.ltable .mono{font-size:8.5px;color:var(--soft)}
+.ltable .act{font-size:9px;border-bottom:1px solid var(--ink);white-space:nowrap}
+.editor{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,0.88fr) 178px;gap:18px;margin-top:14px}
+.ebar{display:flex;align-items:center;gap:8px;border:1px solid var(--rule);border-bottom:0;padding:6px 8px;background:var(--paper-2);font-size:9px;color:var(--soft)}
+.ebar .sp{margin-left:auto;display:flex;gap:6px}
+.ebar .b{border:1px solid var(--ink);padding:3px 8px;font-size:8.5px;color:var(--ink)}
+.ebar .b.pri{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.etabs{display:flex;gap:12px;font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;color:var(--soft);padding:8px 0}
+.etabs .on{color:var(--ink);border-bottom:1px solid var(--ink)}
+.ebody{border:1px solid var(--rule);background:var(--paper);padding:12px;font-family:var(--mono);font-size:9px;line-height:1.9;color:var(--ink);min-height:210px}
+.ebody .cm{color:var(--soft)}
+.eprev{border:1px solid var(--rule);background:var(--white);padding:12px;min-height:210px}
+.eprev .k{font-family:var(--mono);font-size:8px;color:var(--soft);letter-spacing:.12em;margin-bottom:6px}
+.eprev p{font-family:var(--serif);font-size:9.5px;line-height:1.9;margin:0 0 6px}
+.eprev h4{font-family:var(--serif);font-size:10px;margin:8px 0 4px}
+.erail{border-left:1px solid var(--rule);padding-left:14px;font-size:9px;color:var(--soft);line-height:1.7}
+.erail .k{font-family:var(--mono);font-size:8px;letter-spacing:.12em;margin:10px 0 4px}
+.erail .row{display:flex;justify-content:space-between;border-bottom:1px solid var(--rule);padding:4px 0}
+.erail .ok{color:var(--brown)}
+
+/* 路线 */
+.phases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}
+.phase{border:1px solid var(--rule);border-top:3px solid var(--ink);background:var(--white);padding:16px 18px}
+.phase.p0{border-top-color:var(--seal)}
+.phase.p1{border-top-color:var(--brown)}
+.phase.p2{border-top-color:var(--rule-strong)}
+.phase .k{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--soft)}
+.phase h3{margin:4px 0 8px;font-size:14px;font-weight:600}
+.phase ol{margin:0;padding-left:0;list-style:none;counter-reset:s}
+.phase li{counter-increment:s;position:relative;padding-left:20px;font-size:11px;line-height:1.7;color:var(--soft);margin-bottom:4px}
+.phase li::before{content:counter(s,decimal-leading-zero);position:absolute;left:0;top:2px;font-family:var(--mono);font-size:8px;color:var(--brown)}
+.phase li b{color:var(--ink);font-weight:600}
+.est{font-family:var(--mono);font-size:8.5px;color:var(--soft);margin-top:8px;padding-top:8px;border-top:1px solid var(--rule)}
+
+/* 响应式 */
+@media(max-width:1180px){
+  .view{padding:28px 22px 70px}
+  .top{padding:12px 22px}
+  .hero h2{font-size:32px}
+  .detail{grid-template-columns:minmax(0,1fr)}
+  .toc{display:none}
+  .about{grid-template-columns:1fr}
+  .about .idx{display:none}
+}
+@media(max-width:1000px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--rule);padding:16px 12px 10px}
+  .brand{display:flex;align-items:baseline;gap:14px;padding-bottom:10px}
+  .brand-title{margin:0}
+  .brand-sub{margin:0}
+  .nav{display:flex;overflow-x:auto;gap:2px;margin-top:6px}
+  .nav-group{display:none}
+  .nav button{width:auto;white-space:nowrap;grid-template-columns:auto auto;padding:7px 10px;border-left:0;border-bottom:2px solid transparent}
+  .nav button.active{border-left:0;border-bottom-color:var(--brown)}
+  .nav .no,.nav .flag{display:none}
+  .side-foot{display:none}
+  .g4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:1fr}
+  .cols,.hall,.login,.editor{grid-template-columns:1fr}
+  .rail{border-right:0;padding-right:0;border-bottom:1px solid var(--rule);padding-bottom:12px}
+  .toc{display:none}
+  .about{grid-template-columns:1fr}
+  .astats{grid-template-columns:repeat(2,1fr)}
+  .login .left{border-right:0;border-bottom:1px solid var(--rule)}
+}
+@media(max-width:640px){
+  .vt{font-size:24px}
+  .hero{grid-template-columns:1fr}
+  .hero h2{font-size:27px}
+  .g2,.g4,.phases,.achk{grid-template-columns:1fr}
+  .entry{grid-template-columns:26px minmax(0,1fr)}
+  .entry .side{display:none}
+  .spage{padding:22px 16px 30px}
+  .snav{padding:12px 16px;gap:10px}
+  .slinks{gap:12px;font-size:10.5px}
+  .admin{grid-template-columns:1fr}
+  .aside{flex-direction:row;overflow-x:auto;padding:8px}
+  .aside .b,.aside .g,.aside .foot{display:none}
+  .aside .n{white-space:nowrap;border-left:0;border-bottom:2px solid transparent;font-size:10px}
+  .adminlist{overflow-x:auto}
+  .pn{grid-template-columns:1fr}
+  .pn div+div{text-align:left;border-left:0;border-top:1px solid var(--rule);padding-left:0}
+  .cred{grid-template-columns:1fr}
+}
+@media print{
+  .side,.top{display:none}
+  .app{display:block}
+  .view{display:block!important;page-break-after:always;max-width:none;padding:0 0 30px}
+  .frame{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="brand">
+    <div class="brand-mark">LAITY</div>
+    <div class="brand-title">设计升级 V3</div>
+    <div class="brand-sub">ARCHIVE / 2026-11-13</div>
+  </div>
+  <nav class="nav" id="nav">
+    <div class="nav-group">判断</div>
+    <button data-v="overview" class="active"><span class="no">01</span><span>设计总览</span></button>
+    <button data-v="language"><span class="no">02</span><span>设计语言</span></button>
+    <div class="nav-group">前台</div>
+    <button data-v="home"><span class="no">03</span><span>首页</span></button>
+    <button data-v="hall"><span class="no">04</span><span>日志大厅</span></button>
+    <button data-v="detail"><span class="no">05</span><span>日志详情</span></button>
+    <button data-v="projects"><span class="no">06</span><span>作品档案</span></button>
+    <button data-v="about"><span class="no">07</span><span>关于与登录</span></button>
+    <div class="nav-group">后台</div>
+    <button data-v="admin"><span class="no">08</span><span>后台概览</span></button>
+    <button data-v="adminlogs"><span class="no">09</span><span>日志列表</span><span class="flag">新</span></button>
+    <button data-v="editor"><span class="no">10</span><span>日志编辑器</span></button>
+    <div class="nav-group">执行</div>
+    <button data-v="roadmap"><span class="no">11</span><span>实施路线</span></button>
+    <button data-v="audit"><span class="no">12</span><span>实测问题</span><span class="flag">9</span></button>
+    <button data-v="accept"><span class="no">13</span><span>上线验收</span></button>
+  </nav>
+  <div class="side-foot">
+    基线：localhost:3000 实跑<br>
+    13 条已发布 / 33 条记录 / 56 标签<br>
+    165 个测试通过 · 19 项 OPEN
+  </div>
+</aside>
+
+<main class="main">
+<header class="top">
+  <div class="crumb"><span id="crumbGroup">判断</span> / <b id="crumbTitle">设计总览</b></div>
+  <div class="top-right">
+    <span class="pill">V3 · 提案 · 未改代码</span>
+    <button class="btn" onclick="window.print()">打印 / 存 PDF</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ══════════════ 01 总览 ══════════════ -->
+<section class="view active" id="v-overview">
+  <div class="eyebrow">Design review · 2026-11-13</div>
+  <h1 class="vt">把档案库做成<em>一件档案</em></h1>
+  <p class="lede">现状不是「不好看」，而是太客气：导航 10px、区头 10px、元信息 11px，全站最小的字号承担了最多的信息；留白大于内容，索引系统没有建立。V3 不重做功能，用「编目」把已有的 13 条日志、2 个项目和 56 个标签重新组织成一座可读、可查、可引用的档案馆。</p>
+  <div class="rule2"></div>
+
+  <div class="grid g4">
+    <div class="card"><div class="k">本轮实测</div><div class="kpi">165<small>测试</small></div><p class="small">npm test 全绿；lint / tsc / build 均 0</p></div>
+    <div class="card"><div class="k">已发布</div><div class="kpi">13<small>条</small></div><p class="small">库里 33 条，草稿 20 条</p></div>
+    <div class="card"><div class="k">标签</div><div class="kpi">56<small>个</small></div><p class="small">其中 12 个默认可见，44 个折叠</p></div>
+    <div class="card"><div class="k">待办</div><div class="kpi">19<small>OPEN</small></div><p class="small">ISSUES.md 中仍开放的问题</p></div>
+  </div>
+
+  <div class="h2"><span class="idx">A</span>三个判断</div>
+  <div class="grid g3">
+    <div class="card plain">
+      <div class="k">01 · 首屏</div>
+      <div class="h3">没有「馆藏规模」</div>
+      <p class="small">访客看完标语，不知道这里有多少东西、最近有没有更新。首页用整块空白换来了安静，却没有换来信任。</p>
+    </div>
+    <div class="card plain">
+      <div class="k">02 · 索引</div>
+      <div class="h3">层级靠颜色，不靠字号</div>
+      <p class="small">导航 10px、区头 10px、标签 11px，只比正文小 4–8px。扫读时没有一个稳定的「抓手」，所有信息看起来同等重要。</p>
+    </div>
+    <div class="card plain">
+      <div class="k">03 · 阅读</div>
+      <div class="h3">读完没有去处</div>
+      <p class="small">详情页止于摘要印章：没有前后篇、没有相关日志、没有阅读时长。档案的价值不在单篇，而在「串起来」。</p>
+    </div>
+  </div>
+
+  <div class="h2"><span class="idx">B</span>设计主张</div>
+  <div class="grid g3">
+    <div class="card">
+      <div class="k">INDEX FIRST</div>
+      <div class="h3">索引优先</div>
+      <p class="small">编号、计数、日期不再是装饰，而是版式构件：01–03 的项目索引、馆藏计数、条目日期都进入网格，而不是散落在灰字里。</p>
+    </div>
+    <div class="card">
+      <div class="k">PAPER &amp; INK</div>
+      <div class="h3">纸与墨</div>
+      <p class="small">只有纸白、墨黑、暖线与一枚封泥红。不用阴影、圆角和卡片堆叠制造层次——用 1px 线、字号和留白。</p>
+    </div>
+    <div class="card">
+      <div class="k">ONE RED MARK</div>
+      <div class="h3">一处红</div>
+      <p class="small">新增 <span class="mono">--seal #a03a33</span>，只给「档案凭据 / 已发布 / 阻断风险」三处。它是印章，不是装饰色。</p>
+    </div>
+  </div>
+
+  <div class="h2"><span class="idx">C</span>改什么：一张对照表</div>
+  <table class="tbl">
+    <thead><tr><th style="width:15%">位置</th><th style="width:34%">现状（本轮截图实测）</th><th style="width:39%">V3</th><th style="width:12%">性质</th></tr></thead>
+    <tbody>
+      <tr><td><b>全局导航</b></td><td>中文项 10px，字标 11px；导航几乎没有存在感</td><td>中文项 12px、字标 12px；当前项棕色下划线保留，其余结构不变</td><td>视觉</td></tr>
+      <tr><td><b>首页</b></td><td>标语后 96px 空白；右栏直接进项目列表</td><td>标语 + 馆藏卡（项目 / 日志 / 标签 / 最近更新）+ 编号精选 + 最新入库 + 主题索引</td><td>视觉 + 轻功能</td></tr>
+      <tr><td><b>日志大厅</b></td><td>筛选横排，12 个标签 + 44 个折叠；无结果计数、无激活摘要</td><td>左侧 172px 筛选栏（带计数）、结果计数、激活筛选摘要、一键清除</td><td>交互</td></tr>
+      <tr><td><b>日志详情</b></td><td>720px 宋体 + 目录 + 印章；读完即止</td><td>阅读时长、前后篇、相关日志；印章升级为「档案凭据」卡</td><td>功能 + 视觉</td></tr>
+      <tr><td><b>关于</b></td><td>仍写着「后台只有一把口令」，与 GitHub OAuth 不符</td><td>改为「GitHub 账号登录，只有站主一个账号」；技术栈按职责分组</td><td>事实修正</td></tr>
+      <tr><td><b>后台</b></td><td>单列长页、无日志列表、导航只有「概览 / 项目」</td><td>深色侧栏 + 概览 + 日志列表（新）+ 项目 + 同步/导出；编辑器带粘性操作条与发布检查</td><td>结构</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="t">本方案的边界</span>
+    不改数据模型、不新增依赖、不动 GitHub OAuth 与摘要口径、不做评论/统计/暗色模式。所有改动都可以在现有 Next 16 / Prisma 6 / Tailwind 4 里落地；需要新增的只有一个后台日志列表路由和一个纯函数（阅读时长）。
+  </div>
+
+  <div class="h2"><span class="idx">D</span>为什么是这一版，而不是再加一屏</div>
+  <div class="grid g2">
+    <div class="card plain">
+      <div class="h3">已交付的 V2 设计图是对的，但太保守</div>
+      <p class="small">它把改动压在「统计条 / 计数行 / 前后篇」这些补丁上，没有动版式本身。结果是信息更全了，但仍然像博客：小字、横排筛选、没有编目感。</p>
+    </div>
+    <div class="card plain">
+      <div class="h3">V3 只改「组织方式」</div>
+      <p class="small">同样的数据、同样的字体、同样的四色，换一套网格与字号阶，观感会从「个人博客」跳到「档案馆」。这是投入产出比最高的一刀。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 02 设计语言 ══════════════ -->
+<section class="view" id="v-language">
+  <div class="eyebrow">Design language</div>
+  <h1 class="vt">纸、墨、线与<em>一枚封泥</em></h1>
+  <p class="lede">保留 D30 已闭环的暖调令牌，只补一枚「封泥红」。字号阶从「能用」提到「可读」：导航 12、正文 16、正文宋体 18/1.85、页标题 56。所有层级先用字号和留白解决，颜色只做最后一层区分。</p>
+  <div class="rule2"></div>
+
+  <div class="h2"><span class="idx">01</span>色彩：五色 + 一枚封泥</div>
+  <div class="grid g3">
+    <div class="card" style="padding:0"><div style="height:54px;background:#f4f1ec;border-bottom:1px solid var(--rule)"></div><div style="padding:12px 14px"><div class="mono small">--paper</div><div class="kpi" style="font-size:15px">#f4f1ec</div><p class="small">全站唯一背景</p></div></div>
+    <div class="card" style="padding:0"><div style="height:54px;background:#1a1a18"></div><div style="padding:12px 14px"><div class="mono small">--ink</div><div class="kpi" style="font-size:15px">#1a1a18</div><p class="small">正文 / 标题 / 焦点 · 15.5:1</p></div></div>
+    <div class="card" style="padding:0"><div style="height:54px;background:#625d53"></div><div style="padding:12px 14px"><div class="mono small">--ink-soft</div><div class="kpi" style="font-size:15px">#625d53</div><p class="small">辅助 / 元信息 · 5.81:1</p></div></div>
+    <div class="card" style="padding:0"><div style="height:54px;background:#d9d2c5"></div><div style="padding:12px 14px"><div class="mono small">--rule</div><div class="kpi" style="font-size:15px">#d9d2c5</div><p class="small">1px 分隔线 · 装饰性豁免</p></div></div>
+    <div class="card" style="padding:0"><div style="height:54px;background:#7a5a3a"></div><div style="padding:12px 14px"><div class="mono small">--brown</div><div class="kpi" style="font-size:15px">#7a5a3a</div><p class="small">当前项 / 搜索高亮 · 5.56:1</p></div></div>
+    <div class="card" style="padding:0"><div style="height:54px;background:#a03a33"></div><div style="padding:12px 14px"><div class="mono small red">--seal（新增）</div><div class="kpi" style="font-size:15px">#a03a33</div><p class="small">凭据章 / 风险 · 5.88:1</p></div></div>
+  </div>
+  <p class="small" style="margin-top:10px">封泥红只允许出现在三处：内容摘要的印章、后台「阻断」级提示、详情页的「已发布」标记。它不进按钮、不进正文、不做装饰线。对比度按 <span class="mono">#a03a33 / #f4f1ec = 5.88:1</span> 实算，达到 AA。</p>
+
+  <div class="h2"><span class="idx">02</span>字号阶：把「小字」收回 11px 以上</div>
+  <table class="tbl">
+    <thead><tr><th style="width:16%">角色</th><th style="width:14%">现状</th><th style="width:14%">V3</th><th style="width:38%">字体 / 用法</th><th style="width:18%">理由</th></tr></thead>
+    <tbody>
+      <tr><td>页标题 H1</td><td class="num">36 / 48px</td><td class="num">44 / 56px</td><td>Inter 600 · 字距 -0.03em</td><td>首屏需要重量</td></tr>
+      <tr><td>区块标题 H2</td><td class="num">24 / 30px</td><td class="num">32px</td><td>Inter 600</td><td>与 H1 拉开一档</td></tr>
+      <tr><td>条目标题</td><td class="num">20 / 24px</td><td class="num">20px</td><td>Inter 500 · 行高 1.4</td><td>保持密度</td></tr>
+      <tr><td>导航</td><td class="num">10px</td><td class="num red">12px</td><td>Inter 400</td><td>10px 中文偏小</td></tr>
+      <tr><td>区头 / 眉标</td><td class="num">9–10px</td><td class="num">10px</td><td>Mono 400 · 字距 .18em</td><td>保留档案感</td></tr>
+      <tr><td>元信息</td><td class="num">11px</td><td class="num">11px</td><td>Mono / Sans 混排</td><td>时间与数字走 Mono</td></tr>
+      <tr><td>正文</td><td class="num">16px</td><td class="num">16px</td><td>Inter · 行高 1.75</td><td>UI 文本</td></tr>
+      <tr><td>日志正文</td><td class="num">18px</td><td class="num">18px</td><td>Noto Serif SC · 行高 1.85</td><td>铁律不动</td></tr>
+    </tbody>
+  </table>
+
+  <div class="h2"><span class="idx">03</span>版心与节奏</div>
+  <div class="grid g2">
+    <div class="card plain">
+      <div class="h3">版心 1200 / 1080 / 720</div>
+      <p class="small">桌面首页与大厅放宽到 1200px（现 1080）；详情页仍 1080 外框 + 720 正文；后台 1200。放宽只发生在「列表型」页面，正文阅读宽度不动。</p>
+      <p class="small" style="margin-top:8px">≤1024px 回落单列；筛选栏变成顶部折叠面板；详情目录收进正文头部。</p>
+    </div>
+    <div class="card plain">
+      <div class="h3">8px 节奏</div>
+      <p class="small">页面上下 96 / 72；区块之间 56；列表行 20–24；标题下 12；标签间距 8。所有间距取 4 的倍数，禁止 13、18 这类孤值。</p>
+      <p class="small" style="margin-top:8px">1px 线是唯一分隔手段：区块用墨线（1px），条目用暖线（1px），双线只出现在页头。</p>
+    </div>
+  </div>
+
+  <div class="h2"><span class="idx">04</span>五个构件</div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="eyebrow" style="margin:0 0 6px">01 / EYEBROW</div>
+      <p class="small">Mono 10px、字距 .18em、棕色。它标记「这一段是什么」，替代原来的英文大写区头。</p>
+      <hr class="hr" style="margin:14px 0">
+      <div class="mono" style="font-size:10px;color:var(--brown);letter-spacing:.18em">内容摘要 · SHA-256</div>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="margin:0 0 6px">02 / INDEX</div>
+      <p class="small">编号 01–03 用 Mono 10px 辅助灰，放在标题左侧固定 38px 栏。它让列表像目录，而不是信息流。</p>
+      <hr class="hr" style="margin:14px 0">
+      <div style="display:flex;gap:12px;align-items:baseline"><span class="mono" style="font-size:10px;color:var(--soft)">01</span><b style="font-size:16px;font-weight:500">Laity 项目档案库</b></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="margin:0 0 6px">03 / RULE</div>
+      <p class="small">页头用「墨线 + 4px + 墨线」双线，条目用单条暖线。不再用大块底色区分区域。</p>
+      <hr class="hr" style="margin:14px 0">
+      <div class="rule2" style="margin:0"></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="margin:0 0 6px">04 / SEAL</div>
+      <p class="small">60px 方章、1px 封泥红边、轻微 -1.2° 旋转。它是「这条内容可核对」的视觉锚点，不是装饰。</p>
+      <hr class="hr" style="margin:14px 0">
+      <div class="stamp">LAITY<br>第 013 号</div>
+    </div>
+  </div>
+
+  <div class="h2"><span class="idx">05</span>需要你点头的五处「破例」</div>
+  <table class="tbl">
+    <thead><tr><th style="width:18%">原条款</th><th style="width:26%">V3 建议</th><th style="width:38%">理由</th><th style="width:18%">代价</th></tr></thead>
+    <tbody>
+      <tr><td>内容最大宽 1080px</td><td>首页 / 大厅 / 后台放宽到 1200px</td><td>双栏筛选与四列统计在 1080 下会挤；1200 只影响桌面</td><td>需要改 3 个容器类</td></tr>
+      <tr><td>唯一强调色 --brown</td><td>新增 --seal #a03a33，仅限印章/风险</td><td>凭据需要一个与「导航当前项」不同的语义色；5.88:1 达标</td><td>令牌 +1，proxy 无需改</td></tr>
+      <tr><td>导航 10px</td><td>提到 12px</td><td>10px 中文在 1440 屏上可读性差，实测偏小</td><td>无</td></tr>
+      <tr><td>禁圆角 / 阴影 / 渐变</td><td>保持不动</td><td>本方案的层次全部由线与字号完成</td><td>无</td></tr>
+      <tr><td>不新增依赖</td><td>保持；阅读时长是纯函数</td><td>不引入图标库、动画库、日期库</td><td>无</td></tr>
+    </tbody>
+  </table>
+  <div class="note red">
+    <span class="t">不建议动的一条</span>
+    18px 宋体 / 1.85 行高。它是这个站最像「档案」的地方，也是长文阅读的舒适区；V3 的所有版式都为它让路。
+  </div>
+</section>
+
+<!-- ══════════════ 03 首页 ══════════════ -->
+<section class="view" id="v-home">
+  <div class="eyebrow">Page 01 · Home</div>
+  <h1 class="vt">首页：先把「馆藏」说清楚</h1>
+  <p class="lede">首屏不再只有一句标语。标语右侧放一张真正的馆藏卡（项目 / 已发布 / 最近更新），下面用编号条目和「最新入库」把档案的体量摊开。所有数字复用现有查询，首页仍是 2 次数据库查询。</p>
+  <div class="rule2"></div>
+
+  <div class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">localhost:3000/</div></div>
+    <div class="site">
+      <div class="snav"><span class="logo">LAITY</span><div class="slinks"><span>作品档案</span><span>开发日志</span><span>关于</span></div></div>
+      <div class="spage">
+        <div class="hero">
+          <div>
+            <div class="eyebrow" style="margin-bottom:14px">数字档案 · EST. 2026</div>
+            <h2>数字档案，<br>记录每一次工程决策。</h2>
+            <p>收集项目作品与开发复盘，构建一份可信的数字履历。每条日志成对写着 BEFORE 的判断与 AFTER 的验证。</p>
+            <div class="mono" style="font-size:9px;color:var(--soft);margin-top:16px;letter-spacing:.06em">13 条已发布 · 最近更新 2026-11-11 · <span style="border-bottom:1px solid var(--ink);color:var(--ink)">订阅 RSS</span></div>
+          </div>
+          <div class="holds">
+            <div class="mono" style="font-size:9px;letter-spacing:.2em;color:var(--brown);margin-bottom:4px">馆藏 · HOLDINGS</div>
+            <div class="row"><span>项目</span><span><b>02</b></span></div>
+            <div class="row"><span>已发布日志</span><span><b>13</b></span></div>
+            <div class="row"><span>最近更新</span><span><b style="font-size:11px">2026-11-11</b></span></div>
+            <div class="row" style="border-top:1px solid var(--rule);margin-top:4px;padding-top:8px"><span>建站</span><span class="mono" style="font-size:9px">2026-10-30</span></div>
+          </div>
+        </div>
+
+        <div class="sect">
+          <div class="sect-head"><span class="l">精选档案 · SELECTED</span><span class="r">全部作品 →</span></div>
+          <div class="entry">
+            <div class="no">01</div>
+            <div><h3>Laity 项目档案库</h3><div class="meta">产品 · 进行中 · 12 条日志</div><p class="desc">个人全栈数字档案库：厂牌官网 + 开发复盘证据链，兼作软著登记的实物来源。</p></div>
+            <div class="side"><b>11-06</b>最近更新</div>
+          </div>
+          <div class="entry">
+            <div class="no">02</div>
+            <div><h3>GitHub 同步</h3><div class="meta">工具 · 进行中 · 1 条日志</div><p class="desc">自动同步公开仓库的提交草稿，可在编辑页改写后挂到真实项目。</p></div>
+            <div class="side"><b>11-11</b>最近更新</div>
+          </div>
+        </div>
+
+        <div class="cols" style="margin-top:28px">
+          <div>
+            <div class="sect-head"><span class="l">最新入库 · LATEST</span><span class="r">全部日志 →</span></div>
+            <div class="lrow"><div class="d"><b>11-11</b>2026</div><div><h4>测试AI帮我写</h4><p>这条是 AI 写路径的联调记录，目前仍在首页第一条。</p></div></div>
+            <div class="lrow"><div class="d"><b>11-06</b>2026</div><div><h4>D30 四步切换：四类漂移点一次改全</h4><p>回退值要先验框架、对比度只认实算，一次把四类漂移点改全。</p></div></div>
+            <div class="lrow"><div class="d"><b>11-06</b>2026</div><div><h4>全站中文化四批：标签与数据的界线</h4><p>枚举映射单源，以及三个工具层硬坑：CRLF、this 绑定、铁律对拍。</p></div></div>
+          </div>
+          <div>
+            <div class="sect-head"><span class="l">按主题 · TOPICS</span><span class="r">全部 56 个标签 →</span></div>
+            <div class="taglist" style="margin-top:8px">
+              <div class="t"><span>部署与编排</span><em>07</em></div>
+              <div class="t"><span>数据与查询</span><em>05</em></div>
+              <div class="t"><span>前端与视觉</span><em>09</em></div>
+              <div class="t"><span>内容与文案</span><em>04</em></div>
+              <div class="t"><span>质量与门禁</span><em>06</em></div>
+              <div class="t"><span>安全与凭据</span><em>03</em></div>
+              <div class="t"><span>软著与材料</span><em>02</em></div>
+              <div class="t"><span>工具链</span><em>05</em></div>
+            </div>
+            <p class="small" style="margin-top:8px">主题是治理后的建议口径，不是现有 56 个标签的直接罗列。</p>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--rule);padding:13px 30px;display:flex;gap:18px;font-family:var(--mono);font-size:8.5px;color:var(--soft)">LAITY<span>隐私与数据说明</span><span>开源许可</span><span style="margin-left:auto">RSS</span></div>
+    </div>
+  </div>
+
+  <div class="anno">
+    <div class="head"><span class="n">1</span><b>馆藏卡：零新增查询</b></div>
+    <ul>
+      <li><strong>项目数 / 已发布数</strong>直接由 <span class="mono">getArchiveBoard()</span> 的 <span class="mono">count</span> 求和得到；最近更新取 <span class="mono">getLatestLogs(1)</span> 的首条。</li>
+      <li>不再展示「标签数」——那要第三次查询，会顶到 <span class="mono">O8</span> 的首页 3 次预算；改用主题索引的固定清单。</li>
+      <li>手机端馆藏卡落到标语下方，不做横向滚动。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">2</span><b>编号 01–03：让列表像目录</b></div>
+    <ul>
+      <li>编号取数组下标，Mono 10px、辅助灰，固定 38px 栏宽；标题因而不对齐正文，而与编号形成两列。</li>
+      <li>「全部作品 →」与「全部日志 →」统一成 12px Inter + 1px 下划线；现状一处 Mono 11px、一处 Sans 14px。</li>
+      <li>首屏高度控制在 720px 内：1440×900 下无需滚动就能看到「精选档案」的第一条。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">3</span><b>最新入库：先把测试条目处理掉</b></div>
+    <ul>
+      <li>首页第一条现在是「测试AI帮我写」（publishedAt 2026-11-11）。技术上是真发布，观感上是测试残留，<strong>建议下架或改写标题</strong>。</li>
+      <li>列表取 <span class="mono">lessonLearned</span> 两行摘要（已有字段），不需要新查询。</li>
+      <li>日期只留 MM-DD，年份在 2026 内不重复显示；跨年时补全年份。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">4</span><b>主题索引：不是把标签墙搬回首页</b></div>
+    <ul>
+      <li>现有 56 个标签里，只有 <span class="mono">Server Action</span> 被用过 2 次，其余全是 1 次——标签已经退化成关键词碎片。</li>
+      <li>先治理成 8 个主题（映射表见「实施路线 A3」），首页只展示主题；完整标签列表仍可从大厅展开。</li>
+      <li>主题计数用现有日志的 tags 字段离线算一次，不在请求期查库；数字变旧由发布动作重算。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 04 大厅 ══════════════ -->
+<section class="view" id="v-hall">
+  <div class="eyebrow">Page 02 · Logs hall</div>
+  <h1 class="vt">日志大厅：把筛选从「墙」变成「栏」</h1>
+  <p class="lede">横排筛选在 13 条日志时就占三行，56 个标签更是铺成一片。V3 把项目与主题收进左侧 172px 的固定栏，右侧只留结果；当前筛了什么、还剩多少、怎么退出，一眼可见。</p>
+  <div class="rule2"></div>
+
+  <div class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">localhost:3000/logs?q=Server+Action</div></div>
+    <div class="site">
+      <div class="snav"><span class="logo">LAITY</span><div class="slinks"><span>作品档案</span><span class="on">开发日志</span><span>关于</span></div></div>
+      <div class="spage">
+        <div class="hall-head">
+          <h2>开发日志</h2>
+          <div class="stat">按发布时间倒序<br>本页 2 条 · 已到末页</div>
+        </div>
+        <div class="search">
+          <span class="lbl">检索</span>
+          <span class="box">Server Action<span class="caret"></span></span>
+          <span class="go">搜索</span>
+        </div>
+
+        <div class="hall">
+          <div class="rail">
+            <div class="grp">项目</div>
+            <div class="f"><span>全部</span><em>13</em></div>
+            <div class="f on"><span>Laity 项目档案库</span><em>12</em></div>
+            <div class="f"><span>GitHub 同步</span><em>1</em></div>
+            <div class="grp">主题</div>
+            <div class="f"><span>全部主题</span></div>
+            <div class="f"><span>部署与编排</span></div>
+            <div class="f"><span>数据与查询</span></div>
+            <div class="f"><span>前端与视觉</span></div>
+            <div class="f"><span>内容与文案</span></div>
+            <div class="f"><span>质量与门禁</span></div>
+            <div class="grp">全部标签</div>
+            <div class="more">[ + 展开 56 个标签 ]</div>
+            <div class="reset">清除全部筛选 ×</div>
+          </div>
+
+          <div class="results">
+            <div class="sum"><span>筛选中</span><b>关键词：Server Action</b><span>·</span><b>2 条</b><span class="clear">清除全部 ×</span></div>
+            <div class="rrow">
+              <div class="tl"><b>11-06</b>BEFORE<br><b>11-06</b>AFTER</div>
+              <div><h3>「未验证」原来是「不可用」：<mark>Server Action</mark> 的 1MB 上限</h3><div class="m">Laity 项目档案库 · 上传 · OSS</div><p>Blob 不是 File、自我判死的白名单、CORS 假阴性——三个坑叠在一起，让「未验证」直接等于「不可用」。</p></div>
+            </div>
+            <div class="rrow">
+              <div class="tl"><b>11-06</b>BEFORE<br><b>11-06</b>AFTER</div>
+              <div><h3>三不管缺陷：模板里的真凭据、框架 1MB 上限</h3><div class="m">Laity 项目档案库 · 安全 · 规格</div><p>SPEC 写了代码没有、<mark>Server Action</mark> 的 bodySizeLimit 默认 1MB，三处没人认领的缺陷如何收口。</p></div>
+            </div>
+            <div class="pager"><span>第 1 页</span><span>已到末页</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--rule);padding:13px 30px;display:flex;gap:18px;font-family:var(--mono);font-size:8.5px;color:var(--soft)">LAITY<span>隐私与数据说明</span><span>开源许可</span><span style="margin-left:auto">RSS</span></div>
+    </div>
+  </div>
+
+  <div class="anno">
+    <div class="head"><span class="n">1</span><b>筛选栏：URL 参数不动</b></div>
+    <ul>
+      <li><span class="mono">?project=</span> / <span class="mono">?tag=</span> / <span class="mono">?q=</span> / <span class="mono">?cursor=</span> 的语义完全不变，只换呈现；可分享、可回退仍然成立。</li>
+      <li>项目计数来自 <span class="mono">getArchiveBoard()</span> 或一次 <span class="mono">groupBy</span>——后者会多一次查询，建议把计数并入 facets 的同一次查询（改查询层，不改页面）。</li>
+      <li>主题是 8 个固定项，作为标签的上层封装；点击主题等价于按一组标签做 OR 筛选，URL 里仍落 <span class="mono">tag=</span>。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">2</span><b>结果计数：不做全表 count</b></div>
+    <ul>
+      <li>游标分页下没有总数；显示「本页 N 条 + 是否还有下一页」即可，避免为此多一次 <span class="mono">count(*)</span> 顶破 O8 的 2 次预算。</li>
+      <li>如果一定要总数，把 count 并进列表查询的同一事务（CTE），不要另起一次往返。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">3</span><b>激活摘要：当前筛选必须可见</b></div>
+    <ul>
+      <li>现状只在空态给「清除筛选」；有结果时看不到筛了什么。V3 把摘要固定在结果区顶部，每个条件可单独 ×。</li>
+      <li>「清除全部」保留项目前缀，只清关键词与标签——避免用户被送回未筛选状态。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">4</span><b>移动端：筛选栏变折叠面板</b></div>
+    <ul>
+      <li>&lt;1024px 时左栏收起为「筛选 · 2 项」的原生 <span class="mono">&lt;details&gt;</span>，零 JS；展开后仍是同一组链接。</li>
+      <li>列表行时间轴在窄屏改为顶部一行 Mono 日期，不再占 88px 左栏。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 05 详情 ══════════════ -->
+<section class="view" id="v-detail">
+  <div class="eyebrow">Page 03 · Log detail</div>
+  <h1 class="vt">日志详情：读完要有下一站</h1>
+  <p class="lede">720px 宋体正文、右侧目录、整页进度条都保留。补三件事：头部给出阅读时长，尾部给前后篇与相关日志，印章升级为「档案凭据」——把 SHA-256 从一块灰字变成一个可核对的动作。</p>
+  <div class="rule2"></div>
+
+  <div class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">localhost:3000/u/zhanglei/logs/d30-four-step-token-switch</div></div>
+    <div class="site">
+      <div class="progress"></div>
+      <div class="snav"><span class="logo">LAITY</span><div class="slinks"><span>作品档案</span><span class="on">开发日志</span><span>关于</span></div></div>
+      <div class="spage" style="padding-top:24px">
+        <div class="detail">
+          <div>
+            <div class="mono" style="font-size:9px;color:var(--soft);letter-spacing:.14em;margin-bottom:16px">← 开发日志</div>
+            <div class="dhead">
+              <div class="proj">LAITY 项目档案库 / 视觉与令牌</div>
+              <h2>D30 四步切换：四类漂移点一次改全、回退值要先验框架、对比度只认实算</h2>
+              <div class="dmeta"><span>● BEFORE <b>2026-11-05</b></span><span>● AFTER <b>2026-11-06</b></span><span>约 <b>7</b> 分钟</span><span>标签 <b>视觉令牌 · WCAG</b></span></div>
+            </div>
+
+            <div class="dsec">
+              <div class="lab">BEFORE · 当时的判断</div>
+              <div class="dbody">
+                <p>视觉令牌切换不是改四个色值，而是四类漂移点：令牌自己、回退字面量、Proxy 内联页、软著材料里的代码。</p>
+                <h3>一、风险不在改值，在「改一处忘一处」</h3>
+                <p>只要有一处仍是字面量，回退值与令牌值就会分叉；分叉不会报错，只会在某个页面悄悄变回旧色。</p>
+                <h3>二、回退值要先验框架行为</h3>
+                <p><span class="mono" style="font-size:10px">var(--color-ink-soft, #5c5c5c)</span> 的回退值在 <span class="mono" style="font-size:10px">@theme inline</span> 下是否真的输出，要先看产物 CSS，不能靠推断。</p>
+              </div>
+            </div>
+
+            <div class="dsec">
+              <div class="lab">AFTER · 做完的验证</div>
+              <div class="dbody">
+                <p>四色全部落地，Proxy 四组字面量同 commit 同步；实算对比度：主墨 15.47:1、辅助灰 5.81:1、棕 5.56:1、暖线 1.33:1（装饰性豁免）。</p>
+                <h3>三、层间区分度要实测，不认设计意图</h3>
+                <p>在三个页面扫描所有直接承载文本的元素，确认没有一处层次只靠 2.66:1 的颜色差承担。</p>
+              </div>
+            </div>
+
+            <div class="lesson">
+              <div class="lab">经验总结</div>
+              <p>视觉切换的返工成本集中在「改了 A 忘了 B」：同一颜色在几个地方各写一遍，就必须用引用制单源 + 同 commit 同步点把它锁死。</p>
+            </div>
+
+            <div class="cred">
+              <div class="stamp">LAITY<br>第 013 号</div>
+              <div>
+                <div class="k">档案凭据 · CONTENT DIGEST</div>
+                <div class="hash">dea7d3d9f94acdae96215dbfcb57128dc04b220a2ab7c284a8418e00ddbf581d</div>
+                <div class="pub">发布时间 · 2026-11-06 05:42 UTC · 覆盖标题与双正文</div>
+                <div class="acts"><span>复制链接</span><span>复制哈希</span><span>如何核对</span></div>
+              </div>
+            </div>
+
+            <div class="pn">
+              <div><div class="k">← 上一篇</div><b>Cache Components 的静态壳：真 404 只能由 Proxy 前置判定</b></div>
+              <div><div class="k">下一篇 →</div><b>存证的原子性：口径在有历史数据之前定死</b></div>
+            </div>
+
+            <div class="rel">
+              <div class="k">同项目最近发布 · 3</div>
+              <div class="i"><span>全站中文化四批：标签与数据的界线</span><em>11-06</em></div>
+              <div class="i"><span>首页两栏与容器查询：视口断点不等于栏宽</span><em>11-06</em></div>
+              <div class="i"><span>五层防线不是文档，是把错误决策变成制度成本</span><em>11-06</em></div>
+            </div>
+          </div>
+
+          <div class="toc">
+            <div class="k">目录</div>
+            <div class="grp">BEFORE</div>
+            <div class="it"><em>01</em>风险不在改值</div>
+            <div class="it"><em>02</em>回退值先验框架</div>
+            <div class="grp">AFTER</div>
+            <div class="it on"><em>03</em>四类漂移点一次改全</div>
+            <div class="it"><em>04</em>层间区分度实测</div>
+            <div class="it"><em>05</em>窗口与强调色</div>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--rule);padding:13px 30px;display:flex;gap:18px;font-family:var(--mono);font-size:8.5px;color:var(--soft)">LAITY<span>隐私与数据说明</span><span>开源许可</span><span style="margin-left:auto">RSS</span></div>
+    </div>
+  </div>
+
+  <div class="anno">
+    <div class="head"><span class="n">1</span><b>阅读时长：纯函数，可单测</b></div>
+    <ul>
+      <li>新增 <span class="mono">src/lib/reading-time.ts</span>：去 Markdown 标记后按 400 字/分钟折算，最少 1 分钟；进 <span class="mono">tests/</span> 覆盖空文、纯标点、中英混排。</li>
+      <li>只用一次字符串遍历，不引依赖；详情页头部展示「约 7 分钟」，不做进度百分比。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">2</span><b>前后篇：按 publishedAt 取相邻</b></div>
+    <ul>
+      <li>一次查询取「更新时间 &lt; 当前」与「&gt; 当前」各一条（同一 <span class="mono">findFirst</span> ×2，或在详情查询里用窗口函数），都在同一次渲染内完成。</li>
+      <li>取不到就整块不渲染，不留空占位。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">3</span><b>相关日志：今天的标签给不出 3 条</b></div>
+    <ul>
+      <li>实测：56 个标签中只有 1 个被复用过。若按「同标签」取，这一页的相关区会是空的。</li>
+      <li>V3 采用回退链：<strong>同标签 ≥2 → 同项目最近发布 → 同主题</strong>，每层最多 3 条；查询层已有 <span class="mono">getSafeLogs({ tag })</span>，同项目取数复用现有入口。</li>
+      <li>标题写「同项目最近发布」而不是「相关日志」，不假装算法比数据聪明。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">4</span><b>档案凭据：把印章做成一个动作</b></div>
+    <ul>
+      <li>左侧 60px 封泥章（<span class="mono">--seal</span>），右侧哈希与发布时间；「复制链接 / 复制哈希 / 如何核对」三个动作。</li>
+      <li>复制需要极小的客户端组件（<span class="mono">navigator.clipboard</span>，失败回退选中文本）；不引依赖、不弹 toast，按钮文案原位变「已复制」两秒。</li>
+      <li>「如何核对」用 <span class="mono">&lt;details&gt;</span> 展开一段命令说明，不跳页。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 06 作品 ══════════════ -->
+<section class="view" id="v-projects">
+  <div class="eyebrow">Page 04 · Projects</div>
+  <h1 class="vt">作品档案：以「项目」为索引单位</h1>
+  <p class="lede">作品页不是项目Landing，而是档案的另一个入口：每个项目给出编号、状态、已发布数量与最近更新，不拿刚建时间冒充进度。零日志的项目也有位置，但明确写「尚未发布」。</p>
+  <div class="rule2"></div>
+
+  <div class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">localhost:3000/projects</div></div>
+    <div class="site">
+      <div class="snav"><span class="logo">LAITY</span><div class="slinks"><span class="on">作品档案</span><span>开发日志</span><span>关于</span></div></div>
+      <div class="spage">
+        <div class="hall-head"><h2>作品档案</h2><div class="stat">2 个项目<br>12 + 1 条已发布</div></div>
+        <p style="font-size:12px;color:var(--soft);max-width:520px;margin:14px 0 0;line-height:1.8">按作品维度看档案：一个项目下的判断与验证，都收在同一页里。点进去是项目页，不是仓库首页。</p>
+
+        <div class="plist" style="margin-top:22px">
+          <div class="p" style="border-top:1px solid var(--ink)">
+            <div class="no">01</div>
+            <div><h3>Laity 项目档案库</h3><div class="m"><span style="color:var(--brown)">●</span> laity-archive · 产品 · 进行中</div><p>个人全栈数字档案库：厂牌官网 + 开发复盘证据链，兼作软著登记的实物来源。</p></div>
+            <div class="side"><b>12 条日志</b>最近更新 11-06<br><span style="border-bottom:1px solid var(--ink);color:var(--ink)">查看档案 →</span></div>
+          </div>
+          <div class="p">
+            <div class="no">02</div>
+            <div><h3>GitHub 同步</h3><div class="m"><span style="color:var(--brown)">●</span> github-sync · 工具 · 进行中</div><p>自动同步公开仓库的提交草稿，可在编辑页改写后挂到真实项目。</p></div>
+            <div class="side"><b>1 条日志</b>最近更新 11-11<br><span style="border-bottom:1px solid var(--ink);color:var(--ink)">查看档案 →</span></div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:24px;padding-top:14px;border-top:1px solid var(--rule)"><span style="font-size:10.5px;color:var(--soft)">还有 1 个项目尚未发布日志</span><span style="font-size:11px;border-bottom:1px solid var(--ink)">全部日志 →</span></div>
+      </div>
+      <div style="border-top:1px solid var(--rule);padding:13px 30px;display:flex;gap:18px;font-family:var(--mono);font-size:8.5px;color:var(--soft)">LAITY<span>隐私与数据说明</span><span>开源许可</span><span style="margin-left:auto">RSS</span></div>
+    </div>
+  </div>
+
+  <div class="anno">
+    <div class="head"><span class="n">1</span><b>状态与更新时间必须同源</b></div>
+    <ul>
+      <li>状态灯只认 <span class="mono">LIVE</span>（●）/ 其余（○），颜色只给棕色一点，不用红绿；颜色之外还有字符线索。</li>
+      <li>「最近更新」取已发布日志的最大 <span class="mono">publishedAt</span>，与首页看板同一口径；零日志写「尚未发布」，不显示创建时间。</li>
+      <li>「查看档案」链接必须拼 <span class="mono">/u/{handle}/projects/{slug}</span>——首页看板现在拼的是旧路径，已在实测问题 01 里列为 P0。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">2</span><b>项目页：从「仓库」退回「档案」</b></div>
+    <ul>
+      <li>项目页顶部给面包屑（首页 / 作品档案 / 项目名），不把用户丢进无退路的页面。</li>
+      <li>项目页右侧放「同项目日志」目录：按时间列出标题与日期，不再只靠一张卡片。</li>
+      <li>仓库地址只在有值时显示 <span class="mono">↗</span>，不占一整行空白。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 07 关于 / 登录 ══════════════ -->
+<section class="view" id="v-about">
+  <div class="eyebrow">Page 05 · About &amp; Login</div>
+  <h1 class="vt">关于与登录：把「一个人」说到点上</h1>
+  <p class="lede">关于页的事实已经写得很硬，但有两句话停在了口令时代；登录页则是一整片空白。前者改文案，后者补一个「为什么需要登录」的说明与品牌收口。</p>
+  <div class="rule2"></div>
+
+  <div class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">localhost:3000/about</div></div>
+    <div class="site">
+      <div class="snav"><span class="logo">LAITY</span><div class="slinks"><span>作品档案</span><span>开发日志</span><span class="on">关于</span></div></div>
+      <div class="spage">
+        <div class="about">
+          <div class="idx">
+            <div class="mono" style="font-size:8.5px;letter-spacing:.16em;margin-bottom:8px">CONTENTS</div>
+            <div class="on">站主</div>
+            <div>这个档案库记什么</div>
+            <div>技术栈</div>
+            <div>联系方式</div>
+          </div>
+          <div>
+            <h2>关于</h2>
+            <p class="p" style="color:var(--soft);font-size:12px">一个人、一套约定、一份可以被核对的记录。</p>
+            <div class="sec" style="margin-top:18px;border-top:1px solid var(--ink);padding-top:14px">
+              <div class="eyebrow" style="margin-bottom:6px">01 · 站主</div>
+              <p class="p">我是张磊，这个站的主人与唯一的作者：代码、文案、发布与运维都是我一个人。后台用 <b>GitHub 账号</b>登录，只有站主一个账号，没有第二位作者。</p>
+              <p class="p">这里不是博客，也不放教程。它记的是判断过程——每条开发日志都成对写着 BEFORE 与 AFTER，底部带这一版正文的 SHA-256 摘要与服务器发布时间。</p>
+            </div>
+            <div class="sec">
+              <div class="eyebrow" style="margin-bottom:6px">02 · 技术栈</div>
+              <div class="stack">
+                <div class="g">框架</div><div class="v"><b>Next.js</b> <span>App Router 全栈（RSC + Server Actions）</span></div>
+                <div class="g">样式</div><div class="v"><b>Tailwind CSS</b> <span>样式工具类，无组件库、无图标库</span></div>
+                <div class="g">数据</div><div class="v"><b>Prisma</b> <span>schema、迁移与数据访问</span> · <b>PostgreSQL</b> <span>数据库</span></div>
+                <div class="g">鉴权</div><div class="v"><b>NextAuth.js</b> <span>GitHub OAuth 登录与会话</span></div>
+                <div class="g">内容</div><div class="v"><b>react-markdown</b> <span>正文渲染，过 rehype-sanitize</span> · <b>阿里云 OSS</b> <span>插图存储</span></div>
+              </div>
+              <p class="small" style="margin-top:8px">不写版本号：版本是实测值，唯一口径在 AGENTS.md。</p>
+            </div>
+            <div class="sec">
+              <div class="eyebrow" style="margin-bottom:6px">03 · 联系方式</div>
+              <div class="mono" style="font-size:10.5px;line-height:2;color:var(--soft)"><span style="display:inline-block;width:56px">邮箱</span><span style="font-style:italic">待补充</span><br><span style="display:inline-block;width:56px">仓库</span><span style="color:var(--ink)">laity9527/laity-archive ↗</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note red">
+    <span class="t">两处必须改的事实</span>
+    <span class="mono">src/app/about/page.tsx</span> 里两处：「后台只有一把口令，没有第二号用户」；技术栈「NextAuth.js — 后台口令登录与会话」。V2.0 已改 GitHub OAuth（D33），这两句现在是错的。
+  </div>
+
+  <div class="h2"><span class="idx">B</span>登录页：把空白用起来</div>
+  <div class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">localhost:3000/login?callbackUrl=%2Fadmin</div></div>
+    <div class="site">
+      <div class="login">
+        <div class="left">
+          <div class="eyebrow" style="margin-bottom:14px">Administration</div>
+          <h2>后台是写档案的地方，<br>不是另一个网站。</h2>
+          <p>登录后可以新建项目与日志、从 GitHub 拉取提交草稿、导出全部数据。访客不需要账号，前台的日志与项目档案直接可读。</p>
+          <div class="badge">LAITY ARCHIVE<br>仅站主一个账号 · GitHub OAuth<br>登录信息不进入前台页面</div>
+        </div>
+        <div class="right">
+          <div class="k">后台登录</div>
+          <div class="ghbtn">使用 GitHub 登录</div>
+          <p class="hint">登录后回到你刚才想去的页面。<br>无账号？前台内容无需登录。</p>
+          <p class="hint" style="margin-top:20px;border-top:1px solid var(--rule);padding-top:10px"><span style="border-bottom:1px solid var(--ink);color:var(--ink)">← 返回首页</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">1</span><b>不改登录逻辑，只改壳</b></div>
+    <ul>
+      <li>保留现有的 <span class="mono">signIn("github")</span> 与 <span class="mono">callbackUrl</span> 校验；只重排版面。</li>
+      <li>移动端上下堆叠，左侧说明在上，按钮在下；按钮保持 44px 高。</li>
+      <li>不展示错误细节：失败时统一「登录未完成，请重试」，避免把 OAuth 回调参数回显给访客。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 08 后台概览 ══════════════ -->
+<section class="view" id="v-admin">
+  <div class="eyebrow">Admin 01 · Overview</div>
+  <h1 class="vt">后台：先给他一个「工作面」</h1>
+  <p class="lede">现在的后台是前台样式加长：单列、没有侧栏、导航只有三项。V3 用深墨侧栏把它标记成「另一个空间」，把概览重排成「存量 → 待办 → 动作」三层，打开就知道下一步干什么。</p>
+  <div class="rule2"></div>
+
+  <div class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">localhost:3000/admin</div></div>
+    <div class="admin">
+      <div class="aside">
+        <div class="b">LAITY / 后台</div>
+        <div class="g">工作区</div>
+        <div class="n on">概览</div>
+        <div class="n">日志</div>
+        <div class="n">项目</div>
+        <div class="g">数据</div>
+        <div class="n">GitHub 同步</div>
+        <div class="n">导出</div>
+        <div class="g">站点</div>
+        <div class="n">↗ 前台</div>
+        <div class="foot">zhanglei<br>GitHub 已连接</div>
+      </div>
+      <div class="acontent">
+        <div class="atop"><b>概览</b><span class="user">2026-11-13 · 周四</span></div>
+        <div class="astats">
+          <div class="s"><div class="k">项目</div><div class="v">2</div></div>
+          <div class="s"><div class="k">已发布</div><div class="v">13</div></div>
+          <div class="s"><div class="k">草稿</div><div class="v">20</div></div>
+          <div class="s"><div class="k">待处理</div><div class="v" style="color:var(--seal)">03</div></div>
+        </div>
+
+        <div class="apanel"></div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:12px"><span style="font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--soft)">继续处理 · DRAFTS</span><span style="font-size:9px;border-bottom:1px solid var(--ink)">全部日志 →</span></div>
+        <div class="arow"><span class="dot">○</span><div class="t"><b>laity-archive · 11月10日 · 14 条提交</b><span>GitHub 同步</span></div><div class="d">11-11 01:06</div><div class="a">编辑</div></div>
+        <div class="arow"><span class="dot">○</span><div class="t"><b>laity-archive · 11月9日 · 5 条提交</b><span>GitHub 同步</span></div><div class="d">11-11 01:06</div><div class="a">编辑</div></div>
+        <div class="arow"><span class="dot">○</span><div class="t"><b>laity-hub · 10月27日 · 12 条提交</b><span>GitHub 同步</span></div><div class="d">11-11 01:06</div><div class="a">编辑</div></div>
+
+        <div class="achk">
+          <div class="c ok"><b>发布前检查 · 已就绪</b>敏感扫描 0 命中 · 标题与正文非空 · BEFORE 日期已填</div>
+          <div class="c"><b>本周动作</b>下架测试条目 · 补关于页文案 · 建立 8 个主题</div>
+          <div class="c"><b>数据</b>33 条记录 · 20 草稿 · 摘要缺失 0</div>
+          <div class="c"><b>同步</b>GitHub 已连接 · 上次同步 11-11 · 新增 0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="anno">
+    <div class="head"><span class="n">1</span><b>侧栏：把「后台」从页面里拿出来</b></div>
+    <ul>
+      <li>深墨侧栏（<span class="mono">#1a1a18</span>）与前台纸白形成明确的空间切换；当前项左侧 2px 棕色线，不开圆角。</li>
+      <li>导航五项：概览 / 日志 / 项目 / 同步 / 导出；「查看前台」放底部，不占主菜单。</li>
+      <li>移动端侧栏变顶部横向滚动条，不引入抽屉和汉堡图标（图标禁令）。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">2</span><b>概览的顺序：存量 → 待办 → 动作</b></div>
+    <ul>
+      <li>四格存量（项目 / 已发布 / 草稿 / 待处理）在第一屏；待处理 03 用封泥红，因为它是需要动作的数字。</li>
+      <li>「继续处理」只列草稿，按 <span class="mono">updatedAt</span> 倒序 5 条；不再把已发布混进来。</li>
+      <li>新建日志、同步、导出三个动作放页尾一行，仍需保持可发现；导出保持 <span class="mono">/admin/export</span> 链接。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 09 后台日志列表 ══════════════ -->
+<section class="view" id="v-adminlogs">
+  <div class="eyebrow">Admin 02 · Log list · 新增页面</div>
+  <h1 class="vt">后台缺的不是样式，是<em>一条日志列表</em></h1>
+  <p class="lede">现在只能从概览「最近动态」的 5 条里点编辑；第 6 条及更早的草稿没有任何入口。新增 <span class="mono">/admin/logs</span>：状态筛选 + 标题搜索 + 分页，与管理动作同一套 Server Action。</p>
+  <div class="rule2"></div>
+
+  <div class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">localhost:3000/admin/logs?status=draft</div></div>
+    <div class="admin">
+      <div class="aside">
+        <div class="b">LAITY / 后台</div>
+        <div class="g">工作区</div>
+        <div class="n">概览</div>
+        <div class="n on">日志</div>
+        <div class="n">项目</div>
+        <div class="g">数据</div>
+        <div class="n">GitHub 同步</div>
+        <div class="n">导出</div>
+        <div class="g">站点</div>
+        <div class="n">↗ 前台</div>
+        <div class="foot">zhanglei<br>GitHub 已连接</div>
+      </div>
+      <div class="acontent adminlist">
+        <div class="atop"><b>日志</b><span class="user">新建日志 +</span></div>
+        <div class="h">
+          <div class="f"><span>全部 33</span><span class="on">草稿 20</span><span>已发布 13</span></div>
+          <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:9px;color:var(--soft)">搜索标题</span><span style="width:120px;border-bottom:1px solid var(--rule);display:inline-block">&nbsp;</span></div>
+        </div>
+        <table class="ltable">
+          <thead><tr><th style="width:44px">状态</th><th>标题</th><th style="width:92px">项目</th><th style="width:78px">更新时间</th><th style="width:62px">操作</th></tr></thead>
+          <tbody>
+            <tr><td class="st draft">○ 草稿</td><td class="tt">laity-archive · 11月10日 · 14 条提交</td><td class="mono">GitHub</td><td class="mono">11-11 01:06</td><td><span class="act">编辑</span></td></tr>
+            <tr><td class="st draft">○ 草稿</td><td class="tt">laity-archive · 11月9日 · 5 条提交</td><td class="mono">GitHub</td><td class="mono">11-11 01:06</td><td><span class="act">编辑</span></td></tr>
+            <tr><td class="st draft">○ 草稿</td><td class="tt">laity-archive · 11月6日 · 12 条提交</td><td class="mono">GitHub</td><td class="mono">11-11 01:06</td><td><span class="act">编辑</span></td></tr>
+            <tr><td class="st draft">○ 草稿</td><td class="tt">laity-archive · 11月5日 · 16 条提交</td><td class="mono">GitHub</td><td class="mono">11-11 01:06</td><td><span class="act">编辑</span></td></tr>
+            <tr><td class="st draft">○ 草稿</td><td class="tt">laity-hub · 10月27日 · 12 条提交</td><td class="mono">GitHub</td><td class="mono">11-11 01:06</td><td><span class="act">编辑</span></td></tr>
+            <tr><td class="st draft">○ 草稿</td><td class="tt">beforeafter-log · 10月27日 · 5 条提交</td><td class="mono">GitHub</td><td class="mono">11-11 01:06</td><td><span class="act">编辑</span></td></tr>
+          </tbody>
+        </table>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;font-family:var(--mono);font-size:8.5px;color:var(--soft)"><span>第 1 / 2 页 · 每页 10 条</span><span style="border-bottom:1px solid var(--ink);color:var(--ink)">下一页 →</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="anno">
+    <div class="head"><span class="n">1</span><b>新增路由，不改写路径逻辑</b></div>
+    <ul>
+      <li><span class="mono">src/app/admin/logs/page.tsx</span>：Server Component，读 <span class="mono">searchParams</span>（status / q / page），复用 <span class="mono">getAdminLogs(userId, ...)</span>——需在 <span class="mono">lib/logs.ts</span> 新增一个带 <span class="mono">userId</span> 复合条件的列表查询。</li>
+      <li>只读列表；编辑仍跳现有 <span class="mono">/admin/logs/[id]/edit</span>，发布/下架/删除仍走原 Server Action，不做批量操作。</li>
+      <li>分页用 <span class="mono">skip/take</span> 或游标均可；33 条规模下 <span class="mono">skip</span> 足够，别再引入分页组件。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">2</span><b>状态筛选与搜索</b></div>
+    <ul>
+      <li>三个固定页签：全部 / 草稿 / 已发布；不做多选、不做保存视图。</li>
+      <li>搜索只搜标题（<span class="mono">contains</span>, mode insensitive）；正文搜索留给前台，后台不做全文索引。</li>
+      <li>空态写「没有符合条件的日志」并给「清除筛选」，不显示空表格。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 10 编辑器 ══════════════ -->
+<section class="view" id="v-editor">
+  <div class="eyebrow">Admin 03 · Editor</div>
+  <h1 class="vt">编辑器：让「发布」成为一道可核对的关</h1>
+  <p class="lede">现有编辑器功能是完整的（双栏、预览、AI 助手、插图、草稿暂存），但按钮埋在长页底部，发布前检查散在页中间。V3 把保存/发布提到粘性操作条，把检查收进右侧固定栏，写的时候就知道离发布还差什么。</p>
+  <div class="rule2"></div>
+
+  <div class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">localhost:3000/admin/logs/cmlx8/edit</div></div>
+    <div class="admin">
+      <div class="aside">
+        <div class="b">LAITY / 后台</div>
+        <div class="g">工作区</div>
+        <div class="n">概览</div>
+        <div class="n on">日志</div>
+        <div class="n">项目</div>
+        <div class="g">数据</div>
+        <div class="n">GitHub 同步</div>
+        <div class="n">导出</div>
+        <div class="g">站点</div>
+        <div class="n">↗ 前台</div>
+        <div class="foot">zhanglei<br>GitHub 已连接</div>
+      </div>
+      <div class="acontent">
+        <div class="atop"><b>编辑日志</b><span class="user">○ 草稿 · /u/zhanglei/logs/d30-four-step</span></div>
+        <div class="ebar"><span>已保存 14:32</span><span style="color:var(--brown)">○ 草稿</span><span class="sp"><span class="b">保存草稿</span><span class="b pri">保存并发布</span></span></div>
+
+        <div style="display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:8px;margin-top:10px">
+          <div><div style="font-size:8px;color:var(--soft)">标题</div><div style="border:1px solid var(--rule);padding:5px 7px;font-size:9.5px;margin-top:3px">D30 四步切换：四类漂移点一次改全</div></div>
+          <div><div style="font-size:8px;color:var(--soft)">项目</div><div style="border:1px solid var(--rule);padding:5px 7px;font-size:9.5px;margin-top:3px">Laity 项目档案库 ▾</div></div>
+          <div><div style="font-size:8px;color:var(--soft)">标识</div><div style="border:1px solid var(--rule);padding:5px 7px;font-family:var(--mono);font-size:8.5px;margin-top:3px">d30-four-step-token-switch</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:8px;margin-top:8px">
+          <div><div style="font-size:8px;color:var(--soft)">BEFORE 日期</div><div style="border:1px solid var(--rule);padding:5px 7px;font-family:var(--mono);font-size:8.5px;margin-top:3px">2026-11-05 09:00</div></div>
+          <div><div style="font-size:8px;color:var(--soft)">标签（主题 + 关键词，最多 5 个）</div><div style="border:1px solid var(--rule);padding:4px 6px;margin-top:3px"><span class="tag on" style="font-size:8px;margin:0 3px 0 0">前端与视觉</span><span class="tag" style="font-size:8px;margin:0 3px 0 0">视觉令牌</span><span class="tag" style="font-size:8px;margin:0">WCAG</span></div></div>
+          <div><div style="font-size:8px;color:var(--soft)">AFTER 日期</div><div style="border:1px solid var(--rule);padding:5px 7px;font-family:var(--mono);font-size:8.5px;margin-top:3px">2026-11-06 14:30</div></div>
+        </div>
+
+        <div class="editor">
+          <div>
+            <div class="etabs"><span class="on">BEFORE</span><span>AFTER</span><span style="margin-left:auto;color:var(--soft)">AFTER 可留空</span></div>
+            <div class="ebody">
+              <div class="cm">## 一、风险不在改值，在「改一处忘一处」</div><br>
+              视觉令牌切换不是改四个色值，而是四类漂移点：<br>
+              令牌自己、回退字面量、Proxy 内联页、软著材料里的代码。<br><br>
+              <div class="cm">- [ ] 改令牌</div><br>
+              <div class="cm">- [ ] 改 Proxy 四组字面量</div><br>
+              <div class="cm">- [ ] 重出软著材料</div>
+            </div>
+            <div class="ebar" style="border-top:0;border-bottom:1px solid var(--rule)"><span>字数 1,842</span><span>约 5 分钟</span><span class="sp"><span class="b">AI 帮我写</span><span class="b">插入图片</span></span></div>
+          </div>
+          <div class="eprev">
+            <div class="k">预览 · BEFORE</div>
+            <h4>一、风险不在改值，在「改一处忘一处」</h4>
+            <p>视觉令牌切换不是改四个色值，而是四类漂移点：令牌自己、回退字面量、Proxy 内联页、软著材料里的代码。</p>
+            <p>只要有一处仍是字面量，回退值与令牌值就会分叉；分叉不会报错，只会在某个页面悄悄变回旧色。</p>
+            <div style="border-left:1px solid var(--ink);padding-left:8px;color:var(--soft);font-family:var(--serif);font-size:8.5px;margin-top:6px">先验框架，再改颜色。</div>
+          </div>
+          <div class="erail">
+            <div class="k">发布检查</div>
+            <div class="row"><span>标题非空</span><span class="ok">✓</span></div>
+            <div class="row"><span>BEFORE 正文</span><span class="ok">✓</span></div>
+            <div class="row"><span>摘要待重算</span><span style="color:var(--soft)">—</span></div>
+            <div class="row"><span>敏感扫描</span><span class="ok">0 命中</span></div>
+            <div class="row"><span>标签 ≤ 5</span><span class="ok">3</span></div>
+            <div class="k">上次发布</div>
+            <div style="font-family:var(--mono);font-size:8px;line-height:1.6;word-break:break-all">2026-11-06 05:42 UTC<br>dea7d3d9f94acdae9621…</div>
+            <div class="k">危险区</div>
+            <div style="font-size:8.5px;line-height:1.6">下架保留摘要；彻底删除不可恢复。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="anno">
+    <div class="head"><span class="n">1</span><b>粘性操作条：两个动作永远可见</b></div>
+    <ul>
+      <li>「保存草稿」是次按钮，「保存并发布」是主按钮；保存与发布仍共用一张表单，<span class="mono">formAction</span> 语义不变（D25）。</li>
+      <li>操作条吸顶（后台顶栏之下），长文滚到 3000px 也不用回顶部找按钮；移动端只保留两枚按钮与状态。</li>
+      <li>发布成功后回到同页并给 <span class="mono">?published=1</span> 横幅，不跳回概览（现有行为）。</li>
+    </ul>
+  </div>
+  <div class="anno">
+    <div class="head"><span class="n">2</span><b>右侧检查栏：把隐形规则显形</b></div>
+    <ul>
+      <li>五项检查：标题、BEFORE、摘要、敏感扫描、标签数。全部只读，不在客户端做校验判定，服务端仍是唯一判据。</li>
+      <li>「摘要待重算」提示用户：改了正文，哈希会在发布时按当前正文重算。</li>
+      <li>危险区（下架/彻底删除）默认折叠为一行文字，点开后仍需回填 slug，不把毁灭性操作放在首屏。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 11 路线 ══════════════ -->
+<section class="view" id="v-roadmap">
+  <div class="eyebrow">Roadmap</div>
+  <h1 class="vt">三个星期，四个阶段</h1>
+  <p class="lede">按「先修错、再改脸、后补工具」排序：P0 的 404 与测试条目第一天清掉；视觉与阅读路径一周；后台一周；最后一周只做验收与材料重出。每个阶段独立 commit、独立验收。</p>
+  <div class="rule2"></div>
+
+  <div class="phases">
+    <div class="phase p0">
+      <div class="k">PHASE A · 第 1 周 · 先修错</div>
+      <h3>事实与断链</h3>
+      <ol>
+        <li><b>修 StatusBoard 404</b>：补 handle、改链接、加一条链接测试。</li>
+        <li><b>处理测试条目</b>：下架「测试AI帮我写」或改成真实记录。</li>
+        <li><b>改关于页两处口令文案</b>：PROFILE 与技术栈行。</li>
+        <li><b>标签治理</b>：去 <span class="mono">@</span> 前缀、限 5 个、建 8 主题映射表（先脚本干跑出清单）。</li>
+        <li><b>导航 12px + 版心 1200</b>：三处容器与导航类。</li>
+      </ol>
+      <div class="est">约 2 天 · 不改数据结构 · 风险低</div>
+    </div>
+    <div class="phase p0">
+      <div class="k">PHASE B · 第 2 周 · 改脸</div>
+      <h3>首页与阅读路径</h3>
+      <ol>
+        <li><b>首页馆藏卡 + 编号 + 主题索引</b>。</li>
+        <li><b>大厅左栏筛选 + 激活摘要</b>（URL 不变）。</li>
+        <li><b>详情：时长 + 前后篇 + 相关回退链</b>。</li>
+        <li><b>档案凭据卡</b>（复制链接 / 哈希 / 如何核对）。</li>
+        <li><b>作品页与登录页收口</b>。</li>
+      </ol>
+      <div class="est">约 4 天 · 新增 1 个纯函数 + 2 个查询口 · 风险中</div>
+    </div>
+    <div class="phase p1">
+      <div class="k">PHASE C · 第 3 周 · 工具</div>
+      <h3>后台工作面</h3>
+      <ol>
+        <li><b>后台 shell</b>：侧栏 + 顶栏 + 面包屑（不动鉴权）。</li>
+        <li><b>/admin/logs 列表</b>：状态筛选 + 标题搜索 + 分页。</li>
+        <li><b>概览重排</b>：存量 / 待办 / 动作。</li>
+        <li><b>编辑器</b>：粘性操作条 + 右侧检查栏。</li>
+        <li><b>移动端</b>：侧栏横滚、编辑器单栏。</li>
+      </ol>
+      <div class="est">约 4 天 · 新增 1 个列表查询 · 风险中</div>
+    </div>
+    <div class="phase p2">
+      <div class="k">PHASE D · 第 4 周 · 验收</div>
+      <h3>门禁与材料</h3>
+      <ol>
+        <li><b>四道门禁全 0</b>：lint / tsc / test / build。</li>
+        <li><b>三档断点实测</b>：390 / 768 / 1440，<span class="mono">scrollWidth === innerWidth</span>。</li>
+        <li><b>对比度重算</b>：新增 <span class="mono">--seal</span> 与全部文本组合。</li>
+        <li><b>软著材料重出</b>：窗口余量、2 次 MD5、凭据扫描。</li>
+        <li><b>一回滚预案</b>：视觉变更集中在令牌与类，可按 commit 单步回退。</li>
+      </ol>
+      <div class="est">约 2 天 · 不放新功能</div>
+    </div>
+  </div>
+
+  <div class="h2"><span class="idx">!</span>先不做的事</div>
+  <div class="grid g2">
+    <div class="card plain"><p class="small"><b>不做暗色模式</b>：纸白是叙事的一部分，双主题会把令牌单源变成双源，维护成本翻倍。</p></div>
+    <div class="card plain"><p class="small"><b>不做全文搜索索引</b>：13 条日志规模下 <span class="mono">contains</span> 足够，上 <span class="mono">tsvector</span> 是给未来的自己挖坑。</p></div>
+    <div class="card plain"><p class="small"><b>不做访问统计/埋点</b>：与「不收集访客数据」的隐私口径直接冲突。</p></div>
+    <div class="card plain"><p class="small"><b>不做评论/点赞</b>：单作者档案库不需要社交层，且引入审核负担。</p></div>
+  </div>
+
+  <div class="note">
+    <span class="t">顺序上的一个硬约束</span>
+    标签治理必须在首页主题索引之前完成；否则设计图上的 8 个主题只是画饼。先跑一个只读脚本，把 56 个标签映射到 8 个主题并输出清单，人工确认后再改数据。
+  </div>
+</section>
+
+<!-- ══════════════ 12 实测问题 ══════════════ -->
+<section class="view" id="v-audit">
+  <div class="eyebrow">Audit · 实测于本轮</div>
+  <h1 class="vt">跑完一遍，先修这九处</h1>
+  <p class="lede">下面每一条都在本轮实跑或读源码时确认过，不是推测。两项 P0：一个把用户送到 404，一个把测试内容放上了首页第一条。</p>
+  <div class="rule2"></div>
+
+  <table class="tbl">
+    <thead><tr><th style="width:5%">#</th><th style="width:10%">级别</th><th style="width:24%">问题</th><th style="width:36%">证据</th><th style="width:25%">处置</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="num">01</td><td><span class="sev p0">P0</span></td>
+        <td><b>首页「档案状态」链接 404</b><br><span class="small" style="color:var(--brown)">A1 已修</span></td>
+        <td><span class="mono">StatusBoard.tsx</span> 拼 <span class="mono">/projects/{slug}</span>；实测该地址返回 404，真实路由是 <span class="mono">/u/[handle]/projects/[slug]</span>。V2.0 Step 3 迁路由时漏改此组件。</td>
+        <td class="fix">补 <span class="mono">handle</span> 字段并改链接；加一条「看板链接可 200」的集成断言。</td>
+      </tr>
+      <tr>
+        <td class="num">02</td><td><span class="sev p0">P0</span></td>
+        <td><b>测试内容已上线</b><br><span class="small" style="color:var(--brown)">A2 已下架</span></td>
+        <td>首页最新一条为「测试AI帮我写」，<span class="mono">publishedAt 2026-11-11</span>，标签 <span class="mono">github-sync / laity-archive</span>。</td>
+        <td class="fix">后台下架或改写为真实记录；发布前检查加一条「标题含测试字样」提示。</td>
+      </tr>
+      <tr>
+        <td class="num">03</td><td><span class="sev p1">P1</span></td>
+        <td><b>关于页两处事实过期</b><br><span class="small" style="color:var(--brown)">A3 已修</span></td>
+        <td><span class="mono">about/page.tsx</span>：「后台只有一把口令，没有第二号用户」；技术栈：「NextAuth.js — 后台口令登录与会话」。</td>
+        <td class="fix">改为 GitHub 账号登录（D33）；技术栈行改「GitHub OAuth 登录与会话」。</td>
+      </tr>
+      <tr>
+        <td class="num">04</td><td><span class="sev p1">P1</span></td>
+        <td><b>后台没有日志列表</b></td>
+        <td><span class="mono">src/app/admin/</span> 下无 <span class="mono">logs/page.tsx</span>；导航仅「概览 / 项目 / 前台」；概览只列最近 5 条。</td>
+        <td class="fix">新增 <span class="mono">/admin/logs</span>：状态筛选 + 标题搜索 + 分页；导航加「日志」。</td>
+      </tr>
+      <tr>
+        <td class="num">05</td><td><span class="sev p1">P1</span></td>
+        <td><b>标签已退化为关键词碎片</b></td>
+        <td>56 个标签 / 13 条已发布；SQL 实测除 <span class="mono">Server Action</span> 用过 2 次外全部只用 1 次；含 <span class="mono">@container</span>、<span class="mono">flex gap</span> 等 CSS 词元。</td>
+        <td class="fix">写入时去 <span class="mono">@</span> 前缀、限 5 个、建 8 主题映射；先出只读清单再改数据。</td>
+      </tr>
+      <tr>
+        <td class="num">06</td><td><span class="sev p1">P1</span></td>
+        <td><b>导航中文只有 10px</b></td>
+        <td>浏览器 computed 实测：中文导航项 <span class="mono">10px</span>，字标 11px；1440 屏下明显偏小。</td>
+        <td class="fix">导航与字标提到 12px，行高与间距同步；不改字体族。</td>
+      </tr>
+      <tr>
+        <td class="num">07</td><td><span class="sev p2">P2</span></td>
+        <td><b>筛选态不可见</b></td>
+        <td><span class="mono">logs/page.tsx</span>：有结果时不显示当前筛选与计数；「清除筛选」只在空态分支出现。</td>
+        <td class="fix">结果区顶部加筛选摘要 + 逐项 ×；保留项目前缀。</td>
+      </tr>
+      <tr>
+        <td class="num">08</td><td><span class="sev p2">P2</span></td>
+        <td><b>详情读完没有去处</b></td>
+        <td>页面止于 <span class="mono">Seal</span>；无前后篇、无相关、无阅读时长。</td>
+        <td class="fix">见 Page 03；相关日志用「同标签 → 同项目」回退链。</td>
+      </tr>
+      <tr>
+        <td class="num">09</td><td><span class="sev p2">P2</span></td>
+        <td><b>登录页几乎全空</b></td>
+        <td>1440×1000 实测：内容集中在中间 320px，占屏不足 20%；无品牌说明。</td>
+        <td class="fix">左右分栏 + 「为什么需要登录」+ 返回首页；不改鉴权。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note red">
+    <span class="t">另有一类漂移：文档与实测不一致</span>
+    V2 设计稿写「154 条测试」，实测 <b>157</b>（A1/A4 补 8 条用例后 <b>165</b>）；设计稿的「13 条日志」与库一致。设计稿里的数字建议一律改成从命令输出粘贴，不再手写。
+  </div>
+</section>
+
+<!-- ══════════════ 13 验收 ══════════════ -->
+<section class="view" id="v-accept">
+  <div class="eyebrow">Acceptance</div>
+  <h1 class="vt">什么叫做「可以上线」</h1>
+  <p class="lede">不是「看起来变好了」，而是四道门禁全 0、三档断点无溢出、对比度全部达标、软著材料重出且两次 MD5 一致、产出物无凭据。下面是逐项可核对的判据。</p>
+  <div class="rule2"></div>
+
+  <div class="grid g3">
+    <div class="card">
+      <div class="k">GATE 01</div>
+      <div class="h3">四道门禁</div>
+      <p class="small mono" style="line-height:2">npm run lint<br>npx tsc --noEmit<br>npm test<br>npm run build</p>
+      <p class="small" style="margin-top:6px">全 0 退出；测试数从 157 起只增不减。</p>
+    </div>
+    <div class="card">
+      <div class="k">GATE 02</div>
+      <div class="h3">布局与可达性</div>
+      <p class="small">390 / 768 / 1440 三档无横向溢出（<span class="mono">scrollWidth === innerWidth</span>）；焦点环可见；<span class="mono">aria-current</span> 全站唯一；导航可键盘到达。</p>
+    </div>
+    <div class="card">
+      <div class="k">GATE 03</div>
+      <div class="h3">对比度</div>
+      <p class="small">正文与链接 ≥ 4.5:1；新增 <span class="mono">--seal</span> 实算 5.88:1；1px 装饰线按 I073 豁免，但印章边框（非文本）≥ 3:1。</p>
+    </div>
+    <div class="card">
+      <div class="k">GATE 04</div>
+      <div class="h3">材料</div>
+      <p class="small">软著材料重出：<span class="mono">assertWindowFit()</span> 放行、两次生成 MD5 一致、收录行无丢失无重复、新增行合法。</p>
+    </div>
+    <div class="card">
+      <div class="k">GATE 05</div>
+      <div class="h3">凭据与隐私</div>
+      <p class="small">产出物逐行扫凭据形态；示例串不写真实键；导出 JSON 不包含 token；前台任何页面不出现邮箱以外的账号信息。</p>
+    </div>
+    <div class="card">
+      <div class="k">GATE 06</div>
+      <div class="h3">性能预算</div>
+      <p class="small">前台任一页面 Prisma 查询 ≤3；<span class="mono">/logs</span> 首屏 ≤2 且不含正文；<span class="mono">/sitemap.xml</span> ≤3。新增的馆藏卡与筛选栏不得突破。</p>
+    </div>
+  </div>
+
+  <div class="h2"><span class="idx">→</span>需要你做的四件事</div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="k">01 · 登录后台</div>
+      <p class="small">打开 <span class="mono">http://localhost:3000/login</span>，用 GitHub 登录后停在 <span class="mono">/admin</span>。我这边没有你的 GitHub 会话，后台的实测截图与表单验证需要你这一步；登录后告诉我，我继续跑。</p>
+    </div>
+    <div class="card">
+      <div class="k">02 · 点头五处破例</div>
+      <p class="small">版心 1200、导航 12px、新增 <span class="mono">--seal</span> 封泥红、首页结构重排、后台深色侧栏。其余锁定项不动。</p>
+    </div>
+    <div class="card">
+      <div class="k">03 · 定标签口径</div>
+      <p class="small">8 个主题的命名与映射需要你拍板；同时决定「测试AI帮我写」是下架还是改写。这两件都动内容，不该由我代决。</p>
+    </div>
+    <div class="card">
+      <div class="k">04 · 选执行方式</div>
+      <p class="small">按 A→D 全做，还是先做 A（修错 + 视觉基础）看一轮效果；也可以只让我先出可点击的前台静态原型，不动仓库代码。</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="t">A 阶段已开始落地（2026-11-13）</span>
+    已完成 A1（看板 404）、A2（下架测试条目，已发布 13 → 12）、A3（关于页两处文案）、A4（导航 12px / 版心 1200 / 首页馆藏条与索引 / 8 主题映射 + 56 标签全覆盖）。改动 9 个源文件 + 2 个新测试文件，四道门禁全 0，尚未提交。B 阶段未动。
+  </div>
+</section>
+
+
+</div>
+</main>
+</div>
+<script>
+(function(){
+  var nav = document.getElementById('nav');
+  var views = document.querySelectorAll('.view');
+  var buttons = nav.querySelectorAll('button');
+  var titles = {
+    overview:['判断','设计总览'],
+    language:['判断','设计语言'],
+    home:['前台','首页'],
+    hall:['前台','日志大厅'],
+    detail:['前台','日志详情'],
+    projects:['前台','作品档案'],
+    about:['前台','关于与登录'],
+    admin:['后台','后台概览'],
+    adminlogs:['后台','日志列表'],
+    editor:['后台','日志编辑器'],
+    roadmap:['执行','实施路线'],
+    audit:['执行','实测问题'],
+    accept:['执行','上线验收']
+  };
+  function go(id){
+    views.forEach(function(v){ v.classList.toggle('active', v.id === 'v-' + id); });
+    buttons.forEach(function(b){ b.classList.toggle('active', b.dataset.v === id); });
+    var t = titles[id] || ['', ''];
+    document.getElementById('crumbGroup').textContent = t[0];
+    document.getElementById('crumbTitle').textContent = t[1];
+    if (history.replaceState) history.replaceState(null, '', '#' + id);
+    window.scrollTo(0, 0);
+  }
+  buttons.forEach(function(b){ b.addEventListener('click', function(){ go(b.dataset.v); }); });
+  document.querySelectorAll('[data-go]').forEach(function(el){
+    el.addEventListener('click', function(){ go(el.dataset.go); });
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    var i = Array.prototype.findIndex.call(buttons, function(b){ return b.classList.contains('active'); });
+    if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); go(buttons[Math.min(i+1, buttons.length-1)].dataset.v); }
+    if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); go(buttons[Math.max(i-1, 0)].dataset.v); }
+  });
+  var initial = (location.hash || '').replace('#', '');
+  if (initial && document.getElementById('v-' + initial)) go(initial);
+  window.addEventListener('hashchange', function(){
+    var id = (location.hash || '').replace('#', '');
+    if (id && document.getElementById('v-' + id)) go(id);
+  });
+})();
+</script>
+</body>
+</html>

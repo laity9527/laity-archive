@@ -9,13 +9,17 @@
  * - 2026-11-05: 类型与状态两格改走 src/lib/labels.ts 的中文映射（去 toUpperCase），中文格由 font-mono 改 font-sans；带日期的最后一格保留 font-mono
  * - 2026-11-05: 最后一格再拆两层 span——「N 篇日志」与「尚未发布」走 font-sans、日期仍 font-mono（时间戳强制等宽属视觉铁律），外层只留 ml-auto 与字号色，避免 flex 的 gap-x-6 在两段之间撑出 24px
  * - 2026-11-06: 空态 NO ARCHIVE YET 改「暂无项目档案」并去 font-mono 与宽字距（中文标签走 Inter，AGENTS 视觉铁律 2026-11-06 口径）
+ * - 2026-11-13: 修 P0 断链——V2.0 项目页迁到 /u/[handle]/projects/[slug] 后，本组件仍拼 /projects/[slug]，
+ *               实测 404。条目类型补 handle（getArchiveBoard 已带出），链接改走 publicProjectHref()
  */
 import Link from "next/link";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
+import { publicProjectHref } from "@/lib/routes";
 
 export type StatusBoardEntry = {
   name: string;
   slug: string;
+  handle: string;
   kind: string;
   status: string;
   count: number;
@@ -47,7 +51,7 @@ export function StatusBoard({ entries }: StatusBoardProps) {
             {entry.status === "LIVE" ? "●" : "○"}
           </span>
           <Link
-            href={`/projects/${entry.slug}`}
+            href={publicProjectHref(entry.handle, entry.slug)}
             className="text-base hover:underline hover:decoration-1 hover:underline-offset-4"
           >
             {entry.name}

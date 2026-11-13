@@ -6,6 +6,8 @@
  * 修改记录：
  * - 2026-11-05: 初始创建。按 SPEC 的 F19 与 DESIGN 的 D31 落地——静态生成、三段内容、
  *               联系方式走 SITE_CONTACT_EMAIL（未配置不编造），仓库地址取仓库里已登记的那一个
+ * - 2026-11-13: 修正两处口令时代残留（V2.0 Step 4-A 已恢复 GitHub OAuth，D33）：
+ *               个人简介里的「后台只有一把口令」与技术栈里的「NextAuth.js — 后台口令登录与会话」
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -18,7 +20,7 @@ export const metadata: Metadata = {
 
 // 只写仓库里可核对的事实：不出年份、不出粉丝数、不出"多年经验"这类无法验证的说法
 const PROFILE: string[] = [
-  "我是张磊，这个站的主人与唯一的作者：代码、文案、发布与运维都是我一个人，后台只有一把口令，没有第二号用户。",
+  "我是张磊，这个站的主人与唯一的作者：代码、文案、发布与运维都是我一个人。后台用 GitHub 账号登录，只有站主一个账号，没有第二位作者。",
   "这里不是博客，也不放教程。它记的是判断过程——每条开发日志都成对写着 BEFORE（当时怎么判断、为什么这样做）与 AFTER（做完之后验证成什么、哪里不对），底部带这一版正文的 SHA-256 摘要与服务器发布时间，可以和页面上一字一字对。",
   "档案里的第一条记录就是这个项目自己：laity-archive 连同它自己的开发日志都在库里，用同一套后台录入、同一个口径发布。之所以先把自己收进去，是因为一份讲不出真实过程的档案库，不值得别人引用。",
   "工作方式写在仓库根目录的约定里：技术栈锁定不做漂移、四道门禁全 0 才算能发版、范围外的问题记账不顺手改、凭据不进仓库也不进对话。这个站是这个工作方式的产物，也是它的证据。",
@@ -32,7 +34,7 @@ const STACK: { name: string; note: string }[] = [
   { name: "Tailwind CSS", note: "样式工具类（无组件库、无图标库）" },
   { name: "Prisma", note: "schema、迁移与数据访问" },
   { name: "PostgreSQL", note: "数据库（Docker 容器）" },
-  { name: "NextAuth.js", note: "后台口令登录与会话" },
+  { name: "NextAuth.js", note: "GitHub OAuth 登录与会话" },
   { name: "阿里云 OSS", note: "正文插图的对象存储外链" },
   { name: "react-markdown", note: "日志正文渲染，过 rehype-sanitize 消毒" },
   { name: "Node.js", note: "运行时与内置 test runner" },

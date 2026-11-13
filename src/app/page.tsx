@@ -23,6 +23,9 @@
  * - 2026-11-09: V2.0 Step 3 阶段一：精选项目与最新日志的跳转链接改 /u/[handle]/... 体系——
  *               看板条目带出 user.handle（getArchiveBoard 的 select 白名单）、日志行带出 log.user.handle（getLatestLogs 同）；
  *               首页仍展示全站精选（裁定 ①：大厅与首页为全局聚合视图，租户视图在 /u/[handle]）
+ * - 2026-11-13: 显著升级 A：标语下加馆藏条（项目数 / 已发布数 / 最近更新，复用同一次 board+latest 取数，
+ *               零新增查询）；精选行加 mono 索引 01–03；两处「全部」入口统一 12px；项目链接改走
+ *               publicProjectHref()（原先手拼，与看板同一处 404 根因）；版心首页放宽到 1200px
  */
 import Link from "next/link";
 import { Suspense } from "react";
@@ -31,6 +34,7 @@ import { Timeline } from "@/components/Timeline";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { getLatestLogs } from "@/lib/logs";
 import { getArchiveBoard } from "@/lib/projects";
+import { publicProjectHref } from "@/lib/routes";
 
 async function ArchiveOverview() {
   // 首页的最新日志只要 3 条，按发布时间交给数据库取（D13 修订），不再全表捞回内存再切
@@ -39,43 +43,86 @@ async function ArchiveOverview() {
     getLatestLogs(3),
   ]);
 
-  // 精选规则（本轮定的，无数据库字段）：有已发布日志的项目按最近更新取前 3；
+  // 精选规则（本轮定的，无数据库字段）：有已发布日志的项目按「日志数优先、再按最近更新」
+  // 取前 3——只看最近更新会让只有 1 条日志的同步工具排到主项目之前（2026-11-13 实测），
   // 零日志项目只进下面的状态看板，不进精选
-  const featured = board.filter((project) => project.count > 0).slice(0, 3);
+  const featured = board
+    .filter((project) => project.count > 0)
+    .sort(
+      (a, b) =>
+        b.count - a.count ||
+        (b.latest?.getTime() ?? 0) - (a.latest?.getTime() ?? 0),
+    )
+    .slice(0, 3);
+  const publishedCount = board.reduce((sum, project) => sum + project.count, 0);
+  const latest = latestLogs[0]?.publishedAt ?? latestLogs[0]?.beforeDate ?? null;
 
   return (
-    <div className="md:flex md:items-start md:justify-between">
+    <>
+      <div className="flex flex-wrap items-baseline gap-x-10 gap-y-3 border-y border-hairline py-4 font-sans text-[11px] text-ink-soft">
+        <span>
+          <span className="font-mono text-lg text-ink">{board.length}</span> 个项目
+        </span>
+        <span>
+          <span className="font-mono text-lg text-ink">{publishedCount}</span> 条已发布
+        </span>
+        <span>
+          最近更新{" "}
+          <span className="font-mono text-ink">
+            {latest ? latest.toISOString().slice(0, 10) : "尚未发布"}
+          </span>
+        </span>
+        <a
+          href="/feed.xml"
+          className="ml-auto hidden border-b border-transparent font-sans text-[11px] text-ink-soft hover:border-ink hover:text-ink sm:inline"
+        >
+          RSS 订阅 →
+        </a>
+      </div>
+
+      <div className="mt-16 md:flex md:items-start md:justify-between">
       {featured.length > 0 && (
         <section className="md:w-2/3 md:border-r md:border-hairline md:pr-12">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="font-sans text-[10px] text-ink-soft">精选项目</h2>
             <Link
               href="/projects"
-              className="border-b border-ink font-mono text-[11px] hover:underline hover:decoration-1 hover:underline-offset-4"
+              className="border-b border-ink font-sans text-xs hover:underline hover:decoration-1 hover:underline-offset-4"
             >
               全部作品 →
             </Link>
           </div>
           <ul className="border-t border-ink">
-            {featured.map((project) => (
-              <li key={project.slug} className="border-b border-hairline py-6">
-                <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-                  <Link
-                    href={`/u/${project.handle}/projects/${project.slug}`}
-                    className="text-lg hover:underline hover:decoration-1 hover:underline-offset-4"
-                  >
-                    {project.name}
-                  </Link>
-                  <span className="font-sans text-[11px] text-ink-soft">
-                    {kindLabel(project.kind)} · {statusLabel(project.status)} ·{" "}
-                    {logsCountLabel(project.count)}
-                  </span>
+            {featured.map((project, index) => (
+              <li
+                key={project.slug}
+                className="flex gap-6 border-b border-hairline py-6"
+              >
+                <span
+                  aria-hidden
+                  className="pt-1 font-mono text-[10px] text-ink-soft"
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                    <Link
+                      href={publicProjectHref(project.handle, project.slug)}
+                      className="text-xl hover:underline hover:decoration-1 hover:underline-offset-4"
+                    >
+                      {project.name}
+                    </Link>
+                    <span className="font-sans text-[11px] text-ink-soft">
+                      {kindLabel(project.kind)} · {statusLabel(project.status)} ·{" "}
+                      {logsCountLabel(project.count)}
+                    </span>
+                  </div>
+                  {project.summary && (
+                    <p className="mt-2 max-w-prose text-sm text-ink-soft">
+                      {project.summary}
+                    </p>
+                  )}
                 </div>
-                {project.summary && (
-                  <p className="mt-2 max-w-prose text-sm text-ink-soft">
-                    {project.summary}
-                  </p>
-                )}
               </li>
             ))}
           </ul>
@@ -91,7 +138,7 @@ async function ArchiveOverview() {
         <section className="mt-20">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="font-sans text-[10px] text-ink-soft">最新日志</h2>
-            <Link href="/logs" className="border-b border-ink text-sm">
+            <Link href="/logs" className="border-b border-ink font-sans text-xs">
               全部日志 →
             </Link>
           </div>
@@ -135,15 +182,16 @@ async function ArchiveOverview() {
           )}
         </section>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
 export default function Home() {
   return (
-    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
+    <main id="main" className="mx-auto max-w-[1200px] px-6 py-24">
       <header>
-        <h1 className="text-4xl font-medium tracking-tight md:text-5xl">
+        <h1 className="text-[44px] font-medium tracking-tight md:text-[56px]">
           数字档案，记录每一次工程决策。
         </h1>
         <p className="mt-6 max-w-xl text-lg text-ink-soft">

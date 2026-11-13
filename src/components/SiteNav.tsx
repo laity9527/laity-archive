@@ -12,6 +12,8 @@
  * - 2026-11-05: D30 B1 补——字标在首页时下边框走 `border-brown`、文字保持 `text-ink`，非首页为 `border-transparent`；"当前态 = 棕色下划线"从此无例外
  * - 2026-11-06: SECTIONS 顺序按负责人要求调整为「作品档案 → 开发日志 → 关于」（档案优先于复盘）；activeKey 判定与 aria-current、棕色当前态均未动
  * - 2026-11-06: 铁律合规修复（负责人裁断一）——三个中文导航项去 `font-mono` 与 `tracking-[0.2em]` 改走 `font-sans`；字标 LAITY 是英文品牌标识，仍留 `font-mono tracking-[0.3em]`
+ * - 2026-11-13: 显著升级 A——中文导航项 10px → 12px、字标 11px → 12px（实测 10px 偏小）；
+ *               版心 1080 → 1200，与首页 / 大厅同步，避免导航比正文窄一截
  */
 "use client";
 
@@ -52,10 +54,10 @@ export function SiteNav() {
       >
         跳到正文
       </a>
-      <div className="mx-auto flex max-w-[1080px] flex-wrap items-baseline gap-x-8 gap-y-2 px-6 py-5">
+      <div className="mx-auto flex max-w-[1200px] flex-wrap items-baseline gap-x-8 gap-y-2 px-6 py-5">
         <Link
           href="/"
-          className={`border-b font-mono text-[11px] tracking-[0.3em] text-ink ${
+          className={`border-b font-mono text-xs tracking-[0.3em] text-ink ${
             activeKey === "home" ? "border-brown" : "border-transparent"
           }`}
           aria-current={activeKey === "home" ? "page" : undefined}
@@ -68,7 +70,7 @@ export function SiteNav() {
               key={section.key}
               href={section.href}
               aria-current={activeKey === section.key ? "page" : undefined}
-              className={`border-b pb-1 font-sans text-[10px] ${
+              className={`border-b pb-1 font-sans text-xs ${
                 activeKey === section.key
                   ? "border-brown text-brown"
                   : "border-transparent text-ink-soft hover:text-ink"

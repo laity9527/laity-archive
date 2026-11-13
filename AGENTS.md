@@ -151,6 +151,12 @@ DashScope 兼容端点 `https://dashscope.aliyuncs.com/compatible-mode/v1`）/ `
 （`/logs` 首屏查询数 ≤2 且响应不含正文字段；任一前台页面 Prisma 查询数 ≤3，不含 Proxy 前置判定；
 `/sitemap.xml` 查询数 ≤3，与用户数无关），每条附核对方式；其余事实行、修订留痕块与
 技术选型（Next 16.4.3 / Prisma 6.19.3 / Tailwind 4.3.3）一字未动。
+修订留痕续二十三：2026-11-13 由我点名“先做 A”+“授权改 AGENTS”——**按点名授权修改本文件**，
+只改「视觉铁律」的「版式」一行：默认最大宽仍为 1080px，补记首页与日志大厅（连同站点导航、页脚）
+放宽到 **1200px**，并注明日志详情仍是 1080px 外框 + 720px 正文；色值、字体、形态、图标、焦点各行
+与技术选型（Next 16.4.3 / Prisma 6.19.3 / Tailwind 4.3.3）一字未动。同轮代码改动：修 StatusBoard
+项目链接 404（新增 `publicProjectHref()` 单源）、关于页两处口令文案改 GitHub OAuth、导航中文
+10px → 12px、首页加馆藏条与精选编号；未改数据模型、鉴权链路与写路径。
 
 
 ---
@@ -267,7 +273,8 @@ laity-archive/
 - 字体：UI 用 Inter；日志正文强制 Noto Serif SC（思源宋体，18px / 行高 1.85）；
   时间戳、数字与英文标识（如 BEFORE/AFTER）强制 JetBrains Mono；中文标签走 Inter（font-sans），并移除大写字母专用的宽字距（tracking-[0.2em]）
 - 图标：禁用一切图标库，只允许字符（↗ ← ● ○）
-- 版式：内容最大宽 1080px；日志详情限宽 720px；
+- 版式：内容最大宽 1080px；**首页与日志大厅（连同站点导航、页脚）1200px**（2026-11-13 显著升级 A）；
+  日志详情限宽 720px（外框仍 1080px）；
   日志列表左侧 200px BEFORE/AFTER 时间轴（1px 竖线贯穿）
 - 焦点可见性：键盘焦点统一 `outline: 2px solid var(--foreground); outline-offset: 2px`（即主墨 `#1a1a18`，写在 globals.css 的
   `:focus-visible`；A1 起引用令牌而非字面量，改主墨色时焦点框自动跟随），不允许各组件自定焦点样式；

@@ -30,6 +30,7 @@
  *               一字不动（筛选是 F03 点名交互，改成跳转会破坏功能）
  * - 2026-11-13: O1/O2 页面接入：列表改游标分页（50 条/页）、筛选项改 getLogFacets、
  *               搜索改限量 50 条候选池（searchLogsLimited）+ 当前页二次取正文算片段
+ * - 2026-11-13: 显著升级 A：版心 1080 → 1200，与导航 / 首页同步；筛选与搜索逻辑未动
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -333,7 +334,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
 export default function LogsPage({ searchParams }: LogsPageProps) {
   return (
-    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
+    <main id="main" className="mx-auto max-w-[1200px] px-6 py-24">
       <h1 className="mb-12 text-4xl font-medium tracking-tight">开发日志</h1>
       <Suspense
         fallback={<p className="font-sans text-sm text-ink-soft">加载中…</p>}

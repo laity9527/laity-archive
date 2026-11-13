@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-11-03: 初始创建。备案号由根布局读环境变量后以 prop 传入，未配置时整行不渲染
  * - 2026-11-03: 补开源许可入口、侵权投诉邮箱位、公安备案号位与版权行；三个新位同样是"未设置就不渲染"
+ * - 2026-11-13: 版心 1080 → 1200，与导航、首页、大厅对齐
  */
 "use client";
 
@@ -28,7 +29,7 @@ export function SiteFooter({ icp, policeIcp, contactEmail }: SiteFooterProps) {
 
   return (
     <footer className="border-t border-hairline">
-      <div className="mx-auto flex max-w-[1080px] flex-wrap items-baseline gap-x-8 gap-y-3 px-6 py-8 font-mono text-[10px] tracking-[0.2em] text-ink-soft">
+      <div className="mx-auto flex max-w-[1200px] flex-wrap items-baseline gap-x-8 gap-y-3 px-6 py-8 font-mono text-[10px] tracking-[0.2em] text-ink-soft">
         <span className="text-ink">LAITY</span>
         <Link
           href="/privacy"
