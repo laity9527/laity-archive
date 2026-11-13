@@ -135,6 +135,12 @@ DashScope 兼容端点 `https://dashscope.aliyuncs.com/compatible-mode/v1`）/ `
 生成器阈值 `BOUNDARY_MARGIN=100`、余量低于阈值或切口行非法（空行 / ↳ 续行 / 文件分隔行）直接拒件、
 封面边界签名变化即位移信号）。其余事实行、修订留痕块与技术选型
 （Next 16.4.3 / Prisma 6.19.3 / Tailwind 4.3.3）一字未动。
+修订留痕续二十：2026-11-13 由我点名"检查项目代码与相关文档，给出可执行优化建议并落实到文档"——**本轮按点名授权修改本文件**，
+只改述「环境实况」里"真实上传联调"的前置句：删去 D20 时代口径"2026-11-04 起不再依赖 GitHub 授权，口令是我自己配的"，
+改为"需我本人用 GitHub 账号登录后台后亲自点一次上传；V2.0 Step 4-A 起登录恢复为 GitHub OAuth，
+口令方案随 D33 退役，AI 侧没有我的 GitHub 会话"。其余事实行、修订留痕块与技术选型
+（Next 16.4.3 / Prisma 6.19.3 / Tailwind 4.3.3）一字未动；同轮新增
+`docs/00-开发方法论/优化建议-2026-11-13.md`（代码与文档体检清单，含本轮红线突破记录）。
 
 
 ---
@@ -182,8 +188,8 @@ DashScope 兼容端点 `https://dashscope.aliyuncs.com/compatible-mode/v1`）/ `
 
 - 本机现状（2026-11-03）：Node/npm 已装，`node_modules` 就绪，Docker Desktop + 本地
   PostgreSQL 16 容器（`laity-postgres`，库名 laity，口令为仅限本地的 root/root，见 I001）。
-- 仍缺的：服务器上的生产编排实跑、真实上传联调（需我本人登录后台后亲自点一次上传；2026-11-04 起不再依赖 GitHub 授权，
-  口令是我自己配的，AI 已能在应用内浏览器里走到"需我本人决定"的那一步）、
+- 仍缺的：服务器上的生产编排实跑、真实上传联调（需我本人用 GitHub 账号登录后台后亲自点一次上传；
+  V2.0 Step 4-A 起登录恢复为 GitHub OAuth，口令方案随 D33 退役，AI 侧没有我的 GitHub 会话）、
   `docs/03-功能截图` 的运行截图。这几项 AI 一律标注"未验证"，不得用推断补全。
 - GitHub 仓库：https://github.com/laity9527/laity-archive
 - 提交与推送由我本人执行。AI 可以提交，但只有我明确说"提交"才算授权，说提交不等于说 push。
