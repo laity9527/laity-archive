@@ -1,37 +1,48 @@
 /**
  * 文件：src/app/tags/page.tsx
- * 描述：标签索引页：全部标签按使用频次分三档字号，点击进标签聚合页
+ * 描述：标签索引页：全部标签按 8 个主题分组（未归类进「其他」），点击进标签聚合页
  * 作者：张磊
  * 创建日期：2026-11-16
  * 修改记录：
- * - 2026-11-16: 初始创建（重构方案 V3 / B4）。此前标签只能从日志行点进去，没有总览入口；
- *               本页补上索引，字号按频次分三档（≥5 / 2–4 / 1），排序走 getTagIndex 的单源口径。
- *               不做 tagsKey 双轨迁移，URL 仍用显示名编码（与 /tags/[tag] 现状一致）
+ * - 2026-11-16: 初始创建（重构方案 V3 / B4）。此前标签只能从日志行点进去，没有总览入口
+ * - 2026-11-16: 评审第 2 批（P3-1）：频次三档在真实数据下失效（52 个标签 53 次引用，几乎每个只用一次），
+ *               改为按 topics.ts 的 8 个主题分组 + 「其他」；频次降级为灰色小字，不再用字号表达权重。
+ *               分组口径复用 topicOfTag() 单源，不新增映射表
  */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getTagIndex } from "@/lib/logs";
+import { SectionHead } from "@/components/SectionHead";
+import { getTagIndex, type TagIndexEntry } from "@/lib/logs";
+import { TOPICS, topicOfTag } from "@/lib/topics";
 
 export const metadata: Metadata = {
   title: "标签",
   description:
-    "按标签横切档案：同一个技术判断，可能散在不同项目与月份里。按使用频次排序，点开即为该标签的日志列表。",
+    "按标签横切档案：同一个技术判断，可能散在不同项目与月份里。标签按主题分组，点开即为该标签的日志列表。",
 };
 
 // 本页查库，导航进来必然阻塞。instant = false 只用于退出即时导航校验，不改变渲染方式
 export const instant = false;
 
-// 频次三档：一档 20px、二档 16px、三档 14px。字号是唯一变量，不加颜色与字重
-function sizeClass(count: number) {
-  if (count >= 5) return "text-[20px]";
-  if (count >= 2) return "text-[16px]";
-
-  return "text-[14px]";
-}
+type TagGroup = { key: string; label: string; items: TagIndexEntry[] };
 
 export default async function TagsPage() {
   const tags = await getTagIndex();
   const total = tags.reduce((sum, item) => sum + item.count, 0);
+
+  // 每个标签只归入第一个匹配的主题（topicOfTag 是单源），未被任何主题覆盖的进「其他」——
+  // 这样既不重复展示，也不会因为主题表没覆盖到就把标签藏起来
+  const groups: TagGroup[] = TOPICS.map((topic) => ({
+    key: topic.key,
+    label: topic.label,
+    items: tags.filter((item) => topicOfTag(item.tag) === topic.key),
+  })).filter((group) => group.items.length > 0);
+
+  const others = tags.filter((item) => topicOfTag(item.tag) === null);
+
+  if (others.length > 0) {
+    groups.push({ key: "other", label: "其他", items: others });
+  }
 
   return (
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
@@ -41,7 +52,7 @@ export default async function TagsPage() {
             TAGS
           </span>
           <span className="font-sans text-xs text-ink-soft">
-            {tags.length} 个标签 · 被引用 {total} 次
+            {tags.length} 个标签 · 被引用 {total} 次 · 分 {groups.length} 组
           </span>
         </p>
         <h1 className="mt-3 text-[32px] font-medium tracking-tight">标签</h1>
@@ -55,21 +66,34 @@ export default async function TagsPage() {
           还没有标签
         </p>
       ) : (
-        <ul className="mt-10 flex flex-wrap items-baseline gap-x-8 gap-y-5">
-          {tags.map(({ tag, count }) => (
-            <li key={tag}>
-              <Link
-                href={`/tags/${encodeURIComponent(tag)}`}
-                className={`${sizeClass(count)} border-b border-transparent hover:border-ink`}
-              >
-                {tag}
-                <span className="ml-2 font-mono text-[10px] text-ink-soft">
-                  {count}
+        groups.map((group, index) => (
+          <section key={group.key} className="mt-12">
+            <SectionHead
+              index={String(index + 1).padStart(2, "0")}
+              title={group.label}
+              action={
+                <span className="font-mono text-[10px] text-ink-soft">
+                  {group.items.length} 个
                 </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+              }
+            />
+            <ul className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-3">
+              {group.items.map(({ tag, count }) => (
+                <li key={tag}>
+                  <Link
+                    href={`/tags/${encodeURIComponent(tag)}`}
+                    className="border-b border-transparent text-[15px] hover:border-ink"
+                  >
+                    {tag}
+                    <span className="ml-1.5 font-mono text-[10px] text-ink-soft">
+                      {count}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
       )}
 
       <p className="mt-16">

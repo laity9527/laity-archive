@@ -107,28 +107,25 @@ export default async function ProjectsPage() {
               </div>
 
               <div className="col-span-1 col-start-2 text-xs text-ink-soft md:col-span-1 md:col-start-auto md:text-right">
-                <p className="font-sans">
-                  {logsCountLabel(project.logs.length)}
-                </p>
-                <p className="mt-1">
-                  {project.logs.length > 0 ? (
-                    <>
-                      <span className="font-sans">最近一篇 </span>
-                      <span className="font-mono">
-                        {project.logs[0].beforeDate
-                          .toISOString()
-                          .slice(0, 10)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="font-sans">尚未发布</span>
+                <p className="flex flex-wrap items-baseline gap-x-2 md:justify-end">
+                  <span className="font-sans">
+                    {logsCountLabel(project.logs.length)}
+                  </span>
+                  {project.logs.length > 0 && (
+                    <span className="font-mono">
+                      {project.logs[0].beforeDate.toISOString().slice(0, 10)}
+                    </span>
                   )}
                 </p>
                 <Link
-                  href={`/u/${project.user.handle}/projects/${project.slug}`}
-                  className="mt-3 inline-block border-b border-ink font-sans text-xs text-ink"
+                  href={
+                    project.logs.length > 0
+                      ? `/u/${project.user.handle}/projects/${project.slug}`
+                      : `/logs?project=${project.slug}`
+                  }
+                  className="mt-2 inline-block border-b border-ink font-sans text-xs text-ink"
                 >
-                  查看档案 →
+                  {project.logs.length > 0 ? "查看档案 →" : "还没有日志 →"}
                 </Link>
               </div>
             </li>
