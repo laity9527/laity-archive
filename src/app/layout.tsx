@@ -68,7 +68,10 @@ export const metadata: Metadata = {
     description: siteDescription,
   },
   alternates: {
-    types: { "application/rss+xml": "/feed.xml" },
+    types: {
+      "application/rss+xml": "/feed.xml",
+      "application/feed+json": "/feed.json",
+    },
   },
 };
 

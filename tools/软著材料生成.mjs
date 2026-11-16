@@ -260,6 +260,8 @@ const BANDS = [
       // feed.xml 路由是 F27 RSS 订阅出口（请求期取数 + 组装 + XML 响应），
       // 与 sitemap/robots/export route 同族（对外出口层），①+② 零余量防线不动
       "src/app/feed.xml/route.ts",
+      // JSON Feed 路由（2026-11-16 B4）：与 RSS 同数据同摘要口径，供现代阅读器/自动化消费
+      "src/app/feed.json/route.ts",
       "src/app/admin/layout.tsx",
       // Phase C 后台侧栏：深墨导航外壳，与 admin/layout 同属后台壳层；调用方布局已在 ③，
       // 登记 ③ 不动 ①+② 零余量防线（2026-11-13）
