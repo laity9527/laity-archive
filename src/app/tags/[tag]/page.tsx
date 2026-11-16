@@ -42,6 +42,7 @@ export async function generateMetadata({
     alternates: {
       types: {
         "application/rss+xml": `/tags/${encodeURIComponent(normalized)}/feed.xml`,
+        "application/feed+json": `/tags/${encodeURIComponent(normalized)}/feed.json`,
       },
     },
   };

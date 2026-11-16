@@ -242,6 +242,12 @@ JSON Feed 零依赖、可端到端验证，先把分发闭环补齐。
 `projects.ts` 改为再导出，页面引用路径不变；补 `tests/featured.test.ts` 六条（零日志不进精选、日志数优先、
 同数按最近更新且 null 视为最旧、take 截断与 0/负数、空看板、不改入参）。测试总数 **198 → 204**。
 
+**B4 补充三（2026-11-16）**：新增 `/tags/[tag]/feed.json`（JSON Feed 1.1）——与 XML 版同数据同口径
+（`getTagFeedItems` + `toPlainText`，id 用永久链接）；标签非法或无已发布日志同样回 404；
+标签页 `alternates.types` 同时声明 RSS 与 JSON 两种订阅源。
+实测：`/tags/WCAG/feed.json` 200（1.1、1 item）、`/tags/zzzzz/feed.json` 404、
+标签页 head 两种 alternate 均存在。
+
 **材料出件：已解除（2026-11-16，你选“结构重排”，实际无需再移页面）**：本阶段源码增长（编辑器工具条与自动保存、
 feed.json、/archive、/tags、命令面板）让总行数自然跨过页边界，切口落到合法行。当前口径：
 **总行数 15356 / 总页数 308 / 提交 60 页（前 30 + 后 30）/ 收录 107 个文件 / 后窗口余量 179 行**；

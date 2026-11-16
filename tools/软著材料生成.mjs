@@ -269,6 +269,8 @@ const BANDS = [
       "src/app/feed.json/route.ts",
       // 标签订阅源（2026-11-16 B4）：同标签 RSS，复用 buildRssXml 与 getTagFeedItems
       "src/app/tags/[tag]/feed.xml/route.ts",
+      // 标签订阅源 JSON 版（2026-11-16 B4）：与 XML 版同数据同口径
+      "src/app/tags/[tag]/feed.json/route.ts",
       "src/app/admin/layout.tsx",
       // Phase C 后台侧栏：深墨导航外壳，与 admin/layout 同属后台壳层；调用方布局已在 ③，
       // 登记 ③ 不动 ①+② 零余量防线（2026-11-13）
