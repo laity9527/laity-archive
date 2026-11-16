@@ -168,3 +168,5 @@ uploads/
 !src/app/admin/logs/
 !src/app/admin/logs/**
 
+# 客户端记忆目录（本机状态，不入库）
+.workbuddy/

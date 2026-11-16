@@ -1,0 +1,405 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+.ld-root{--paper:#f4f1ec;--ink:#1a1a18;--ink-soft:#625d53;--hairline:#d9d2c5;--brown:#7a5a3a;--sb-bg:#1a1a18;--sb-text:#f4f1ec;--sb-muted:#8a857a;--sb-hover:#2a2a26;--accent-lt:#a08060;--surface:#fff;--surface-warm:#efe9de;--success:#2f6b4f;--warn:#9a7228;--danger:#a03a33;--font-ui:'Inter','Noto Sans SC',sans-serif;--font-serif:'Noto Serif SC',serif;--font-mono:'JetBrains Mono',monospace;--tr:180ms cubic-bezier(.4,0,.2,1);font-family:var(--font-ui);background:var(--paper);color:var(--ink);min-height:100vh;display:flex;position:relative;overflow-x:hidden}
+.ld-root *{box-sizing:border-box;margin:0;padding:0}
+.ld-root ::-webkit-scrollbar{width:6px;height:6px}
+.ld-root ::-webkit-scrollbar-track{background:transparent}
+.ld-root ::-webkit-scrollbar-thumb{background:var(--hairline)}
+.ld-root ::-webkit-scrollbar-thumb:hover{background:var(--ink-soft)}
+.ld-sb{width:250px;min-width:250px;background:var(--sb-bg);color:var(--sb-text);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:100;transition:transform var(--tr)}
+.ld-sb-hd{padding:24px 20px 18px;border-bottom:1px solid #2a2a26}
+.ld-sb-brand{font-family:var(--font-mono);font-size:10px;letter-spacing:.3em;color:var(--accent-lt);margin-bottom:6px}
+.ld-sb-title{font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.ld-sb-meta{font-size:10px;color:var(--sb-muted);margin-top:5px;font-family:var(--font-mono)}
+.ld-sb-nav{flex:1;padding:14px 0}
+.ld-ns{padding:0 14px;margin-bottom:6px}
+.ld-ns-l{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--sb-muted);padding:7px 8px 5px}
+.ld-ni{display:flex;align-items:center;gap:9px;padding:8px 11px;font-size:12px;color:var(--sb-text);cursor:pointer;border:none;background:transparent;width:100%;text-align:left;font-family:var(--font-ui);transition:background var(--tr);border-left:2px solid transparent}
+.ld-ni:hover{background:var(--sb-hover)}
+.ld-ni.active{background:var(--sb-hover);border-left-color:var(--accent-lt);color:#fff}
+.ld-ni-icon{font-family:var(--font-mono);font-size:10px;color:var(--sb-muted);width:15px;text-align:center;flex-shrink:0}
+.ld-ni.active .ld-ni-icon{color:var(--accent-lt)}
+.ld-ni-badge{margin-left:auto;font-size:9px;font-family:var(--font-mono);padding:1px 5px;background:#2a2a26;color:var(--sb-muted)}
+.ld-ni.active .ld-ni-badge{background:var(--brown);color:#fff}
+.ld-sb-ft{padding:14px 20px;border-top:1px solid #2a2a26;font-size:9px;color:var(--sb-muted);font-family:var(--font-mono);line-height:1.6}
+.ld-main{flex:1;min-height:100vh;display:flex;flex-direction:column}
+.ld-tb{position:sticky;top:0;z-index:50;background:rgba(244,241,236,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--hairline);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.ld-tb-l{display:flex;align-items:baseline;gap:10px}
+.ld-tb-t{font-size:14px;font-weight:600}
+.ld-tb-s{font-size:10px;color:var(--ink-soft);font-family:var(--font-mono)}
+.ld-tb-r{display:flex;gap:7px}
+.ld-btn{padding:5px 12px;font-size:11px;font-family:var(--font-ui);font-weight:500;border:1px solid var(--hairline);background:transparent;color:var(--ink);cursor:pointer;transition:all var(--tr)}
+.ld-btn:hover{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.ld-btn.primary{background:var(--brown);border-color:var(--brown);color:#fff}
+.ld-btn.primary:hover{background:var(--ink);border-color:var(--ink)}
+.ld-ct{flex:1;padding:28px;max-width:1100px;width:100%;margin:0 auto}
+.ld-v{display:none;animation:ldF 300ms ease}
+.ld-v.active{display:block}
+.ld-v.active>*{animation:ldRise .45s cubic-bezier(.2,.7,.2,1) backwards}
+.ld-v.active>*:nth-child(2){animation-delay:.06s}
+.ld-v.active>*:nth-child(3){animation-delay:.12s}
+.ld-v.active>*:nth-child(4){animation-delay:.18s}
+.ld-v.active>*:nth-child(5){animation-delay:.24s}
+@keyframes ldF{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ldRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.ld-v,.ld-v.active>*{animation:none}}
+.ld-sh{margin-bottom:24px}
+.ld-eb{font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--brown);margin-bottom:7px}
+.ld-st{font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.2;margin-bottom:7px}
+.ld-sd{font-size:13px;color:var(--ink-soft);line-height:1.7;max-width:600px}
+.ld-cg{display:grid;gap:14px}
+.ld-c2{grid-template-columns:repeat(2,1fr)}
+.ld-c3{grid-template-columns:repeat(3,1fr)}
+.ld-c4{grid-template-columns:repeat(4,1fr)}
+.ld-ic{background:var(--surface);border:1px solid var(--hairline);padding:18px;transition:border-color var(--tr)}
+.ld-ic:hover{border-color:var(--ink-soft)}
+.ld-cl{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
+.ld-cv{font-size:20px;font-weight:600;letter-spacing:-.01em;margin-bottom:3px}
+.ld-cn{font-size:11px;color:var(--ink-soft);line-height:1.5}
+.ld-tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:28px}
+.ld-ts{border:1px solid var(--hairline);overflow:hidden;transition:border-color var(--tr)}
+.ld-ts:hover{border-color:var(--ink)}
+.ld-tc{height:64px;display:flex;align-items:flex-end;padding:7px 11px}
+.ld-tcl{font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,.9);text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.ld-ti{padding:9px 11px;background:var(--surface)}
+.ld-tn{font-size:11px;font-weight:600;margin-bottom:2px}
+.ld-th{font-family:var(--font-mono);font-size:10px;color:var(--ink-soft)}
+.ld-tu{font-size:9px;color:var(--ink-soft);margin-top:3px;line-height:1.4}
+.ld-td{background:var(--surface);border:1px solid var(--hairline);padding:24px;margin-bottom:20px}
+.ld-tr{display:flex;align-items:baseline;gap:18px;padding:10px 0;border-bottom:1px solid var(--hairline)}
+.ld-tr:last-child{border-bottom:none}
+.ld-tl{font-family:var(--font-mono);font-size:9px;color:var(--ink-soft);width:110px;flex-shrink:0;letter-spacing:.05em}
+.ld-tsm{flex:1}
+.ld-br{border:1px solid var(--hairline);background:var(--surface);overflow:hidden;margin-bottom:20px}
+.ld-br-bar{display:flex;align-items:center;gap:7px;padding:9px 12px;background:var(--surface-warm);border-bottom:1px solid var(--hairline)}
+.ld-br-dots{display:flex;gap:4px}
+.ld-br-dot{width:7px;height:7px;border-radius:50%;background:var(--hairline)}
+.ld-br-url{flex:1;font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);background:var(--paper);padding:3px 9px;border:1px solid var(--hairline);margin-left:7px}
+.ld-br-ct{background:var(--paper);min-height:360px;position:relative}
+.ld-mn{display:flex;align-items:baseline;gap:20px;padding:14px 20px;border-bottom:1px solid var(--hairline)}
+.ld-mb{font-family:var(--font-mono);font-size:10px;letter-spacing:.3em;color:var(--ink);border-bottom:1px solid var(--brown);padding-bottom:2px}
+.ml{display:flex;gap:18px;margin-left:auto}
+.ld-ml{font-size:9px;color:var(--ink-soft);border-bottom:1px solid transparent;padding-bottom:2px;cursor:pointer;transition:all var(--tr)}
+.ld-ml:hover{color:var(--ink)}
+.ld-ml.current{color:var(--brown);border-bottom-color:var(--brown)}
+.ld-mm{padding:36px 20px;max-width:1000px;margin:0 auto}
+.ld-mh h1{font-size:28px;font-weight:500;letter-spacing:-.02em;line-height:1.2;margin-bottom:10px}
+.ld-mh p{font-size:14px;color:var(--ink-soft);max-width:440px;line-height:1.6}
+.ld-mlb{font-size:9px;color:var(--ink-soft);margin-bottom:10px;display:flex;align-items:baseline;justify-content:space-between}
+.ld-mmr{font-family:var(--font-mono);font-size:10px;color:var(--ink);border-bottom:1px solid var(--ink);cursor:pointer}
+.ld-mls{border-top:1px solid var(--ink)}
+.ld-mi{padding:14px 0;border-bottom:1px solid var(--hairline)}
+.ld-mit{font-size:15px;font-weight:500;margin-bottom:3px;cursor:pointer}
+.ld-mit:hover{text-decoration:underline;text-underline-offset:4px}
+.ld-mim{font-size:10px;color:var(--ink-soft)}
+.ld-mis{font-size:12px;color:var(--ink-soft);margin-top:5px;line-height:1.5}
+.ld-mtc{display:grid;grid-template-columns:2fr 1fr;gap:28px;margin-top:28px}
+.ld-mtc .ld-lft{border-right:1px solid var(--hairline);padding-right:28px}
+.ld-spec{display:grid;grid-template-columns:150px 1fr;gap:24px}
+.ld-hero{display:grid;grid-template-columns:1.5fr 1fr;gap:20px}
+.ld-ms{display:flex;align-items:baseline;gap:7px;padding:7px 0;border-bottom:1px solid var(--hairline);font-size:11px}
+.ld-md{font-family:var(--font-mono);font-size:9px}
+.ld-msn{font-weight:500;flex:1}
+.ld-msm{font-size:9px;color:var(--ink-soft);font-family:var(--font-mono)}
+.ld-an{background:var(--surface);border:1px solid var(--hairline);border-left:3px solid var(--brown);padding:18px 22px;margin-bottom:20px}
+.ld-at{font-size:12px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.ld-an-n{font-family:var(--font-mono);font-size:9px;background:var(--brown);color:#fff;width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ld-al{list-style:none;display:flex;flex-direction:column;gap:7px}
+.ld-al li{font-size:12px;color:var(--ink-soft);line-height:1.6;padding-left:14px;position:relative}
+.ld-al li::before{content:'→';position:absolute;left:0;color:var(--brown);font-family:var(--font-mono)}
+.ld-al li strong{color:var(--ink);font-weight:600}
+.ld-cmp{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px}
+.ld-cmp th{text-align:left;padding:9px 12px;font-size:9px;font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid var(--ink);background:var(--surface-warm)}
+.ld-cmp td{padding:10px 12px;border-bottom:1px solid var(--hairline);vertical-align:top;line-height:1.5}
+.ld-cmp tr:hover td{background:var(--surface)}
+.ld-bf{color:var(--ink-soft)}
+.ld-af{color:var(--ink);font-weight:500}
+.ld-im{font-family:var(--font-mono);font-size:9px;padding:2px 7px;display:inline-block}
+.ld-im-h{background:#f0e0d0;color:var(--brown)}
+.ld-im-m{background:#e8e4d8;color:var(--ink-soft)}
+.ld-im-l{background:#e0e8e0;color:var(--success)}
+.ld-pr{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-mono);font-size:9px;padding:2px 7px;border:1px solid}
+.ld-p0{border-color:var(--danger);color:var(--danger)}
+.ld-p1{border-color:var(--warn);color:var(--warn)}
+.ld-p2{border-color:var(--ink-soft);color:var(--ink-soft)}
+.ld-sp{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--hairline);padding:20px;margin-bottom:20px}
+.ld-sr{display:flex;align-items:center;gap:14px;padding:7px 0}
+.ld-sb2{height:14px;background:var(--brown);opacity:.7}
+.ld-sl{font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);width:75px;flex-shrink:0}
+.ld-sv{font-family:var(--font-mono);font-size:10px;color:var(--ink);width:55px}
+.ld-mt{display:none;position:fixed;top:10px;left:10px;z-index:200;width:34px;height:34px;background:var(--sb-bg);color:var(--sb-text);border:none;cursor:pointer;font-size:15px;align-items:center;justify-content:center}
+.ld-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+.ld-ov.show{display:block}
+@media(max-width:860px){.ld-sb{position:fixed;top:0;left:0;bottom:0;transform:translateX(-100%)}.ld-sb.open{transform:translateX(0)}.ld-mt{display:flex}.ld-ct{padding:18px 14px}.ld-c2,.ld-c3,.ld-c4{grid-template-columns:1fr}.ld-mtc{grid-template-columns:1fr}.ld-mtc .ld-lft{border-right:none;padding-right:0;border-bottom:1px solid var(--hairline);padding-bottom:20px}.ld-tb{padding:10px 14px;padding-left:52px}.ld-st{font-size:20px}.ld-hero{grid-template-columns:1fr}}
+@media(max-width:560px){.ld-tg{grid-template-columns:repeat(2,1fr)}.ld-tr{flex-direction:column;gap:3px}.ld-tl{width:auto}.ld-cmp{font-size:11px}.ld-cmp th,.ld-cmp td{padding:7px 9px}.ld-spec{grid-template-columns:1fr;gap:16px}}
+</style>
+<div class="ld-root" id="ldRoot">
+<button class="ld-mt" onclick="ldToggle()" aria-label="菜单">☰</button>
+<div class="ld-ov" onclick="ldToggle()"></div>
+<aside class="ld-sb" id="ldSb">
+<div class="ld-sb-hd"><div class="ld-sb-brand">LAITY ARCHIVE</div><div class="ld-sb-title">显著升级设计图</div><div class="ld-sb-meta">2026-11-13 · V2.3</div></div>
+<nav class="ld-sb-nav">
+<div class="ld-ns"><div class="ld-ns-l">总览</div>
+<button class="ld-ni active" data-view="overview"><span class="ld-ni-icon">◈</span> 设计总览</button>
+<button class="ld-ni" data-view="tokens"><span class="ld-ni-icon">◐</span> 设计令牌</button>
+<button class="ld-ni" data-view="typography"><span class="ld-ni-icon">Aa</span> 字体与排版</button></div>
+<div class="ld-ns"><div class="ld-ns-l">页面方案</div>
+<button class="ld-ni" data-view="home"><span class="ld-ni-icon">⌂</span> 首页 <span class="ld-ni-badge">P0</span></button>
+<button class="ld-ni" data-view="logs"><span class="ld-ni-icon">≡</span> 日志大厅 <span class="ld-ni-badge">P0</span></button>
+<button class="ld-ni" data-view="detail"><span class="ld-ni-icon">¶</span> 日志详情 <span class="ld-ni-badge">P0</span></button>
+<button class="ld-ni" data-view="projects"><span class="ld-ni-icon">▦</span> 作品档案 <span class="ld-ni-badge">P1</span></button>
+<button class="ld-ni" data-view="about"><span class="ld-ni-icon">○</span> 关于页 <span class="ld-ni-badge">P1</span></button></div>
+<div class="ld-ns"><div class="ld-ns-l">交付</div>
+<button class="ld-ni" data-view="compare"><span class="ld-ni-icon">⇄</span> 优化对照表</button>
+<button class="ld-ni" data-view="roadmap"><span class="ld-ni-icon">→</span> 实施路线</button></div>
+</nav>
+<div class="ld-sb-ft">视觉铁律：零圆角 · 无阴影<br>无渐变 · 无图标库<br>暖纸 #f4f1ec · 暖墨 #1a1a18</div>
+</aside>
+<div class="ld-main">
+<div class="ld-tb"><div class="ld-tb-l"><span class="ld-tb-t" id="ldT">设计总览</span><span class="ld-tb-s" id="ldS">Laity 档案库 · 显著升级</span></div><div class="ld-tb-r"><button class="ld-btn primary" onclick="ldExp()">导出方案摘要</button></div></div>
+<div class="ld-ct">
+
+<div class="ld-v active" id="ld-view-overview">
+<div class="ld-sh"><div class="ld-eb">DESIGN OVERVIEW</div><h1 class="ld-st">让档案库的视觉品质<br>匹配它的工程品质</h1><p class="ld-sd">Laity 档案库已完成 V1.0–V2.2 功能闭环（F01–F27），四道门禁全 0。本次显著升级在视觉铁律与技术栈锁定项内，以页面美观为主、功能优化为辅，让首页信息层次、大厅筛选体验、详情页阅读节奏达到可上线的成熟档案库水准。</p></div>
+<div style="margin-bottom:28px" class="ld-hero">
+<div style="border:1px solid var(--hairline);background:var(--surface);padding:24px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px"><span style="font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--brown)">档案条目 · SPECIMEN</span><span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-soft)">Laity 项目档案库</span></div>
+<div style="font-size:20px;font-weight:500;letter-spacing:-.01em;margin-bottom:16px">Docker 编排收口与预检门禁</div>
+<div class="ld-spec" style="margin-bottom:18px">
+<div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-soft)"><div>● BEFORE</div><div style="color:var(--ink);margin-top:2px">2026-11-12 09:14</div><div style="margin-top:12px">● AFTER</div><div style="color:var(--ink);margin-top:2px">2026-11-12 14:30</div></div>
+<div style="font-family:var(--font-serif);font-size:14px;line-height:1.85;color:var(--ink)">判断：把编排、门禁、文档三者收口到同一口径。验证：preflight 硬卡非 root、口令 ≥12 位、域名 https，app.environment 显式列出全部环境变量，填了即生效。</div>
+</div>
+<div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);margin-bottom:16px">Docker · 部署 · 编排</div>
+<div style="border:1px solid var(--ink);padding:12px;font-family:var(--font-mono);font-size:9px"><div style="letter-spacing:.2em;margin-bottom:6px">内容摘要 · SHA-256</div><div style="color:var(--ink-soft);word-break:break-all;line-height:1.6">73020c50d142c3d7affd6211d0f6ee9dae80ec4a26875df9d6ed0b880358f15b</div><div style="color:var(--ink-soft);margin-top:6px">PUBLISHED AT · 2026-11-12 14:30 UTC</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="border:1px solid var(--hairline);background:var(--surface-warm);padding:20px;flex:1">
+<div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--brown);margin-bottom:10px">为什么升级</div>
+<div style="font-size:13px;line-height:1.8;color:var(--ink)">功能已闭环、门禁全 0，但<strong>视觉品质还没匹配工程品质</strong>。本次不重做已实现的，只对着量到的真实缺口：首页缺规模感知、大厅筛选态不可视、详情读完无去处。</div>
+</div>
+<button class="ld-btn primary" style="padding:11px 16px;font-size:13px" onclick="document.querySelector('[data-view=home]').click()">查看首页方案 →</button>
+<button class="ld-btn" style="padding:9px 16px;font-size:12px" onclick="document.querySelector('[data-view=compare]').click()">优化对照表 · 基线 → 新增</button>
+</div>
+</div>
+<div class="ld-cg ld-c4" style="margin-bottom:28px">
+<div class="ld-ic"><div class="ld-cl">功能闭环</div><div class="ld-cv">F01–F27</div><div class="ld-cn">V1.0 冻结 + V2.2 增补全部落地</div></div>
+<div class="ld-ic"><div class="ld-cl">回归测试</div><div class="ld-cv">154 条</div><div class="ld-cn">npm test 全绿，纯逻辑覆盖</div></div>
+<div class="ld-ic"><div class="ld-cl">视觉令牌</div><div class="ld-cv">5 色</div><div class="ld-cn">暖纸 / 暖墨 / 暖灰 / 暖线 / 棕</div></div>
+<div class="ld-ic"><div class="ld-cl">本次升级</div><div class="ld-cv">5 页</div><div class="ld-cn">首页 / 大厅 / 详情 / 作品 / 关于</div></div>
+</div>
+<div class="ld-an"><div class="ld-at"><span class="ld-an-n">!</span> 升级原则</div><ul class="ld-al">
+<li><strong>不破锁定项</strong>：零圆角、无阴影、无渐变、无图标库、色值单源、技术栈不升级</li>
+<li><strong>美观为主</strong>：信息层次、留白节奏、字号阶韵律是本次核心，功能只补量到的缺口</li>
+<li><strong>可上线标准</strong>：三档断点无溢出、对比度 ≥ AA 4.5:1、视觉语言全站无漂移</li>
+<li><strong>软著兼容</strong>：改收录文件须重出材料，窗口容量约束纳入实施路线</li>
+</ul></div>
+<div class="ld-cg ld-c3">
+<div class="ld-ic"><div class="ld-cl">策略一 · 信息架构</div><div class="ld-cv" style="font-size:15px">统计前置 · 筛选可视</div><div class="ld-cn">首页档案统计条复用现有取数；大厅结果计数 + 激活筛选摘要一键清除；详情前后篇闭环</div></div>
+<div class="ld-ic"><div class="ld-cl">策略二 · 视觉设计</div><div class="ld-cv" style="font-size:15px">Mono 索引强化档案隐喻</div><div class="ld-cn">精选行 01–03 索引编号；统一两处「全部」入口字体（实测 mono 11px vs sans 14px 漂移）；加载骨架走暖线语言</div></div>
+<div class="ld-ic"><div class="ld-cl">策略三 · 交互设计</div><div class="ld-cv" style="font-size:15px">阅读路径闭环</div><div class="ld-cn">前后篇导航 + 同标签相关日志；阅读时长估算纯函数可单测；零日志提示与首页看板对齐</div></div>
+</div>
+</div>
+
+<div class="ld-v" id="ld-view-tokens">
+<div class="ld-sh"><div class="ld-eb">DESIGN TOKENS</div><h1 class="ld-st">五色令牌体系</h1><p class="ld-sd">D30 已闭环的暖调令牌体系。所有色值单源于 globals.css，改令牌须同 commit 同步 proxy.ts 内联 404 页。不引入 --ink-2 与数据色。</p></div>
+<div class="ld-tg">
+<div class="ld-ts"><div class="ld-tc" style="background:#f4f1ec"><span class="ld-tcl" style="color:#1a1a18;text-shadow:none">背景</span></div><div class="ld-ti"><div class="ld-tn">--background</div><div class="ld-th">#f4f1ec</div><div class="ld-tu">暖纸底，全站唯一背景色</div></div></div>
+<div class="ld-ts"><div class="ld-tc" style="background:#1a1a18"><span class="ld-tcl">主字</span></div><div class="ld-ti"><div class="ld-tn">--foreground</div><div class="ld-th">#1a1a18</div><div class="ld-tu">暖墨，正文 / 标题 / 焦点框</div></div></div>
+<div class="ld-ts"><div class="ld-tc" style="background:#625d53"><span class="ld-tcl">辅助</span></div><div class="ld-ti"><div class="ld-tn">--color-ink-soft</div><div class="ld-th">#625d53</div><div class="ld-tu">暖灰，标签 / 摘要 / 辅助文字</div></div></div>
+<div class="ld-ts"><div class="ld-tc" style="background:#d9d2c5"><span class="ld-tcl" style="color:#1a1a18;text-shadow:none">分隔</span></div><div class="ld-ti"><div class="ld-tn">--color-hairline</div><div class="ld-th">#d9d2c5</div><div class="ld-tu">暖线，1px 分隔线（装饰性豁免）</div></div></div>
+<div class="ld-ts"><div class="ld-tc" style="background:#7a5a3a"><span class="ld-tcl">强调</span></div><div class="ld-ti"><div class="ld-tn">--color-brown</div><div class="ld-th">#7a5a3a</div><div class="ld-tu">唯一强调色：导航当前项 + 搜索高亮</div></div></div>
+</div>
+<div class="ld-an"><div class="ld-at"><span class="ld-an-n">✓</span> 对比度判据（WCAG AA）</div><ul class="ld-al">
+<li>主墨 <strong>#1a1a18</strong> / 暖纸 = <strong>15.47:1</strong>（AAA）</li>
+<li>暖灰 <strong>#625d53</strong> / 暖纸 = <strong>5.81:1</strong>（AA）</li>
+<li>棕 <strong>#7a5a3a</strong> / 暖纸 = <strong>5.56:1</strong>（AA，全站最差文本对比）</li>
+<li>暖线 <strong>#d9d2c5</strong> / 暖纸 = <strong>1.33:1</strong>（装饰性豁免，I073）</li>
+</ul></div>
+<div class="ld-sh" style="margin-top:28px"><div class="ld-eb">SPACING RHYTHM</div><h2 class="ld-st" style="font-size:18px">留白节奏</h2></div>
+<div class="ld-sp">
+<div class="ld-sr"><span class="ld-sl">页面内边距</span><div class="ld-sb2" style="width:90px"></div><span class="ld-sv">24px</span></div>
+<div class="ld-sr"><span class="ld-sl">页面上下</span><div class="ld-sb2" style="width:180px"></div><span class="ld-sv">96px</span></div>
+<div class="ld-sr"><span class="ld-sl">区块间距</span><div class="ld-sb2" style="width:150px"></div><span class="ld-sv">80px</span></div>
+<div class="ld-sr"><span class="ld-sl">列表行间距</span><div class="ld-sb2" style="width:75px"></div><span class="ld-sv">32px</span></div>
+<div class="ld-sr"><span class="ld-sl">标题下间距</span><div class="ld-sb2" style="width:45px"></div><span class="ld-sv">24px</span></div>
+<div class="ld-sr"><span class="ld-sl">标签间距</span><div class="ld-sb2" style="width:22px"></div><span class="ld-sv">16px</span></div>
+</div>
+</div>
+
+<div class="ld-v" id="ld-view-typography">
+<div class="ld-sh"><div class="ld-eb">TYPOGRAPHY</div><h1 class="ld-st">三字体分工</h1><p class="ld-sd">Inter 承担 UI 与中文标签，Noto Serif SC 承担日志正文（18px / 行高 1.85），JetBrains Mono 承担时间戳、数字与英文标识。中文标签不走 Mono，去 0.2em 宽字距。</p></div>
+<div class="ld-td">
+<div class="ld-tr"><span class="ld-tl">H1 · 36px</span><span class="ld-tsm" style="font-size:32px;font-weight:500;letter-spacing:-.02em">数字档案，记录每一次工程决策。</span></div>
+<div class="ld-tr"><span class="ld-tl">H2 · 24px</span><span class="ld-tsm" style="font-size:22px;font-weight:500">开发日志</span></div>
+<div class="ld-tr"><span class="ld-tl">H3 · 20px</span><span class="ld-tsm" style="font-size:18px;font-weight:500">精选项目标题</span></div>
+<div class="ld-tr"><span class="ld-tl">正文 · 18px</span><span class="ld-tsm" style="font-family:var(--font-serif);font-size:16px;line-height:1.85">日志正文强制 Noto Serif SC，18px 字号、1.85 行高，长文阅读耐看。这是档案库的核心阅读体验。</span></div>
+<div class="ld-tr"><span class="ld-tl">辅助 · 14px</span><span class="ld-tsm" style="font-size:13px;color:var(--ink-soft)">收集项目作品与开发复盘，构建一份可信的数字履历。</span></div>
+<div class="ld-tr"><span class="ld-tl">标签 · 11px</span><span class="ld-tsm" style="font-size:10px;color:var(--ink-soft)">产品 · 进行中 · 3 条日志</span></div>
+<div class="ld-tr"><span class="ld-tl">区头 · 10px</span><span class="ld-tsm" style="font-size:9px;color:var(--ink-soft)">精选项目</span></div>
+<div class="ld-tr"><span class="ld-tl">Mono · 11px</span><span class="ld-tsm" style="font-family:var(--font-mono);font-size:10px;letter-spacing:.1em">BEFORE · 2026-11-04 10:59 UTC</span></div>
+<div class="ld-tr"><span class="ld-tl">字标 · 11px</span><span class="ld-tsm" style="font-family:var(--font-mono);font-size:10px;letter-spacing:.3em;border-bottom:1px solid var(--brown);padding-bottom:2px">LAITY</span></div>
+</div>
+<div class="ld-an"><div class="ld-at"><span class="ld-an-n">!</span> 字体铁律</div><ul class="ld-al">
+<li><strong>中文标签走 Inter</strong>（font-sans），不走 Mono，去 tracking-[0.2em] 宽字距</li>
+<li><strong>英文标识保留 Mono</strong>：BEFORE / AFTER / LAITY 字标 / 时间戳 / 哈希</li>
+<li><strong>日志正文强制宋体</strong>：Noto Serif SC 18px / 1.85，不可替换</li>
+<li><strong>字号阶不新增</strong>：36 / 24 / 20 / 18 / 14 / 11 / 10，不引入 13px 等阶外值</li>
+</ul></div>
+</div>
+
+<div class="ld-v" id="ld-view-home">
+<div class="ld-sh"><div class="ld-eb">PAGE 01 · HOME</div><h1 class="ld-st">首页 · 索引大厅</h1><p class="ld-sd">首屏 3 秒理解站点定位。精选项目占主栏 2/3 前置，档案状态与最新日志分右栏 1/3。容器查询按栏宽决定时间轴横竖排，不靠视口断点。</p></div>
+<div class="ld-br"><div class="ld-br-bar"><div class="ld-br-dots"><span class="ld-br-dot"></span><span class="ld-br-dot"></span><span class="ld-br-dot"></span></div><div class="ld-br-url">localhost:3000/</div></div><div class="ld-br-ct">
+<div class="ld-mn"><span class="ld-mb">LAITY</span><div class="ml"><span class="ld-ml">作品档案</span><span class="ld-ml">开发日志</span><span class="ld-ml">关于</span></div></div>
+<div class="ld-mm"><div class="ld-mh"><h1>数字档案，记录每一次工程决策。</h1><p>收集项目作品与开发复盘，构建一份可信的数字履历。</p></div>
+<div style="display:flex;gap:26px;align-items:baseline;margin-top:22px;padding:12px 0;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);font-size:10px;color:var(--ink-soft);flex-wrap:wrap"><span><span style="font-family:var(--font-mono);color:var(--ink);font-size:15px;font-weight:500">2</span> 项目</span><span><span style="font-family:var(--font-mono);color:var(--ink);font-size:15px;font-weight:500">13</span> 已发布日志</span><span>最新发布 <span style="font-family:var(--font-mono);color:var(--ink)">2026-11-12</span></span><span style="margin-left:auto;border:1px solid var(--hairline);padding:1px 7px;font-family:var(--font-mono);font-size:9px">新增 · 档案统计条</span></div>
+<div class="ld-mtc"><div class="ld-lft"><div class="ld-mlb"><span>精选项目</span><span class="ld-mmr">全部作品 →</span></div><div class="ld-mls">
+<div class="ld-mi"><div class="ld-mit"><span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);margin-right:10px">01</span>Laity 项目档案库</div><div class="ld-mim">产品 · 进行中 · 13 条日志</div><div class="ld-mis">个人全栈数字档案库：厂牌官网 + 开发复盘证据链</div></div>
+<div class="ld-mi"><div class="ld-mit"><span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);margin-right:10px">02</span>地球 Mirror</div><div class="ld-mim">站点 · 已上线 · 1 条日志</div></div>
+</div></div><div><div class="ld-mlb"><span>档案状态</span></div>
+<div class="ld-ms"><span class="ld-md">●</span><span class="ld-msn">Laity 项目档案库</span><span class="ld-msm">13 LOGS</span></div>
+<div class="ld-ms"><span class="ld-md">○</span><span class="ld-msn">地球 Mirror</span><span class="ld-msm">1 LOGS</span></div>
+<div style="margin-top:28px"><div class="ld-mlb"><span>最新日志</span><span class="ld-mmr">全部日志 →</span></div><div class="ld-mls">
+<div class="ld-mi"><div class="ld-mit" style="font-size:13px">Docker 编排收口</div><div class="ld-mim" style="font-size:9px">BEFORE 11-12 · AFTER 11-12</div></div>
+<div class="ld-mi"><div class="ld-mit" style="font-size:13px">搜索高亮落地</div><div class="ld-mim" style="font-size:9px">BEFORE 11-11 · AFTER 11-12</div></div>
+</div></div></div></div></div>
+</div></div>
+<div class="ld-an"><div class="ld-at"><span class="ld-an-n">1</span> 首页 · 基线已实现 → 本次新增</div><ul class="ld-al">
+<li><strong>基线</strong>：三区分栏 + 容器查询 + publishedAt 排序 + 摘要两行 + 字标棕色当前态（F01/D13，代码实测在位）</li>
+<li><strong>新增</strong>：档案统计条——项目数 / 已发布数 / 最新发布，复用 getArchiveBoard + getLatestLogs 现有结果，零新增查询</li>
+<li><strong>新增</strong>：精选行 mono 索引编号 01–03，强化「档案条目」隐喻，编号走 JetBrains Mono</li>
+<li><strong>新增</strong>：统一两处「全部」入口字体——实测漂移：精选区 mono 11px vs 最新日志区 sans 14px（page.tsx 两处 className 不一致）</li>
+</ul></div>
+</div>
+
+<div class="ld-v" id="ld-view-logs">
+<div class="ld-sh"><div class="ld-eb">PAGE 02 · LOGS HALL</div><h1 class="ld-st">日志大厅 · 筛选与搜索</h1><p class="ld-sd">双层筛选（项目 + 标签）经 URL 参数传递、可分享。搜索高亮 + 片段预览。标签默认折叠 12 个，超出收进原生 details，选中项并进可见组。</p></div>
+<div class="ld-br"><div class="ld-br-bar"><div class="ld-br-dots"><span class="ld-br-dot"></span><span class="ld-br-dot"></span><span class="ld-br-dot"></span></div><div class="ld-br-url">localhost:3000/logs?q=Docker</div></div><div class="ld-br-ct">
+<div class="ld-mn"><span class="ld-mb">LAITY</span><div class="ml"><span class="ld-ml">作品档案</span><span class="ld-ml current">开发日志</span><span class="ld-ml">关于</span></div></div>
+<div class="ld-mm"><h1 style="font-size:24px;font-weight:500;margin-bottom:20px">开发日志</h1>
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--hairline)"><span style="font-size:9px;color:var(--ink-soft)">搜索</span><span style="font-size:12px;border-bottom:1px solid var(--hairline);padding:2px 0;flex:1">Docker</span><span style="font-size:12px;border-bottom:1px solid var(--ink);cursor:pointer">搜索</span></div>
+<div style="display:flex;gap:20px;padding:10px 0;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);margin-bottom:20px;flex-wrap:wrap"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><span style="font-size:9px;color:var(--ink-soft)">项目</span><span style="font-size:11px;border-bottom:1px solid var(--ink)">全部</span><span style="font-size:11px;color:var(--ink-soft)">Laity 档案库</span></div><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-left:auto"><span style="font-size:9px;color:var(--ink-soft)">标签</span><span style="font-size:11px;color:var(--ink-soft)">Docker</span><span style="font-size:11px;color:var(--ink-soft)">部署</span><span style="font-size:10px;color:var(--ink-soft);font-family:var(--font-mono)">[ + 展开全部标签 ]</span></div></div>
+<div style="display:flex;align-items:baseline;gap:14px;margin-bottom:14px;font-size:10px;color:var(--ink-soft);flex-wrap:wrap"><span style="font-family:var(--font-mono)">共 <span style="color:var(--ink)">1</span> 条日志</span><span>筛选：q=Docker</span><span style="border-bottom:1px solid var(--ink);color:var(--ink);cursor:pointer">清除全部 ×</span><span style="margin-left:auto;border:1px solid var(--hairline);padding:1px 7px;font-family:var(--font-mono);font-size:9px">新增 · 计数 + 筛选摘要</span></div>
+<div class="ld-mls"><div class="ld-mi" style="display:flex;gap:20px"><div style="width:120px;flex-shrink:0;font-family:var(--font-mono);font-size:9px;color:var(--ink-soft)"><div>● BEFORE</div><div style="color:var(--ink);margin-top:2px">2026-11-12</div><div style="margin-top:10px">● AFTER</div><div style="color:var(--ink);margin-top:2px">2026-11-12</div></div><div style="flex:1"><div style="font-size:9px;color:var(--ink-soft);font-family:var(--font-mono);margin-bottom:3px">Laity 项目档案库</div><div style="font-size:16px;font-weight:500;margin-bottom:5px"><mark style="background:var(--brown);color:var(--paper);padding:0 2px">Docker</mark> 编排收口与预检门禁</div><div style="font-size:10px;color:var(--ink-soft);font-family:var(--font-mono);margin-bottom:7px">Docker · 部署 · 编排</div><div style="font-size:12px;color:var(--ink);line-height:1.6"><span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-soft);letter-spacing:.1em">AFTER</span> …生产编排的 <mark style="background:var(--brown);color:var(--paper);padding:0 2px">Docker</mark> compose 配置已收口，preflight 硬卡…</div></div></div></div>
+</div></div></div>
+<div class="ld-an"><div class="ld-at"><span class="ld-an-n">2</span> 大厅 · 基线已实现 → 本次新增</div><ul class="ld-al">
+<li><strong>基线</strong>：双层筛选 URL 可分享 + 标签折叠 12 + 搜索高亮片段 + 空态三态 + 标签聚合链接（F02/F24/F26，代码实测在位）</li>
+<li><strong>新增</strong>：结果计数行——「共 N 条日志」随筛选/搜索联动，mono 数字，复用现有 logs.length 零新增查询</li>
+<li><strong>新增</strong>：激活筛选摘要 + 一键清除——实测缺口：有结果时看不到当前筛了什么，清除出口只在空态出现</li>
+<li><strong>新增</strong>：「全部日志」入口字体与首页统一（同首页漂移项，一次改两处）</li>
+</ul></div>
+</div>
+
+<div class="ld-v" id="ld-view-detail">
+<div class="ld-sh"><div class="ld-eb">PAGE 03 · LOG DETAIL</div><h1 class="ld-st">日志详情 · 阅读体验</h1><p class="ld-sd">限宽 720px 宋体正文，BEFORE / AFTER 双段 Markdown。≥1024px 正文左 + 目录右栏（grid + sticky），&lt;1024px 目录收为折叠面板。整页阅读进度条（CSS 滚动驱动，零 JS）。底部内容摘要印章。</p></div>
+<div class="ld-br"><div class="ld-br-bar"><div class="ld-br-dots"><span class="ld-br-dot"></span><span class="ld-br-dot"></span><span class="ld-br-dot"></span></div><div class="ld-br-url">localhost:3000/u/zhanglei/logs/docker-compose</div></div><div class="ld-br-ct">
+<div style="height:3px;background:var(--ink);width:35%;position:absolute;top:0;left:0"></div>
+<div class="ld-mn"><span class="ld-mb">LAITY</span><div class="ml"><span class="ld-ml">作品档案</span><span class="ld-ml current">开发日志</span><span class="ld-ml">关于</span></div></div>
+<div class="ld-mm" style="max-width:1000px"><div style="display:grid;grid-template-columns:1fr 200px;gap:32px"><div>
+<div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);letter-spacing:.2em;margin-bottom:20px">← 开发日志</div>
+<div style="border-bottom:1px solid var(--hairline);padding-bottom:20px;margin-bottom:28px"><div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);margin-bottom:7px">Laity 项目档案库</div><h1 style="font-size:22px;font-weight:500;letter-spacing:-.01em;margin-bottom:14px">Docker 编排收口与预检门禁</h1><div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-soft);display:flex;gap:20px"><span>● BEFORE 2026-11-12</span><span>● AFTER 2026-11-12</span></div><div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);margin-top:10px">Docker · 部署 · 编排 · 约 4 分钟读完</div></div>
+<div style="margin-bottom:28px"><div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--ink-soft);margin-bottom:10px">BEFORE</div><div style="font-family:var(--font-serif);font-size:15px;line-height:1.85;color:var(--ink)"><p style="margin-bottom:14px">生产编排的 Docker compose 配置散落在多处，preflight 门禁的判定项与文档不同步。需要把编排、门禁、文档三者收口到同一口径。</p><h2 style="font-size:18px;font-weight:500;margin:20px 0 10px">问题定位</h2><p>compose 的 --env-file 只参与插值、不注入容器，此前漏了 OSS 四键导致填了也不显示。</p></div></div>
+<div style="margin-bottom:28px"><div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--ink-soft);margin-bottom:10px">AFTER</div><div style="font-family:var(--font-serif);font-size:15px;line-height:1.85;color:var(--ink)"><p>编排已收口，preflight 硬卡非 root、口令 ≥12 位、域名 https。app.environment 显式列出全部环境变量。</p></div></div>
+<div style="border:1px solid var(--ink);padding:14px;font-family:var(--font-mono);font-size:10px;margin-top:28px"><div style="letter-spacing:.2em;margin-bottom:7px">内容摘要</div><div style="color:var(--ink-soft);word-break:break-all;line-height:1.6">73020c50d142c3d7affd6211d0f6ee9dae80ec4a26875df9d6ed0b880358f15b</div><div style="color:var(--ink-soft);margin-top:7px">PUBLISHED AT · 2026-11-12 14:30 UTC</div></div>
+<div style="display:flex;justify-content:space-between;gap:20px;margin-top:28px;padding-top:16px;border-top:1px solid var(--hairline);font-size:11px;flex-wrap:wrap"><span style="color:var(--ink-soft)">← 上一篇：<span style="color:var(--ink)">搜索高亮落地</span></span><span style="color:var(--ink-soft)">下一篇：<span style="color:var(--ink)">标签聚合页</span> →</span></div>
+<div style="margin-top:20px"><div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--ink-soft);margin-bottom:8px">相关日志 · 同标签 ≤3</div><div style="font-size:11px;color:var(--ink);line-height:2">生产预演与回滚手册 · 部署流水线一次跑通</div></div>
+</div><div style="position:sticky;top:20px;align-self:start"><div style="font-size:9px;color:var(--ink-soft);margin-bottom:10px">目录</div>
+<div style="border-left:2px solid var(--ink);padding-left:10px;margin-bottom:7px"><div style="font-size:11px;color:var(--ink);font-weight:500">01 问题定位</div></div>
+<div style="border-left:2px solid transparent;padding-left:10px;margin-bottom:7px"><div style="font-size:11px;color:var(--ink-soft)">02 编排收口</div></div>
+<div style="border-left:2px solid transparent;padding-left:10px;margin-bottom:7px"><div style="font-size:11px;color:var(--ink-soft)">03 门禁同步</div></div>
+<div style="border-left:2px solid transparent;padding-left:10px"><div style="font-size:11px;color:var(--ink-soft)">04 验证判据</div></div>
+</div></div></div>
+</div></div>
+<div class="ld-an"><div class="ld-at"><span class="ld-an-n">3</span> 详情页 · 基线已实现 → 本次新增</div><ul class="ld-al">
+<li><strong>基线</strong>：720px 宋体 + 目录右栏 sticky + scrollspy + 整页进度条 + 摘要印章 + AI 标注（F03/F23，代码实测在位）</li>
+<li><strong>新增</strong>：前后篇导航——按 publishedAt 取相邻已发布日志，印章下方暖线分隔，读完有去处</li>
+<li><strong>新增</strong>：相关日志——同标签至多 3 条（排除自身），复用 getSafeLogs({ tag })，零新增查询口</li>
+<li><strong>新增</strong>：阅读时长估算——正文字数 / 400 字每分钟，纯函数进 src/lib 可单测，头部 mono 展示</li>
+</ul></div>
+</div>
+
+<div class="ld-v" id="ld-view-projects">
+<div class="ld-sh"><div class="ld-eb">PAGE 04 · PROJECTS</div><h1 class="ld-st">作品档案 · 项目维度</h1><p class="ld-sd">按作品维度归档：每个项目的类型、状态、简介与已发布日志数。下钻页不进全局导航，顶部给返回退路。公开口径由查询层 select 白名单决定。</p></div>
+<div class="ld-br"><div class="ld-br-bar"><div class="ld-br-dots"><span class="ld-br-dot"></span><span class="ld-br-dot"></span><span class="ld-br-dot"></span></div><div class="ld-br-url">localhost:3000/projects</div></div><div class="ld-br-ct">
+<div class="ld-mn"><span class="ld-mb">LAITY</span><div class="ml"><span class="ld-ml current">作品档案</span><span class="ld-ml">开发日志</span><span class="ld-ml">关于</span></div></div>
+<div class="ld-mm"><div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);letter-spacing:.2em;margin-bottom:20px">← 首页</div><h1 style="font-size:24px;font-weight:500;margin-bottom:10px">项目</h1><p style="font-size:14px;color:var(--ink-soft);max-width:440px;margin-bottom:28px">按作品维度看档案：一个项目下的判断与验证，都收在同一页里。</p>
+<div class="ld-mls">
+<div class="ld-mi" style="display:flex;gap:14px;align-items:baseline"><span style="font-family:var(--font-mono);font-size:9px">●</span><div style="flex:1"><div class="ld-mit">Laity 项目档案库</div><div class="ld-mim"><span style="font-family:var(--font-mono)">laity-archive</span> · 产品 · 进行中</div><div class="ld-mis">个人全栈数字档案库：厂牌官网 + 开发复盘证据链</div></div><div style="font-size:10px;color:var(--ink-soft);text-align:right"><div>13 条日志</div><div style="font-family:var(--font-mono);font-size:9px">2026-11-12</div></div></div>
+<div class="ld-mi" style="display:flex;gap:14px;align-items:baseline"><span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-soft)">○</span><div style="flex:1"><div class="ld-mit">地球 Mirror</div><div class="ld-mim"><span style="font-family:var(--font-mono)">earth-mirror</span> · 站点 · 已上线</div></div><div style="font-size:10px;color:var(--ink-soft);text-align:right"><div>1 条日志</div><div style="font-family:var(--font-mono);font-size:9px">2026-11-04</div></div></div>
+</div><div style="margin-top:28px"><span style="font-size:12px;border-bottom:1px solid var(--ink);cursor:pointer">全部日志 →</span></div></div>
+</div></div>
+<div class="ld-an"><div class="ld-at"><span class="ld-an-n">4</span> 作品页 · 基线已实现 → 本次新增</div><ul class="ld-al">
+<li><strong>基线</strong>：状态符号 ●/○ + select 白名单 + 只计已发布 + 返回退路（F11/D10，代码实测在位）</li>
+<li><strong>新增</strong>：日期口径统一到 formatUtc——实测漂移：本页用 toISOString().slice(0,10)，与全站 time.ts 单源不一致（I058 四处之一）</li>
+<li><strong>新增</strong>：零日志项目补「尚未发布」提示，与首页看板口径对齐，不拿创建时间冒充更新</li>
+</ul></div>
+</div>
+
+<div class="ld-v" id="ld-view-about">
+<div class="ld-sh"><div class="ld-eb">PAGE 05 · ABOUT</div><h1 class="ld-st">关于页 · 可信度建立</h1><p class="ld-sd">站主简介 / 技术栈 / 联系方式三段。技术栈只列名称与用途不写版本号。联系方式走环境变量，未配置显示「待补充」不虚构。静态生成，进 sitemap 与导航第三项。</p></div>
+<div class="ld-br"><div class="ld-br-bar"><div class="ld-br-dots"><span class="ld-br-dot"></span><span class="ld-br-dot"></span><span class="ld-br-dot"></span></div><div class="ld-br-url">localhost:3000/about</div></div><div class="ld-br-ct">
+<div class="ld-mn"><span class="ld-mb">LAITY</span><div class="ml"><span class="ld-ml">作品档案</span><span class="ld-ml">开发日志</span><span class="ld-ml current">关于</span></div></div>
+<div class="ld-mm" style="max-width:640px"><div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);letter-spacing:.2em;margin-bottom:20px">← 返回首页</div>
+<div style="border-bottom:1px solid var(--hairline);padding-bottom:20px;margin-bottom:28px"><h1 style="font-size:22px;font-weight:500;margin-bottom:7px">关于</h1><div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-soft)">站主 · 这个档案库记什么 · 用什么做 · 怎么联系</div></div>
+<div style="margin-bottom:28px"><div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--ink-soft);margin-bottom:10px">个人简介</div><div style="font-size:14px;line-height:1.8;color:var(--ink)"><p style="margin-bottom:10px">我是张磊，这个站的主人与唯一的作者：代码、文案、发布与运维都是我一个人。</p><p>这里不是博客，也不放教程。它记的是判断过程——每条开发日志都成对写着 BEFORE 与 AFTER，底部带 SHA-256 摘要与服务器发布时间。</p></div></div>
+<div style="border-top:1px solid var(--hairline);padding-top:28px;margin-bottom:28px"><div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--ink-soft);margin-bottom:10px">技术栈</div><div style="font-family:var(--font-mono);font-size:11px;line-height:2;color:var(--ink-soft)"><div style="font-size:9px;letter-spacing:.15em;margin-top:4px">框架</div><div><span style="color:var(--ink)">Next.js</span> — App Router 全栈框架</div><div><span style="color:var(--ink)">TypeScript</span> — 类型系统与编译</div><div style="font-size:9px;letter-spacing:.15em;margin-top:8px">样式</div><div><span style="color:var(--ink)">Tailwind CSS</span> — 样式工具类</div><div style="font-size:9px;letter-spacing:.15em;margin-top:8px">数据</div><div><span style="color:var(--ink)">Prisma</span> — schema、迁移与数据访问</div><div><span style="color:var(--ink)">PostgreSQL</span> — 数据库</div></div></div>
+<div style="border-top:1px solid var(--hairline);padding-top:28px"><div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--ink-soft);margin-bottom:10px">联系方式</div><div style="font-family:var(--font-mono);font-size:11px;display:flex;gap:14px;margin-bottom:7px"><span style="color:var(--ink-soft);width:70px">邮箱</span><span style="color:var(--ink-soft);font-style:italic">待补充</span></div><div style="font-family:var(--font-mono);font-size:11px;display:flex;gap:14px"><span style="color:var(--ink-soft);width:70px">代码仓库</span><span style="color:var(--ink)">laity9527/laity-archive ↗</span></div></div>
+</div></div></div>
+<div class="ld-an"><div class="ld-at"><span class="ld-an-n">5</span> 关于页 · 基线已实现 → 本次新增</div><ul class="ld-al">
+<li><strong>基线</strong>：三段内容 + 不虚构「待补充」+ 不写版本号 + 静态生成进 sitemap（F19/D31，代码实测在位）</li>
+<li><strong>新增</strong>：技术栈展示分组——按职责分组（框架 / 样式 / 数据 / 鉴权），纯前端分组不改数据与文案，扫读更快</li>
+<li><strong>新增</strong>：分组小标题走既有 10px 区头字号阶，不新增字号、不引入新色</li>
+</ul></div>
+</div>
+
+<div class="ld-v" id="ld-view-compare">
+<div class="ld-sh"><div class="ld-eb">OPTIMIZATION MAP</div><h1 class="ld-st">优化对照表</h1><p class="ld-sd">左列是代码实测的已实现基线（不重做），右列是本次新增升级——每项都对着量到的真实缺口。所有改动在视觉铁律与技术栈锁定项内，不新增依赖。</p></div>
+<table class="ld-cmp"><thead><tr><th style="width:13%">页面</th><th style="width:27%">已实现基线（实测）</th><th style="width:32%">本次新增升级</th><th style="width:12%">影响面</th><th style="width:16%">优先级</th></tr></thead><tbody>
+<tr><td><strong>首页</strong></td><td class="ld-bf">三区分栏 + 容器查询 + publishedAt 排序 + 摘要两行（F01/D13）</td><td class="ld-af">档案统计条复用现有取数；精选行 mono 索引 01–03；统一两处「全部」入口字体（实测 mono 11px vs sans 14px 漂移）</td><td><span class="ld-im ld-im-h">高</span></td><td><span class="ld-pr ld-p0">P0</span></td></tr>
+<tr><td><strong>日志大厅</strong></td><td class="ld-bf">双层筛选 URL 可分享 + 标签折叠 12 + 搜索高亮片段 + 空态三态（F02/F24/F26）</td><td class="ld-af">结果计数行随筛选联动；激活筛选摘要 + 一键清除（现清除出口只在空态出现）</td><td><span class="ld-im ld-im-h">高</span></td><td><span class="ld-pr ld-p0">P0</span></td></tr>
+<tr><td><strong>日志详情</strong></td><td class="ld-bf">720px 宋体 + 目录右栏 + 进度条 + 印章（F03/F23）</td><td class="ld-af">前后篇导航；同标签相关日志 ≤3；阅读时长估算纯函数 + 测试</td><td><span class="ld-im ld-im-h">高</span></td><td><span class="ld-pr ld-p0">P0</span></td></tr>
+<tr><td><strong>作品档案</strong></td><td class="ld-bf">状态符号 + select 白名单 + 只计已发布 + 返回退路（F11/D10）</td><td class="ld-af">日期口径统一 formatUtc（实测 toISOString().slice，I058）；零日志「尚未发布」提示对齐</td><td><span class="ld-im ld-im-m">中</span></td><td><span class="ld-pr ld-p1">P1</span></td></tr>
+<tr><td><strong>关于页</strong></td><td class="ld-bf">三段 + 不虚构 + 静态生成（F19/D31）</td><td class="ld-af">技术栈展示分组（框架/样式/数据/鉴权），纯前端不改数据</td><td><span class="ld-im ld-im-l">低</span></td><td><span class="ld-pr ld-p1">P1</span></td></tr>
+<tr><td><strong>全局</strong></td><td class="ld-bf">焦点 / aria-current / CSP / sanitize 在位</td><td class="ld-af">Suspense 加载骨架：暖线占位行替换「加载中…」文本，零 JS</td><td><span class="ld-im ld-im-m">中</span></td><td><span class="ld-pr ld-p1">P1</span></td></tr>
+</tbody></table>
+</div>
+
+<div class="ld-v" id="ld-view-roadmap">
+<div class="ld-sh"><div class="ld-eb">IMPLEMENTATION ROADMAP</div><h1 class="ld-st">实施路线</h1><p class="ld-sd">按影响面与依赖关系排序，每步独立验收、独立 commit。改收录文件须重出软著材料，窗口容量约束纳入每步判据。</p></div>
+<div class="ld-cg ld-c2" style="margin-bottom:20px">
+<div class="ld-ic" style="border-left:3px solid var(--danger)"><div class="ld-cl">Phase A · 核心体验（P0）</div><div class="ld-cv" style="font-size:15px">首页 + 大厅 + 详情</div><div class="ld-cn" style="margin-top:7px;line-height:1.8">A1 首页统计条 + 索引编号 + 入口字体统一<br>A2 大厅计数行 + 筛选摘要一键清除<br>A3 详情前后篇 + 相关日志</div></div>
+<div class="ld-ic" style="border-left:3px solid var(--warn)"><div class="ld-cl">Phase B · 阅读增强（P1）</div><div class="ld-cv" style="font-size:15px">时长 + 口径 + 全局</div><div class="ld-cn" style="margin-top:7px;line-height:1.8">B1 阅读时长估算（纯函数 + 测试）<br>B2 作品日期口径统一 + 零日志提示<br>B3 关于页技术栈分组<br>B4 全局加载骨架</div></div>
+</div>
+<div class="ld-an"><div class="ld-at"><span class="ld-an-n">!</span> 每步验收判据</div><ul class="ld-al">
+<li><strong>四道门禁全 0</strong>：npm run lint / npx tsc --noEmit / npm run build / npm test</li>
+<li><strong>视觉铁律自查</strong>：grep 产出无 rounded-（非 none）/ shadow-（非 none）/ bg-gradient / 图标库 import</li>
+<li><strong>软著材料重出</strong>：node tools/软著材料生成.mjs，assertWindowFit() 放行，两次 MD5 一致</li>
+<li><strong>浏览器实测</strong>：三档断点无横向溢出，对比度 ≥ AA，aria-current 全站唯一</li>
+<li><strong>凭据扫描</strong>：产出物逐行扫凭据形态，先用伪凭据验证扫描器有效</li>
+</ul></div>
+<div class="ld-an" style="border-left-color:var(--success)"><div class="ld-at"><span class="ld-an-n" style="background:var(--success)">✓</span> 已闭环（不需重做）</div><ul class="ld-al">
+<li>D30 视觉令牌切换（四色 + 棕，A1–A4 + B1 全落地）</li>
+<li>F19 /about 关于页（静态生成，三段内容）</li>
+<li>F23 阅读目录与进度条（toc.ts + ArticleToc + CSS 滚动驱动）</li>
+<li>F24 搜索高亮（highlight.ts + mark 棕底纸白字）</li>
+<li>F25 全站数据导出（JSON + Route Handler）</li>
+<li>F26 标签聚合页（/tags/[tag] + proxy 真 404）</li>
+<li>F27 RSS 订阅（/feed.xml + 手写 XML 零依赖）</li>
+</ul></div>
+</div>
+
+</div></div></div>
+<script>
+(function(){
+var root=document.getElementById('ldRoot');
+var navItems=root.querySelectorAll('.ld-ni');
+var views=root.querySelectorAll('.ld-v');
+var topT=document.getElementById('ldT');
+var topS=document.getElementById('ldS');
+var titles={overview:['设计总览','Laity 档案库 · 显著升级'],tokens:['设计令牌','五色体系 · 对比度判据'],typography:['字体与排版','三字体分工 · 字号阶'],home:['首页 · 索引大厅','统计条 · 索引编号 · 入口统一'],logs:['日志大厅','结果计数 · 筛选摘要'],detail:['日志详情','前后篇 · 相关日志 · 时长'],projects:['作品档案','日期口径 · 零日志提示'],about:['关于页','技术栈分组'],compare:['优化对照表','基线已实现 → 本次新增'],roadmap:['实施路线','Phase A / B · 验收判据']};
+function sw(id){views.forEach(function(v){v.classList.remove('active')});navItems.forEach(function(n){n.classList.remove('active')});var t=document.getElementById('ld-view-'+id);if(t)t.classList.add('active');var b=root.querySelector('[data-view="'+id+'"]');if(b)b.classList.add('active');if(titles[id]){topT.textContent=titles[id][0];topS.textContent=titles[id][1]}var sb=document.getElementById('ldSb');if(sb)sb.classList.remove('open');var ov=root.querySelector('.ld-ov');if(ov)ov.classList.remove('show')}
+navItems.forEach(function(item){item.addEventListener('click',function(){sw(item.dataset.view)})});
+window.ldToggle=function(){var sb=document.getElementById('ldSb');var ov=root.querySelector('.ld-ov');if(sb)sb.classList.toggle('open');if(ov)ov.classList.toggle('show')};
+window.ldExp=function(){var s='Laity 档案库显著升级方案摘要\n================================\n日期：2026-11-13\n范围：显著升级（页面美观为主）\n\n设计令牌（5 色）\n- 暖纸 #f4f1ec（背景）\n- 暖墨 #1a1a18（主字）\n- 暖灰 #625d53（辅助）\n- 暖线 #d9d2c5（分隔）\n- 棕 #7a5a3a（强调）\n\n字体分工\n- Inter：UI 与中文标签\n- Noto Serif SC：日志正文 18px / 1.85\n- JetBrains Mono：时间戳 / 数字 / 英文标识\n\n基线：F01–F27 已实现（含目录/高亮/聚合/RSS），本次不重做\n\n本次新增（5 页 + 全局）\n1. 首页：档案统计条 + 精选索引编号 + 入口字体统一\n2. 日志大厅：结果计数 + 激活筛选摘要一键清除\n3. 日志详情：前后篇导航 + 相关日志 + 阅读时长\n4. 作品档案：日期口径统一 + 零日志提示对齐\n5. 关于页：技术栈展示分组\n6. 全局：Suspense 加载骨架（暖线占位，零 JS）\n\n实施路线\n- Phase A（P0）：首页统计条/索引/入口 + 大厅计数/筛选摘要 + 详情前后篇/相关\n- Phase B（P1）：阅读时长 + 日期口径 + 关于分组 + 加载骨架\n\n验收判据\n- 四道门禁全 0\n- 三档断点无横向溢出\n- 对比度 >= AA 4.5:1\n- 软著材料重出 + MD5 幂等\n- 凭据扫描通过\n\n视觉铁律\n- 零圆角 / 无阴影 / 无渐变 / 无图标库\n- 色值单源，改令牌须同步 proxy\n- 技术栈锁定：Next 16 / Prisma 6 / Tailwind 4\n- 不新增依赖\n';var inFrame=false;try{inFrame=window.top!==window.self}catch(e){inFrame=true}if(!inFrame){var blob=new Blob([s],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='laity-upgrade-summary.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},4000);return}var prev=document.getElementById('ldExpModal');if(prev)prev.remove();var m=document.createElement('div');m.id='ldExpModal';m.style.cssText='position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(26,26,24,.5);padding:20px';var card=document.createElement('div');card.style.cssText='background:#f4f1ec;border:1px solid #d9d2c5;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column;padding:18px';var hd=document.createElement('div');hd.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;font-weight:600;color:#1a1a18';var tt=document.createElement('span');tt.textContent='方案摘要 · 预览态请手动复制';var close=document.createElement('button');close.textContent='×';close.setAttribute('aria-label','关闭');close.style.cssText='border:1px solid #d9d2c5;background:transparent;color:#1a1a18;width:26px;height:26px;cursor:pointer;font-size:15px';close.onclick=function(){m.remove()};hd.appendChild(tt);hd.appendChild(close);var ta=document.createElement('textarea');ta.readOnly=true;ta.value=s;ta.style.cssText='flex:1;min-height:280px;border:1px solid #d9d2c5;background:#fff;color:#1a1a18;font-family:var(--font-mono);font-size:11px;line-height:1.6;padding:12px;resize:vertical';var hint=document.createElement('p');hint.style.cssText='font-size:10px;color:#625d53;margin-top:8px;line-height:1.5';hint.textContent='在系统浏览器中打开本 HTML 可一键下载；预览态请全选上方文本复制（Ctrl/Cmd+A 后 Ctrl/Cmd+C）。';card.appendChild(hd);card.appendChild(ta);card.appendChild(hint);m.appendChild(card);m.addEventListener('click',function(e){if(e.target===m)m.remove()});document.body.appendChild(m);ta.focus();ta.select()};
+})();
+</script>
