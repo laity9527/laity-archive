@@ -29,6 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { generateAiDraftAction } from "@/app/admin/ai-actions";
 import { uploadImageAction } from "@/app/admin/upload-action";
 import { estimateReadingMinutes } from "@/lib/reading-time";
+import { scanSensitive } from "@/lib/sensitive-scan";
 import { countBodyChars } from "@/lib/text-stats";
 import { errorTextOf } from "@/lib/error-text";
 import { Markdown } from "@/lib/markdown";
@@ -121,6 +122,13 @@ export function Editor({
 
     return { chars: countBodyChars(text), minutes: estimateReadingMinutes(text) };
   }, [before, after]);
+
+  // 敏感信息实时提示（评审 P6-1）：复用发布时同一个扫描函数，编辑时就把命中列出来。
+  // 只提示、不拦保存；真正的阻断仍在发布动作里（服务端再扫一次，客户端改不了那条判据）
+  const sensitiveHits = useMemo(
+    () => scanSensitive(`${before}\n${after}`).filter((hit) => !hit.advisory),
+    [before, after],
+  );
   // AI 只依据「- 提交」列表生成：没有列表时客户端先禁用，服务端仍会再校一次（AI_006）
   const hasCommits = /^[ \t]*- /m.test(before) || /^[ \t]*- /m.test(after);
   const dirtyRef = useRef(false);
@@ -420,6 +428,17 @@ export function Editor({
           </button>
           <span className="ml-auto font-mono text-[10px]">⌘B / ⌘I / ⌘K</span>
         </div>
+
+        {sensitiveHits.length > 0 && (
+          <p
+            aria-live="polite"
+            className="mt-3 border-l-2 border-brown pl-3 font-sans text-[11px] leading-relaxed text-ink-soft"
+          >
+            可能含敏感信息：
+            {sensitiveHits.map((hit) => `${hit.label} ${hit.count} 处`).join("、")}
+            <span className="ml-2">发布时仍会再扫一次</span>
+          </p>
+        )}
 
         <textarea
           ref={beforeRef}
