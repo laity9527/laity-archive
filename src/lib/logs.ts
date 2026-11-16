@@ -47,6 +47,8 @@
  * - 2026-11-16: 大厅排序切换：getLogList / searchLogsLimited 新增 sort（decided | published），
  *               orderBy 收成一个内部单源；published 口径把 publishedAt 为 null 的排到最后，
  *               游标仍用 id，两种排序下分页都稳定
+ * - 2026-11-16: B4：新增 getTagFeedItems（/tags/[tag]/feed.xml 取数口）——同标签下最新 20 篇已发布，
+ *               只取 feed 需要的列（标题/链接/发布时间/摘要/标签），不取全文
  */
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -433,8 +435,61 @@ export async function getArchive(): Promise<ArchiveYear[]> {
     }));
 }
 
-export type TagIndexEntry = { tag: string; count: number };
+export type TagFeedItem = {
+  title: string;
+  slug: string;
+  handle: string;
+  publishedAt: Date;
+  summary: string;
+  tags: string[];
+};
+
 /**
+ * 标签订阅源（/tags/[tag]/feed.xml）的取数口：同标签下最新 N 篇已发布日志。
+ * 只取 feed 需要的列（不取全文），publishedAt 为空的跳过——订阅源不出现“从未发布”的条目。
+ */
+export async function getTagFeedItems(
+  tag: string,
+  take = 20,
+): Promise<TagFeedItem[]> {
+  const rows = await db.log.findMany({
+    where: buildLogWhere({ tag, requireOwner: true }),
+    orderBy: [
+      { publishedAt: { sort: "desc", nulls: "last" } },
+      { id: "desc" },
+    ],
+    take,
+    select: {
+      title: true,
+      slug: true,
+      publishedAt: true,
+      lessonLearned: true,
+      beforeContent: true,
+      tags: true,
+      user: { select: { handle: true } },
+    },
+  });
+
+  const items: TagFeedItem[] = [];
+
+  for (const row of rows) {
+    if (!row.user || !row.publishedAt) continue;
+
+    items.push({
+      title: row.title,
+      slug: row.slug,
+      handle: row.user.handle,
+      publishedAt: row.publishedAt,
+      // 摘要口径与全站 feed / 详情页一致：经验总结优先，缺则取 BEFORE 正文
+      summary: row.lessonLearned?.trim() || row.beforeContent,
+      tags: row.tags,
+    });
+  }
+
+  return items;
+}
+
+export type TagIndexEntry = { tag: string; count: number };/**
  * 标签索引页（/tags）的唯一取数口：只取 tags 一列，按显示名聚合计数。
  * 排序固定「频次降序 → 名称升序（zh-CN）」，保证同一份数据每次渲染顺序一致。
  * 口径与大厅一致（isPublished + 有主行），不做 tagsKey 双轨（标签归一化留给 B4 迁移批）。

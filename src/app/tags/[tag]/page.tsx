@@ -38,6 +38,12 @@ export async function generateMetadata({
   return {
     title: `标签 ${normalized}`,
     description: `该标签下共 ${logs.length} 条已发布日志，均为 Before/After 开发复盘，附正文 SHA-256 摘要与发布时间。`,
+    // 标签订阅源：给定标签可单独订阅（B4），与全站 feed 同一套组装口径
+    alternates: {
+      types: {
+        "application/rss+xml": `/tags/${encodeURIComponent(normalized)}/feed.xml`,
+      },
+    },
   };
 }
 
