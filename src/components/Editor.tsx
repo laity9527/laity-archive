@@ -25,9 +25,11 @@
  */
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { generateAiDraftAction } from "@/app/admin/ai-actions";
 import { uploadImageAction } from "@/app/admin/upload-action";
+import { estimateReadingMinutes } from "@/lib/reading-time";
+import { countBodyChars } from "@/lib/text-stats";
 import { errorTextOf } from "@/lib/error-text";
 import { Markdown } from "@/lib/markdown";
 
@@ -111,6 +113,14 @@ export function Editor({
   const fileRef = useRef<HTMLInputElement>(null);
   const active = tab === "before" ? before : after;
   const dirty = before !== initialBefore || after !== initialAfter;
+
+  // 字数与阅读时长：中文按字、拉丁按词，合计作为一个可核对的“体量”数字；
+  // 分钟数复用详情页同一个 estimateReadingMinutes（400 字/分钟），避免两处口径不一
+  const stats = useMemo(() => {
+    const text = `${before}\n${after}`;
+
+    return { chars: countBodyChars(text), minutes: estimateReadingMinutes(text) };
+  }, [before, after]);
   // AI 只依据「- 提交」列表生成：没有列表时客户端先禁用，服务端仍会再校一次（AI_006）
   const hasCommits = /^[ \t]*- /m.test(before) || /^[ \t]*- /m.test(after);
   const dirtyRef = useRef(false);
@@ -379,8 +389,11 @@ export function Editor({
           <button type="button" onClick={() => setTab("after")} className={tabClass("after")}>
             AFTER
           </button>
-          <span className="ml-auto font-mono text-[10px] text-ink-soft">
-            {savedAt ? `已自动保存 ${savedAt}` : "AFTER 可留空"}
+          <span className="ml-auto flex items-baseline gap-3 font-mono text-[10px] text-ink-soft">
+            <span>
+              {stats.chars} 字 · 约 {stats.minutes} 分钟
+            </span>
+            <span>{savedAt ? `已自动保存 ${savedAt}` : "AFTER 可留空"}</span>
           </span>
         </div>
 
