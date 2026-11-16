@@ -55,6 +55,7 @@ export function Toast() {
   const errorCode = params.get("error");
   const field = params.get("field") ?? undefined;
   const successKey = Object.keys(SUCCESS).find((key) => params.get(key) !== null);
+  const bulkCount = params.get("bulkUnpublished");
 
   // 消息是参数到文案的纯映射：渲染期算，不存 state（也避免 effect 里同步 setState）
   const message = useMemo<Message | null>(() => {
@@ -67,6 +68,14 @@ export function Toast() {
       };
     }
 
+    if (bulkCount !== null) {
+      return {
+        tone: "ok",
+        title: "已批量下架",
+        text: `共下架 ${bulkCount} 条；正文与历史摘要都保留，只是不再对访客显示。`,
+      };
+    }
+
     if (successKey) {
       const entry = SUCCESS[successKey];
 
@@ -74,14 +83,16 @@ export function Toast() {
     }
 
     return null;
-  }, [errorCode, field, successKey, pathname]);
+  }, [bulkCount, errorCode, field, successKey, pathname]);
 
   // 只记"哪一条被关掉了"：参数变了 key 就变，旧记录自动失效，不需要 effect 里重置
   const messageKey = errorCode
     ? `e:${errorCode}:${field ?? ""}`
-    : successKey
-      ? `s:${successKey}`
-      : "";
+    : bulkCount !== null
+      ? `b:${bulkCount}`
+      : successKey
+        ? `s:${successKey}`
+        : "";
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
   const visible = message !== null && dismissedKey !== messageKey;
 

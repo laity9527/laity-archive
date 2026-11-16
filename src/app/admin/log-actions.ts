@@ -319,3 +319,35 @@ export async function quickUnpublishAction(formData: FormData) {
   refreshLogViews();
   redirect("/admin/logs?unpublished=1");
 }
+
+// 批量下架（B3）：只收 id 列表，逐条复用 unpublishLog。不提供批量发布与批量删除——
+// 发布要按正文重算摘要并过敏感扫描（应逐条确认），删除是破坏性动作（要求输 slug 确认）
+export async function bulkUnpublishAction(formData: FormData) {
+  const session = await requireAdminSession();
+
+  if (!session) {
+    redirect("/login?callbackUrl=%2Fadmin%2Flogs");
+  }
+
+  const ids = formData
+    .getAll("id")
+    .filter(
+      (value): value is string =>
+        typeof value === "string" && ID_PATTERN.test(value),
+    );
+
+  if (ids.length === 0) {
+    redirect("/admin/logs?error=VAL_001&field=id");
+  }
+
+  let done = 0;
+
+  for (const id of ids) {
+    const result = await unpublishLog(id, session.userId);
+
+    if (result.ok) done += 1;
+  }
+
+  refreshLogViews();
+  redirect(`/admin/logs?bulkUnpublished=${done}`);
+}

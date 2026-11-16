@@ -21,6 +21,7 @@ import {
   type AdminLogStatus,
 } from "@/lib/logs";
 import {
+  bulkUnpublishAction,
   quickPublishAction,
   quickUnpublishAction,
 } from "../log-actions";
@@ -186,6 +187,23 @@ export default async function AdminLogsPage({
         )}
       </form>
 
+      {/* 批量操作只做“下架”：发布需逐条确认摘要与敏感扫描，删除是破坏性动作 */}
+      <form
+        id="bulk-form"
+        action={bulkUnpublishAction}
+        className="mt-6 flex flex-wrap items-baseline gap-4 border-b border-hairline pb-4"
+      >
+        <button
+          type="submit"
+          className="border border-ink px-4 py-2 font-sans text-xs text-ink hover:bg-ink hover:text-paper"
+        >
+          批量下架选中
+        </button>
+        <span className="font-sans text-[11px] text-ink-soft">
+          勾选左侧方框后提交；删除仍需逐条在编辑页确认
+        </span>
+      </form>
+
       {items.length === 0 ? (
         <div className="mt-8">
           <p className="border-t border-ink py-6 font-sans text-xs text-ink-soft">
@@ -207,6 +225,14 @@ export default async function AdminLogsPage({
               key={log.id}
               className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-hairline py-4"
             >
+              <input
+                type="checkbox"
+                form="bulk-form"
+                name="id"
+                value={log.id}
+                aria-label={`选择「${log.title}」用于批量操作`}
+                className="h-3.5 w-3.5 shrink-0 accent-ink"
+              />
               <span aria-hidden className="font-mono text-[10px] text-ink">
                 {log.isPublished ? "●" : "○"}
               </span>
