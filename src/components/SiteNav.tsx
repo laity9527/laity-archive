@@ -46,6 +46,15 @@ export function SiteNav() {
   // ⌘K / Ctrl+K 全局唤起；监听器很小，留在导航里，面板实体按需加载
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      // 正在输入框里打字时不抢快捷键：编辑器里 ⌘K 是插链接，不是开面板
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable === true;
+
+      if (typing) return;
+
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setPaletteOpen(true);

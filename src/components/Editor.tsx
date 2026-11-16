@@ -192,6 +192,101 @@ export function Editor({
     });
   }
 
+  // 取当前标签页的 textarea 与正文（两栏共用一套工具栏）
+  function activeField() {
+    return {
+      el: tab === "before" ? beforeRef.current : afterRef.current,
+      value: tab === "before" ? before : after,
+      setValue: tab === "before" ? setBefore : setAfter,
+    };
+  }
+
+  // 包裹选区：有选中就包住它，没选中就插入占位词并选中占位词，方便直接改
+  function wrapSelection(beforeText: string, afterText: string, placeholder: string) {
+    const { el, value, setValue } = activeField();
+
+    if (!el) {
+      setValue(`${value}${beforeText}${placeholder}${afterText}`);
+      return;
+    }
+
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    const selected = value.slice(start, end) || placeholder;
+
+    setValue(
+      `${value.slice(0, start)}${beforeText}${selected}${afterText}${value.slice(end)}`,
+    );
+
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + beforeText.length, start + beforeText.length + selected.length);
+    });
+  }
+
+  // 上传一张图并把 Markdown 插到光标处；粘贴、拖拽、选文件三条入口共用
+  async function uploadAndInsert(file: File) {
+    setStatus({ kind: "busy" });
+
+    const data = new FormData();
+    data.append("file", file);
+
+    try {
+      const result = await uploadImageAction(data);
+
+      if (result.ok) {
+        insertAtCursor(`\n![${safeAlt(file.name)}](${result.url})\n`);
+        setStatus({ kind: "done", text: `已上传 · ${result.bytes} 字节` });
+      } else {
+        setStatus({ kind: "error", text: errorTextOf(result.code) });
+      }
+    } catch {
+      setStatus({ kind: "error", text: "上传失败，请查看服务端日志。" });
+    }
+  }
+
+  // 快捷键：⌘/Ctrl + B / I / K（只改当前标签页的正文）
+  function handleEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!(event.metaKey || event.ctrlKey)) return;
+
+    const key = event.key.toLowerCase();
+
+    if (key === "b") {
+      event.preventDefault();
+      wrapSelection("**", "**", "粗体");
+    } else if (key === "i") {
+      event.preventDefault();
+      wrapSelection("*", "*", "斜体");
+    } else if (key === "k") {
+      event.preventDefault();
+      wrapSelection("[", "](https://)", "链接文字");
+    }
+  }
+
+  // 粘贴截图即上传（非图片的粘贴保留默认行为）
+  async function handlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const file = Array.from(event.clipboardData.files).find((item) =>
+      item.type.startsWith("image/"),
+    );
+
+    if (!file) return;
+
+    event.preventDefault();
+    await uploadAndInsert(file);
+  }
+
+  // 拖入图片即上传；拖其他东西不拦（避免抢表单其他行为）
+  async function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+    const file = Array.from(event.dataTransfer.files).find((item) =>
+      item.type.startsWith("image/"),
+    );
+
+    if (!file) return;
+
+    event.preventDefault();
+    await uploadAndInsert(file);
+  }
+
   // 只响应手动点击：读整张表单（title 与两栏正文都在里面），没有自动触发路径——
   // 生成结果直接 setState 回填 textarea；任何异常都收敛为横幅，不外抛、不阻塞保存
   async function handleAiWrite(event: React.MouseEvent<HTMLButtonElement>) {
@@ -235,27 +330,17 @@ export function Editor({
       return;
     }
 
-    setStatus({ kind: "busy" });
-
-    const data = new FormData();
-    data.append("file", file);
-
-    try {
-      const result = await uploadImageAction(data);
-
-      if (result.ok) {
-        insertAtCursor(`\n![${safeAlt(file.name)}](${result.url})\n`);
-        setStatus({ kind: "done", text: `已上传 · ${result.bytes} 字节` });
-      } else {
-        setStatus({ kind: "error", text: errorTextOf(result.code) });
-      }
-    } catch {
-      setStatus({ kind: "error", text: "上传失败，请查看服务端日志。" });
-    }
+    await uploadAndInsert(file);
   }
 
   return (
-    <div className="grid gap-8 md:grid-cols-2">
+    <div
+      className="grid gap-8 md:grid-cols-2"
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes("Files")) event.preventDefault();
+      }}
+      onDrop={handleDrop}
+    >
       <div>
         {/* AI 标记：点击 [ AI 帮我写 ] 成功后渲染；随整张表单提交，保存/发布动作据此落库 */}
         {aiAssisted && <input type="hidden" name="isAiAssisted" value="true" />}
@@ -271,12 +356,38 @@ export function Editor({
           </span>
         </div>
 
+        {/* 格式工具栏：只操作当前标签页的正文；无选中时插入占位词并选中它 */}
+        <div className="mt-3 flex flex-wrap items-baseline gap-4 border-b border-hairline pb-2 font-sans text-[11px] text-ink-soft">
+          <span className="font-mono text-[10px] tracking-[0.16em]">格式</span>
+          <button type="button" onClick={() => wrapSelection("**", "**", "粗体")} className="hover:text-ink">
+            粗体
+          </button>
+          <button type="button" onClick={() => wrapSelection("*", "*", "斜体")} className="hover:text-ink">
+            斜体
+          </button>
+          <button type="button" onClick={() => wrapSelection("`", "`", "代码")} className="hover:text-ink">
+            行内码
+          </button>
+          <button type="button" onClick={() => wrapSelection("\n> ", "", "引用")} className="hover:text-ink">
+            引用
+          </button>
+          <button type="button" onClick={() => wrapSelection("\n- ", "", "列表项")} className="hover:text-ink">
+            列表
+          </button>
+          <button type="button" onClick={() => wrapSelection("[", "](https://)", "链接文字")} className="hover:text-ink">
+            链接
+          </button>
+          <span className="ml-auto font-mono text-[10px]">⌘B / ⌘I / ⌘K</span>
+        </div>
+
         <textarea
           ref={beforeRef}
           name="beforeContent"
           aria-label="BEFORE 正文（Markdown）"
           value={before}
           onChange={(event) => setBefore(event.target.value)}
+          onKeyDown={handleEditorKeyDown}
+          onPaste={handlePaste}
           hidden={tab !== "before"}
           rows={20}
           spellCheck={false}
@@ -288,6 +399,8 @@ export function Editor({
           aria-label="AFTER 正文（Markdown，可留空）"
           value={after}
           onChange={(event) => setAfter(event.target.value)}
+          onKeyDown={handleEditorKeyDown}
+          onPaste={handlePaste}
           hidden={tab !== "after"}
           rows={20}
           spellCheck={false}
