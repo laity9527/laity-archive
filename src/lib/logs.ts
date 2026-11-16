@@ -44,6 +44,9 @@
  *               按显示名聚合计数，排序固定「频次降序 → 名称升序」；不做 tagsKey 双轨迁移
  * - 2026-11-16: B4：新增 getArchive（/archive 归档页）——只取列表列，按 beforeDate 分年/月，
  *               排序固定「年降序 → 月降序 → 日降序」，时间全部按 UTC 切片（与全站存时口径一致）
+ * - 2026-11-16: 大厅排序切换：getLogList / searchLogsLimited 新增 sort（decided | published），
+ *               orderBy 收成一个内部单源；published 口径把 publishedAt 为 null 的排到最后，
+ *               游标仍用 id，两种排序下分页都稳定
  */
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -200,8 +203,25 @@ export type LogListPage = { items: LogListItem[]; nextCursor: string | null };
  * 调用方：下一步的 /logs 页面接入；本轮无调用方。
  * 分页：id 游标（orderBy beforeDate desc, id desc 保证稳定），多取一条判断是否还有下一页。
  */
+export type LogSort = "decided" | "published";
+
+// 列表排序单源：decided = 按“哪天做的决策”（beforeDate），published = 按“什么时候写出来”（publishedAt）。
+// 两种都带 id 做二级键，保证游标分页稳定；publishedAt 可空，null 一律排最后
+function logOrderBy(sort?: LogSort) {
+  return sort === "published"
+    ? [
+        { publishedAt: { sort: "desc" as const, nulls: "last" as const } },
+        { id: "desc" as const },
+      ]
+    : [{ beforeDate: "desc" as const }, { id: "desc" as const }];
+}
+
 export async function getLogList(
-  params: SafeLogFilter & { cursor?: string | null; take?: number } = {},
+  params: SafeLogFilter & {
+    cursor?: string | null;
+    take?: number;
+    sort?: LogSort;
+  } = {},
 ): Promise<LogListPage> {
   const resolved = await resolveLogFilter(params);
 
@@ -212,8 +232,8 @@ export async function getLogList(
   const take = Math.min(Math.max(params.take ?? LOG_PAGE_SIZE, 1), LOG_PAGE_SIZE);
   const rows = await db.log.findMany({
     where: buildLogWhere({ ...resolved, requireOwner: true }),
-    // beforeDate 可重复，故加 id 做二级游标，避免同刻日志跳条或重复。
-    orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
+    // beforeDate 可重复，故加 id 做二级游标，避免同刻日志跳条或重复；published 口径同理
+    orderBy: logOrderBy(params.sort),
     take: take + 1,
     ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
     select: logListSelect,
@@ -238,7 +258,12 @@ export async function getLogList(
  * 调用方：下一步的 /logs 页面接入；本轮无调用方。
  */
 export async function searchLogsLimited(
-  params: SafeLogFilter & { q: string; cursor?: string | null; take?: number },
+  params: SafeLogFilter & {
+    q: string;
+    cursor?: string | null;
+    take?: number;
+    sort?: LogSort;
+  },
 ): Promise<LogListPage> {
   const resolved = await resolveLogFilter(params);
 
@@ -276,7 +301,7 @@ export async function searchLogsLimited(
         },
       ],
     },
-    orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
+    orderBy: logOrderBy(params.sort),
     take: take + 1,
     ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
     select: logListSelect,

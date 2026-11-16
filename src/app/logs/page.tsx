@@ -48,7 +48,7 @@ import { Timeline } from "@/components/Timeline";
 import { db } from "@/lib/db";
 import { ID_PATTERN, pickParam } from "@/lib/forms";
 import { extractSnippet, highlightSegments } from "@/lib/highlight";
-import { getLogFacets, getLogList, searchLogsLimited } from "@/lib/logs";
+import { getLogFacets, getLogList, searchLogsLimited, type LogSort } from "@/lib/logs";
 import { isTopicKey, topicLabel, type TopicKey } from "@/lib/topics";
 
 export const metadata: Metadata = {
@@ -63,6 +63,7 @@ type LogsPageProps = {
     tag?: string | string[];
     topic?: string | string[];
     q?: string | string[];
+    sort?: string | string[];
     cursor?: string | string[];
   }>;
 };
@@ -72,6 +73,7 @@ function logsHref(params: {
   tag?: string;
   topic?: string;
   q?: string;
+  sort?: LogSort;
   cursor?: string;
 }) {
   const search = new URLSearchParams();
@@ -79,6 +81,7 @@ function logsHref(params: {
   if (params.tag) search.set("tag", params.tag);
   if (params.topic) search.set("topic", params.topic);
   if (params.q) search.set("q", params.q);
+  if (params.sort === "published") search.set("sort", "published");
   if (params.cursor) search.set("cursor", params.cursor);
   const query = search.toString();
   return query ? `/logs?${query}` : "/logs";
@@ -98,7 +101,7 @@ function filterClass(active: boolean) {
 }
 
 async function LogBoard({ searchParams }: LogsPageProps) {
-  const { project, tag, topic, q, cursor: rawCursor } = await searchParams;
+  const { project, tag, topic, q, sort: rawSort, cursor: rawCursor } = await searchParams;
   const projectFilter = pickParam(project);
   const tagFilter = pickParam(tag);
   const rawTopic = pickParam(topic);
@@ -108,6 +111,19 @@ async function LogBoard({ searchParams }: LogsPageProps) {
   const qFilter = pickParam(q);
   const cursor = parseCursor(pickParam(rawCursor));
 
+  // 排序只认两个值：不传 / 非法都回落 decided（按“哪天做的决策”），与首页“最新日志”口径区分
+  const sortFilter: LogSort =
+    pickParam(rawSort) === "published" ? "published" : "decided";
+
+  // 站内链接统一带当前排序，避免点筛选后顺序被悄悄重置
+  const logsHrefWithSort = (params: {
+    project?: string;
+    tag?: string;
+    topic?: string;
+    q?: string;
+    cursor?: string;
+  }) => logsHref({ ...params, sort: sortFilter });
+
   const facets = await getLogFacets();
   const page = qFilter
     ? await searchLogsLimited({
@@ -115,12 +131,14 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         project: projectFilter,
         tag: tagFilter,
         topic: topicFilter,
+        sort: sortFilter,
         cursor,
       })
     : await getLogList({
         project: projectFilter,
         tag: tagFilter,
         topic: topicFilter,
+        sort: sortFilter,
         cursor,
       });
   const items = page.items;
@@ -154,7 +172,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
     activeChips.push({
       key: "project",
       label: `项目：${name}`,
-      href: logsHref({ tag: tagFilter, topic: topicFilter, q: qFilter }),
+      href: logsHrefWithSort({ tag: tagFilter, topic: topicFilter, q: qFilter }),
     });
   }
 
@@ -162,7 +180,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
     activeChips.push({
       key: "topic",
       label: `主题：${topicLabel(topicFilter)}`,
-      href: logsHref({
+      href: logsHrefWithSort({
         project: projectFilter,
         tag: tagFilter,
         q: qFilter,
@@ -174,7 +192,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
     activeChips.push({
       key: "tag",
       label: `标签：${tagFilter}`,
-      href: logsHref({
+      href: logsHrefWithSort({
         project: projectFilter,
         topic: topicFilter,
         q: qFilter,
@@ -186,7 +204,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
     activeChips.push({
       key: "q",
       label: `关键词：${qFilter}`,
-      href: logsHref({
+      href: logsHrefWithSort({
         project: projectFilter,
         tag: tagFilter,
         topic: topicFilter,
@@ -197,7 +215,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
   const tagChip = (item: string) => (
     <Link
       key={item}
-      href={logsHref({
+      href={logsHrefWithSort({
         project: projectFilter,
         // 点单标签时清掉主题：两者是不同层级的同一维度，叠在一起会得到空集
         tag: tagFilter === item ? undefined : item,
@@ -226,7 +244,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         <ul className="space-y-1.5">
           <li>
             <Link
-              href={logsHref({
+              href={logsHrefWithSort({
                 tag: tagFilter,
                 topic: topicFilter,
                 q: qFilter,
@@ -243,7 +261,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           {projectOptions.map(({ slug, name, count }) => (
             <li key={slug}>
               <Link
-                href={logsHref({
+                href={logsHrefWithSort({
                   project: projectFilter === slug ? undefined : slug,
                   tag: tagFilter,
                   topic: topicFilter,
@@ -271,7 +289,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         <ul className="space-y-1.5">
           <li>
             <Link
-              href={logsHref({
+              href={logsHrefWithSort({
                 project: projectFilter,
                 tag: tagFilter,
                 q: qFilter,
@@ -288,7 +306,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           {facets.topics.map((item) => (
             <li key={item.key}>
               <Link
-                href={logsHref({
+                href={logsHrefWithSort({
                   project: projectFilter,
                   // 点主题时清掉单标签：主题是标签的上层，叠着查会互相收窄
                   topic: topicFilter === item.key ? undefined : item.key,
@@ -316,7 +334,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         {tagFilter && (
           <p className="mb-2 text-[11px]">
             <Link
-              href={logsHref({
+              href={logsHrefWithSort({
                 project: projectFilter,
                 topic: topicFilter,
                 q: qFilter,
@@ -428,6 +446,43 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 {page.nextCursor ? "还有下一页" : "已到末页"}
               </span>
             </span>
+            <span className="ml-auto flex items-baseline gap-3 font-sans text-xs">
+              <span className="text-ink-soft">排序</span>
+              <Link
+                href={logsHref({
+                  project: projectFilter,
+                  tag: tagFilter,
+                  topic: topicFilter,
+                  q: qFilter,
+                  sort: "decided",
+                })}
+                aria-current={sortFilter === "decided" ? "true" : undefined}
+                className={
+                  sortFilter === "decided"
+                    ? "border-b border-ink text-ink"
+                    : "border-b border-transparent text-ink-soft hover:border-ink hover:text-ink"
+                }
+              >
+                判断时间
+              </Link>
+              <Link
+                href={logsHref({
+                  project: projectFilter,
+                  tag: tagFilter,
+                  topic: topicFilter,
+                  q: qFilter,
+                  sort: "published",
+                })}
+                aria-current={sortFilter === "published" ? "true" : undefined}
+                className={
+                  sortFilter === "published"
+                    ? "border-b border-ink text-ink"
+                    : "border-b border-transparent text-ink-soft hover:border-ink hover:text-ink"
+                }
+              >
+                发布时间
+              </Link>
+            </span>
             {activeChips.map((chip) => (
               <Link
                 key={chip.key}
@@ -456,7 +511,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                     <code className="font-mono">{qFilter}</code>」的日志
                   </p>
                   <Link
-                    href={logsHref({
+                    href={logsHrefWithSort({
                       project: projectFilter,
                       tag: tagFilter,
                       topic: topicFilter,
@@ -546,7 +601,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           {page.nextCursor && (
             <nav className="mt-12 flex justify-end border-t border-hairline pt-6">
               <Link
-                href={logsHref({
+                href={logsHrefWithSort({
                   project: projectFilter,
                   tag: tagFilter,
                   topic: topicFilter,
