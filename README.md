@@ -66,11 +66,11 @@ GitHub Actions 包含两条工作流：
 |---|---|---|---|
 | 0 | **本文件 README.md** | 项目入口 | 这是什么、做到哪了、怎么跑起来 |
 | 1 | [AGENTS.md](file:///D:/ZHANGLEI/laity-archive/AGENTS.md) | **事实基座（每次开工必读）** | 技术栈锁定、视觉铁律、环境变量总表、常见变更操作手册、已知坑速查 |
-| 2 | [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) | 架构与取舍 | **先读「零、架构总览」与「零·补、历史决策裁剪说明」**，再按需查 D1–D39 决策记录 |
-| 3 | [SPEC.md](file:///D:/ZHANGLEI/laity-archive/SPEC.md) | 需求规格（V2.0 冻结） | 读 F 编号：F01–F27 范围与验收口径、数据模型、接口契约、追溯矩阵 |
-| 4 | [ISSUES.md](file:///D:/ZHANGLEI/laity-archive/ISSUES.md) | 范围外问题台账 | 遇到疑似历史遗留问题先查这里（I001–I089） |
+| 2 | [docs/现状说明书.md](file:///D:/ZHANGLEI/laity-archive/docs/%E7%8E%B0%E7%8A%B6%E8%AF%B4%E6%98%8E%E4%B9%A6.md) | **现行事实** | 系统是什么、数据与口径、页面与路由、工程与运维；除 AGENTS 外只看这一份 |
+| 3 | [docs/重构方案-V3-2026-11-16.md](file:///D:/ZHANGLEI/laity-archive/docs/%E9%87%8D%E6%9E%84%E6%96%B9%E6%A1%88-V3-2026-11-16.md) | 方向与批次 | 为什么这样改、B0–B5 进度、裁定的取舍（含附录 A/B/C） |
+| 4 | [docs/archive/2026-11-16-旧编号体系/](file:///D:/ZHANGLEI/laity-archive/docs/archive/2026-11-16-%E6%97%A7%E7%BC%96%E5%8F%B7%E4%BD%93%E7%B3%BB/) | 封存的历史文档 | 旧 SPEC / DESIGN / ISSUES，仅用于查历史决策过程，不作实现依据 |
 
-冲突判定顺序：**代码与运行时实测 > AGENTS.md > SPEC.md > DESIGN.md > ISSUES.md**；README 只作入口，发现冲突一律回报。
+冲突判定顺序：**代码与运行时实测 > AGENTS.md > docs/现状说明书.md > 重构方案 V3 > 封存文档**；README 只作入口，发现冲突一律回报。
 
 ## 项目结构
 
