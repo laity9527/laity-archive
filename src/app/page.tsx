@@ -87,9 +87,15 @@ async function ArchiveOverview() {
         </a>
       </div>
 
-      <section className="mt-16 md:flex md:items-start md:justify-between md:gap-12">
+      <section
+        className={
+          featured.length >= 2
+            ? "mt-16 md:flex md:items-start md:justify-between md:gap-12"
+            : "mt-16"
+        }
+      >
         {featured.length > 0 && (
-          <div className="md:w-2/3">
+          <div className={featured.length >= 2 ? "md:w-2/3" : ""}>
             <SectionHead
               index="01"
               title="精选项目"
@@ -138,9 +144,9 @@ async function ArchiveOverview() {
 
         <div
           className={`@container ${
-            featured.length > 0
+            featured.length >= 2
               ? "mt-16 md:mt-0 md:w-1/3 md:border-l md:border-hairline md:pl-12"
-              : "md:w-full"
+              : "mt-16 md:grid md:grid-cols-2 md:gap-12"
           }`}
         >
           <section>
@@ -150,7 +156,7 @@ async function ArchiveOverview() {
             </div>
           </section>
 
-          <section className="mt-16">
+          <section className={featured.length >= 2 ? "mt-16" : "mt-16 md:mt-0"}>
             <SectionHead
               index="03"
               title="最新日志"
@@ -238,7 +244,7 @@ export default function Home() {
   return (
     <main id="main" className="mx-auto max-w-[1200px] px-6 py-24">
       <header className="border-b border-ink pb-12">
-        <h1 className="max-w-[14ch] text-[clamp(2.5rem,5.2vw,3.5rem)] font-medium leading-[1.08] tracking-tight">
+        <h1 className="text-balance text-[clamp(2.5rem,5.2vw,3.5rem)] font-medium leading-[1.08] tracking-tight">
           数字档案，记录每一次工程决策。
         </h1>
         <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-soft">

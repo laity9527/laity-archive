@@ -184,7 +184,13 @@ export default async function LogDetailPage({
                 label: log.project.name,
                 href: `/u/${handle}/projects/${log.project.slug}`,
               },
-              { label: log.title },
+              // 末项=当前页，但截断到 20 字：完整标题紧挨 H1 会重复，长标题还会把面包屑撑成两行
+              {
+                label:
+                  log.title.length > 20
+                    ? `${log.title.slice(0, 20)}…`
+                    : log.title,
+              },
             ]}
           />
 
