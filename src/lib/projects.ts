@@ -253,11 +253,18 @@ export async function isProjectSlug(slug: string, handle: string) {
 }
 
 export async function getAdminOverview(userId: string) {
-  const [projectCount, publishedCount, draftCount, recentDrafts] =
+  // 「本周」定义为滚动 7 天（不是自然周）：单人站关心的是“最近有没有产出”，
+  // 自然周会让周一早上看板归零，误导性大于信息量
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [projectCount, publishedCount, draftCount, publishedThisWeek, recentDrafts] =
     await Promise.all([
       db.project.count({ where: { userId } }),
       db.log.count({ where: { userId, isPublished: true } }),
       db.log.count({ where: { userId, isPublished: false } }),
+      db.log.count({
+        where: { userId, isPublished: true, publishedAt: { gte: weekAgo } },
+      }),
       db.log.findMany({
         where: { userId, isPublished: false },
         orderBy: { updatedAt: "desc" },
@@ -273,7 +280,7 @@ export async function getAdminOverview(userId: string) {
       }),
     ]);
 
-  return { projectCount, publishedCount, draftCount, recentDrafts };
+  return { projectCount, publishedCount, draftCount, publishedThisWeek, recentDrafts };
 }
 
 export async function saveProject(

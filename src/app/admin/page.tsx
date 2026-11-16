@@ -61,13 +61,14 @@ export default async function AdminHomePage({
     redirect("/login?callbackUrl=%2Fadmin");
   }
 
-  const { projectCount, publishedCount, draftCount, recentDrafts } =
+  const { projectCount, publishedCount, draftCount, publishedThisWeek, recentDrafts } =
     await getAdminOverview(session.userId);
 
   const stats = [
     { label: "项目总数", value: projectCount },
     { label: "已发布", value: publishedCount },
     { label: "草稿", value: draftCount },
+    { label: "近 7 天发布", value: publishedThisWeek },
   ];
 
   return (
@@ -77,7 +78,7 @@ export default async function AdminHomePage({
           <p className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
             OVERVIEW
           </p>
-          <h1 className="mt-2 text-3xl font-medium tracking-tight">概览</h1>
+          <h1 className="mt-2 text-[32px] font-medium tracking-tight">概览</h1>
         </div>
         <Link
           href="/admin/logs/new"
@@ -132,7 +133,7 @@ export default async function AdminHomePage({
         </p>
       )}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((item) => (
           <div key={item.label} className="border border-hairline p-4">
             <p className="font-sans text-[10px] text-ink-soft">{item.label}</p>
