@@ -506,7 +506,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
             <div>
               {qFilter ? (
                 <>
-                  <p className="font-sans text-xs text-ink-soft">
+                  <p className="font-sans text-sm text-ink-soft">
                     没有找到包含「
                     <code className="font-mono">{qFilter}</code>」的日志
                   </p>
@@ -516,25 +516,39 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                       tag: tagFilter,
                       topic: topicFilter,
                     })}
-                    className="mt-5 inline-block border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                    className="mt-5 inline-block border-b border-ink font-sans text-xs text-ink"
                   >
                     清除搜索，看全部日志 →
                   </Link>
                 </>
               ) : projectFilter || tagFilter || topicFilter ? (
                 <>
-                  <p className="font-sans text-xs text-ink-soft">
+                  <p className="font-sans text-sm text-ink-soft">
                     没有符合条件的日志
                   </p>
                   <Link
                     href="/logs"
-                    className="mt-5 inline-block border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                    className="mt-5 inline-block border-b border-ink font-sans text-xs text-ink"
                   >
                     清除筛选，看全部日志 →
                   </Link>
                 </>
               ) : (
-                <p className="font-sans text-xs text-ink-soft">还没有日志</p>
+                <p className="font-sans text-sm text-ink-soft">还没有日志</p>
+              )}
+
+              {/* 空态出口：只把人送回原点是不够的，再给"换一条路径找"——标签与年月两条横切面。
+                  库本身为空时不渲染，避免指向两个同样空的页面 */}
+              {totalLogs > 0 && (
+                <p className="mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-2 border-t border-hairline pt-4 font-sans text-xs">
+                  <span className="text-ink-soft">换一条路径找</span>
+                  <Link href="/tags" className="border-b border-ink text-ink">
+                    按标签看 →
+                  </Link>
+                  <Link href="/archive" className="border-b border-ink text-ink">
+                    按年月看 →
+                  </Link>
+                </p>
               )}
             </div>
           ) : (
