@@ -15,12 +15,16 @@
  *               改回「后台」，由模板补一次站名
  * - 2026-11-13: Phase C 后台外壳——深墨侧栏（AdminNav）+ 右侧内容区，导航从横排改为侧栏，
  *               登录校验仍走 requireAdminSession；移动端侧栏变顶部横滚，不引入抽屉/图标库
+ * - 2026-11-16: B1-b 挂 Toast（Suspense 包裹，useSearchParams 需要边界）：操作回执从「页内横幅 + URL 参数」
+ *               改为右下角浮层，成功 4.5s 自动收起并清查询串，错误保持到手动关闭
  */
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
 import { AdminNav } from "@/components/AdminNav";
+import { Toast } from "@/components/Toast";
 
 // 后台读会话与数据库，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
@@ -59,6 +63,9 @@ export default async function AdminLayout({
           {children}
         </main>
       </div>
+      <Suspense fallback={null}>
+        <Toast />
+      </Suspense>
     </div>
   );
 }
