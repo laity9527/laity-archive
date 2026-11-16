@@ -36,6 +36,9 @@
  *               点主题会清掉单标签、点单标签会清掉主题；标签全量收进 details，不再默认铺 12 个。
  *               计数在同一次 facets 查询里派生，首屏仍为 2 次数据库查询（O8）
  * - 2026-11-13: 显著升级 B4：Suspense fallback 由文本改为暖线骨架（LoadingRows）
+ * - 2026-11-16: 重构 B2 首批：左栏当前项由下划线改为棕左线（与详情页目录同一套“当前项”语言）；
+ *               搜索框并入顶栏并限宽 320px；结果行改“共 N 条 / 本页 N 条”；列表行距 40→32px、
+ *               元信息 11→12px（中文在 11px 下发糊）。筛选与搜索逻辑一字未动
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -207,10 +210,12 @@ async function LogBoard({ searchParams }: LogsPageProps) {
     </Link>
   );
 
+  // 当前项：棕左线 + 墨字——与详情页目录右栏同一套“当前项”语言；
+  // 未选中留一条透明左线，避免 hover 时文字横向跳动
   const railLabel = (active: boolean) =>
     active
-      ? "border-b border-ink text-ink"
-      : "border-b border-transparent text-ink-soft hover:border-ink hover:text-ink";
+      ? "border-l-2 border-brown pl-3 text-ink"
+      : "border-l-2 border-transparent pl-3 text-ink-soft hover:border-ink hover:text-ink";
 
   const rail = (
     <nav aria-label="日志筛选">
@@ -368,10 +373,10 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
   return (
     <>
-      <form method="get" className="mb-10 flex items-baseline gap-4">
+      <form method="get" className="mb-8 flex items-baseline gap-3">
         <label
           htmlFor="log-search"
-          className="font-sans text-[10px] text-ink-soft"
+          className="shrink-0 font-sans text-xs text-ink-soft"
         >
           搜索
         </label>
@@ -381,7 +386,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           name="q"
           defaultValue={qFilter}
           placeholder="标题 / 正文 / 标签"
-          className="border-b border-hairline bg-transparent py-1 font-sans text-sm text-ink"
+          className="min-w-0 max-w-[320px] flex-1 border-b border-hairline bg-transparent py-1 font-sans text-sm text-ink"
           aria-label="搜索日志"
         />
         <input type="hidden" name="project" value={projectFilter ?? ""} />
@@ -417,9 +422,11 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
         <div className="min-w-0">
           <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-hairline pb-3 text-[11px] text-ink-soft">
-            <span className="font-mono text-[10px]">
-              本页 {items.length} 条
-              {page.nextCursor ? " · 还有下一页" : " · 已到末页"}
+            <span className="font-sans text-xs text-ink-soft">
+              {hasFilter ? `本页 ${items.length} 条` : `共 ${totalLogs} 条`}
+              <span className="ml-2 font-mono text-[10px] text-ink-soft">
+                {page.nextCursor ? "还有下一页" : "已到末页"}
+              </span>
             </span>
             {activeChips.map((chip) => (
               <Link
@@ -480,14 +487,14 @@ async function LogBoard({ searchParams }: LogsPageProps) {
               {items.map((log) => (
                 <li
                   key={log.id}
-                  className="flex flex-col gap-6 border-b border-hairline py-10 md:flex-row md:gap-10"
+                  className="flex flex-col gap-6 border-b border-hairline py-8 md:flex-row md:gap-10"
                 >
                   <Timeline
                     beforeDate={log.beforeDate}
                     afterDate={log.afterDate}
                   />
                   <article className="flex-1">
-                    <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
+                    <p className="font-mono text-xs tracking-[0.1em] text-ink-soft">
                       {log.project.name}
                     </p>
                     <h2 className="mt-2 text-xl font-medium">
@@ -508,7 +515,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                       </Link>
                     </h2>
                     {log.tags.length > 0 && (
-                      <p className="mt-3 font-mono text-[11px] text-ink-soft">
+                      <p className="mt-3 font-mono text-xs text-ink-soft">
                         {log.tags.map((item, i) => (
                           <span key={item}>
                             {i > 0 && " · "}

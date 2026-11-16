@@ -186,6 +186,16 @@ const BANDS = [
       // projects.ts 2026-11-13（D39）自 ② 平移至此：cache()/pickFeatured 的新增行把 ①+② 顶过前窗口，
       // proxy.ts 被 1500 切口切开；与本段的 logs.ts 同为 DAL，调用方页面均在 ④ 可见
       "src/lib/projects.ts",
+      // B0/B1-a 新增的排版与交互组件（2026-11-16）：都是“排版 + 小块交互”的外壳，
+      // 其数据来源（logs/projects DAL）与渲染入口（页面）均已在可见载体，登记 ③ 不动 ①+② 防线
+      "src/components/SectionHead.tsx",
+      "src/components/Breadcrumbs.tsx",
+      "src/components/CodeBlock.tsx",
+      "src/components/ZoomableArticle.tsx",
+      "src/components/ThemeToggle.tsx",
+      "src/components/icons/index.tsx",
+      // 站点导航外壳：渲染三项导航、当前项高亮与主题切换按钮；判定逻辑在 routes.ts、交互在 ThemeToggle
+      "src/components/SiteNav.tsx",
       // log-search 是 V2.1 全局搜索的匹配纯函数（四字段大小写不敏感子串匹配），
       // 调用方 searchLogs 在 logs.ts 内、页面在 ④；与 ai-prompt/object-key 同类放 ③，不动 ①+② 行数
       "src/lib/log-search.ts",
@@ -373,7 +383,9 @@ const BANDS = [
     files: [
       "src/app/globals.css",
       "src/app/layout.tsx",
-      "src/components/SiteNav.tsx",
+      // SiteNav 于 2026-11-16（B1-a）自 ④ 平移进折走段 ③：它是导航外壳（渲染导航项 + 主题切换），
+      // 判定逻辑在 routes.ts、交互在 ThemeToggle，均已在可见载体；
+      // 平移是为了给 B0 新增的首页/详情样式腾出后窗口容量
       // StatusBoard.tsx 于本轮自 ④ 平移进折走段 ③（2026-11-05，D30 A1，见 ③ 段注释）
       "src/components/Timeline.tsx",
       "src/app/page.tsx",
