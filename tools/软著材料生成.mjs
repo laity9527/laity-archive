@@ -186,6 +186,9 @@ const BANDS = [
       // projects.ts 2026-11-13（D39）自 ② 平移至此：cache()/pickFeatured 的新增行把 ①+② 顶过前窗口，
       // proxy.ts 被 1500 切口切开；与本段的 logs.ts 同为 DAL，调用方页面均在 ④ 可见
       "src/lib/projects.ts",
+      // archive.ts：归档分组的纯函数（年/月切分与排序），调用方 logs.ts 的 getArchive 已在 ③；
+      // 抽出来是为了让分组规则可以被 tests/archive.test.ts 单独钉住（2026-11-16）
+      "src/lib/archive.ts",
       // B0/B1-a 新增的排版与交互组件（2026-11-16）：都是“排版 + 小块交互”的外壳，
       // 其数据来源（logs/projects DAL）与渲染入口（页面）均已在可见载体，登记 ③ 不动 ①+② 防线
       "src/components/SectionHead.tsx",

@@ -53,6 +53,11 @@
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
 import { db } from "@/lib/db";
+import {
+  groupArchive,
+  type ArchiveEntry,
+  type ArchiveYear,
+} from "@/lib/archive";
 import { escapeLikePattern, matchLog } from "@/lib/log-search";
 import { resolveUserId } from "@/lib/projects";
 import {
@@ -366,18 +371,12 @@ export async function getLogFacets(): Promise<LogFacets> {
   };
 }
 
-export type ArchiveEntry = {
-  id: string;
-  title: string;
-  slug: string;
-  handle: string;
-  projectName: string;
-  beforeDate: Date;
-};
-
-export type ArchiveMonth = { key: string; items: ArchiveEntry[] };
-
-export type ArchiveYear = { year: string; count: number; months: ArchiveMonth[] };
+// 分组规则抽到 src/lib/archive.ts 的纯函数（可用 node --test 钉住）；这里只做类型再导出，页面引用路径不变
+export type {
+  ArchiveEntry,
+  ArchiveMonth,
+  ArchiveYear,
+} from "@/lib/archive";
 
 /**
  * 归档页（/archive）的唯一取数口：只取列表需要的列，不取正文。
@@ -398,41 +397,24 @@ export async function getArchive(): Promise<ArchiveYear[]> {
     },
   });
 
-  const years = new Map<string, Map<string, ArchiveEntry[]>>();
+  const entries: ArchiveEntry[] = [];
 
   for (const row of rows) {
     // 无主行前台从不展示（buildLogWhere 已过滤，这里仅为类型收窄）
     if (!row.user) continue;
 
-    const iso = row.beforeDate.toISOString();
-    const year = iso.slice(0, 4);
-    const month = iso.slice(0, 7);
-    const entry: ArchiveEntry = {
+    entries.push({
       id: row.id,
       title: row.title,
       slug: row.slug,
       handle: row.user.handle,
       projectName: row.project.name,
       beforeDate: row.beforeDate,
-    };
-
-    const months = years.get(year) ?? new Map<string, ArchiveEntry[]>();
-    const items = months.get(month) ?? [];
-
-    items.push(entry);
-    months.set(month, items);
-    years.set(year, months);
+    });
   }
 
-  return [...years.entries()]
-    .sort((a, b) => Number(b[0]) - Number(a[0]))
-    .map(([year, months]) => ({
-      year,
-      count: [...months.values()].reduce((sum, items) => sum + items.length, 0),
-      months: [...months.entries()]
-        .sort((a, b) => b[0].localeCompare(a[0]))
-        .map(([key, items]) => ({ key, items })),
-    }));
+  // 分组与排序规则在纯函数里（年降序 → 月降序 → 日内保持查询顺序）
+  return groupArchive(entries);
 }
 
 export type TagFeedItem = {
