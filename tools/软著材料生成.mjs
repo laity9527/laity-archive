@@ -196,6 +196,8 @@ const BANDS = [
       "src/components/icons/index.tsx",
       // 站点导航外壳：渲染三项导航、当前项高亮与主题切换按钮；判定逻辑在 routes.ts、交互在 ThemeToggle
       "src/components/SiteNav.tsx",
+      // 根布局：字体挂载 + metadata + 首屏主题脚本 + 导航/页脚组合（无业务逻辑，视觉都在 globals.css）
+      "src/app/layout.tsx",
       // log-search 是 V2.1 全局搜索的匹配纯函数（四字段大小写不敏感子串匹配），
       // 调用方 searchLogs 在 logs.ts 内、页面在 ④；与 ai-prompt/object-key 同类放 ③，不动 ①+② 行数
       "src/lib/log-search.ts",
@@ -382,7 +384,8 @@ const BANDS = [
     name: "站点外壳（样式令牌 + 根布局 + 导航）与访客可见界面，末段为对外公示页（开源致谢 / 关于；隐私页、404 外壳与页脚自本轮起进折走段）",
     files: [
       "src/app/globals.css",
-      "src/app/layout.tsx",
+      // layout.tsx 于 2026-11-16（B2）自 ④ 平移进折走段 ③：根布局只做字体挂载、metadata 与导航/页脚组合，
+      // 主题脚本与视觉规则分别在 ThemeToggle / globals.css；平移是为了给 ④ 腾出后窗口容量（本轮余量 62 行被拒件）
       // SiteNav 于 2026-11-16（B1-a）自 ④ 平移进折走段 ③：它是导航外壳（渲染导航项 + 主题切换），
       // 判定逻辑在 routes.ts、交互在 ThemeToggle，均已在可见载体；
       // 平移是为了给 B0 新增的首页/详情样式腾出后窗口容量

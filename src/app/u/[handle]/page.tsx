@@ -9,6 +9,8 @@
  *               精选/看板/日志三处的跳转链接带本页 handle（/u/[handle]/... 体系）
  * - 2026-11-13: 本轮升级：精选改调 pickFeatured（原先只 filter + slice，实际按最近更新取，
  *               与首页「日志数优先」并不一致）；同时给本页补上 canonical 与 OG（原先只有 title）
+ * - 2026-11-16: 重构 B2：标题 36/48 → 32px、副标 18 → 15px、头部加 ink 收边线（与首页/作品页同一写法）；
+ *               统计条本批未加（会吃掉软著材料后窗口余量，已只剩 105 行），留待 B2 收尾时连同统计口径一起做
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -173,11 +175,11 @@ export default async function TenantHomePage({
 
   return (
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
-      <header>
-        <h1 className="text-4xl font-medium tracking-tight md:text-5xl">
+      <header className="border-b border-ink pb-8">
+        <h1 className="text-[32px] font-medium tracking-tight">
           {handle}
         </h1>
-        <p className="mt-6 max-w-xl text-lg text-ink-soft">
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-soft">
           数字档案：该租户的档案看板与最新开发日志。
         </p>
       </header>

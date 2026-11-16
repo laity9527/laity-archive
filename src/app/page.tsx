@@ -48,6 +48,7 @@ import { publicProjectHref } from "@/lib/routes";
 const actionClass =
   "border-b border-transparent text-xs text-ink hover:border-ink";
 
+// 首页版心 1200px（与导航、页脚同宽）；Hero 用 clamp(2.5rem,5.2vw,3.5rem)，375–1440 不折行
 async function ArchiveOverview() {
   // 首页的最新日志只要 3 条，按发布时间交给数据库取（D13 修订），不再全表捞回内存再切
   const [board, latestLogs, topics] = await Promise.all([

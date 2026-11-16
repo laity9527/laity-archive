@@ -13,6 +13,9 @@
  *               详情链接改 /u/[handle]/projects/[slug]——handle 经 listPublicProjects 的 select 白名单带出（公开标识）
  * - 2026-11-13: 显著升级 B3：标题改「作品档案」与导航一致；加 01–03 编号；右侧明确「最近一篇」与
  *               「尚未发布」（零日志项目不再只显示 0 篇日志）；返回链接与底部入口改 12px 中文，不再走 Mono
+ * - 2026-11-16: 重构 B2：h1 44 → 32px（与全站字号阶统一）、头部加 ink 收边线；元信息 11 → 12px、
+ *               「ARCHIVE」标签 9 → 10px。保留列表而不改卡片网格：零圆角 + 无阴影的语言下，
+ *               卡片会退化成带边框的表格，档案索引用列表更好扫读
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -41,19 +44,19 @@ export default async function ProjectsPage() {
         ← 首页
       </Link>
 
-      <header className="mt-10 pb-8">
+      <header className="mt-10 border-b border-ink pb-8">
         <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+          <span className="font-mono text-[10px] tracking-[0.18em] text-ink-soft">
             ARCHIVE
           </span>
-          <span className="font-sans text-[10px] text-ink-soft">
+          <span className="font-sans text-xs text-ink-soft">
             {projects.length} 个项目
           </span>
         </p>
-        <h1 className="mt-3 text-[44px] font-medium tracking-tight">
+        <h1 className="mt-3 text-[32px] font-medium tracking-tight">
           作品档案
         </h1>
-        <p className="mt-4 max-w-xl text-lg text-ink-soft">
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-soft">
           按作品维度看档案：一个项目下的判断与验证，都收在同一页里。
         </p>
       </header>
@@ -89,7 +92,7 @@ export default async function ProjectsPage() {
                       {project.name}
                     </Link>
                   </h2>
-                  <span className="font-sans text-[11px] text-ink-soft">
+                  <span className="font-sans text-xs text-ink-soft">
                     {kindLabel(project.kind)} · {statusLabel(project.status)}
                   </span>
                 </div>
@@ -103,7 +106,7 @@ export default async function ProjectsPage() {
                 )}
               </div>
 
-              <div className="col-span-1 col-start-2 text-[11px] text-ink-soft md:col-span-1 md:col-start-auto md:text-right">
+              <div className="col-span-1 col-start-2 text-xs text-ink-soft md:col-span-1 md:col-start-auto md:text-right">
                 <p className="font-sans">
                   {logsCountLabel(project.logs.length)}
                 </p>
@@ -123,7 +126,7 @@ export default async function ProjectsPage() {
                 </p>
                 <Link
                   href={`/u/${project.user.handle}/projects/${project.slug}`}
-                  className="mt-3 inline-block border-b border-ink font-sans text-[11px] text-ink"
+                  className="mt-3 inline-block border-b border-ink font-sans text-xs text-ink"
                 >
                   查看档案 →
                 </Link>

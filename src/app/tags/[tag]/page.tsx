@@ -7,6 +7,7 @@
  * - 2026-11-12: 初始创建（F26 标签聚合页 Commit 4：页面 + 链接接线。params 实测为编码原样（dev 探针），
  *               入口先 decodeTagParam 解码一次再 normalizeTag；0 行 notFound；
  *               Timeline 容器查询第六个调用点，ul 必须带 @container）
+ * - 2026-11-16: 全站字号阶统一后，本页标题仍为 44px（B2 尚未轮到本页）；收尾时与作品页/租户页一并调到 32px
  */
 import type { Metadata } from "next";
 import Link from "next/link";
