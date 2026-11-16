@@ -25,7 +25,7 @@
  */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { generateAiDraftAction } from "@/app/admin/ai-actions";
 import { uploadImageAction } from "@/app/admin/upload-action";
 import { errorTextOf } from "@/lib/error-text";
@@ -162,6 +162,34 @@ export function Editor({
       document.removeEventListener("submit", onSubmit, true);
     };
   }, [draftKey, before, after, aiAssisted]);
+
+  // 自动保存（F9）：停止输入 30s 或失焦时把正文写进 sessionStorage，并在工具栏显示时间戳。
+  // 与提交时那次暂存共用同一个 key，所以服务端打回（?error=）回填的是最新一版，
+  // 而不是“最后一次点保存”的版本；不存在任何自动提交，草稿状态不会被它改变
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  const saveDraftNow = useCallback(() => {
+    if (!dirty) return;
+
+    window.sessionStorage.setItem(
+      stashKey(draftKey),
+      JSON.stringify({ before, after, aiAssisted }),
+    );
+    setSavedAt(
+      new Date().toLocaleTimeString("zh-CN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    );
+  }, [dirty, draftKey, before, after, aiAssisted]);
+
+  useEffect(() => {
+    if (!dirty) return;
+
+    const timer = window.setTimeout(saveDraftNow, 30_000);
+
+    return () => window.clearTimeout(timer);
+  }, [dirty, saveDraftNow]);
 
   const tabClass = (value: Tab) =>
     `border-b pb-1 font-mono text-[10px] tracking-[0.2em] ${
@@ -352,7 +380,7 @@ export function Editor({
             AFTER
           </button>
           <span className="ml-auto font-mono text-[10px] text-ink-soft">
-            AFTER 可留空
+            {savedAt ? `已自动保存 ${savedAt}` : "AFTER 可留空"}
           </span>
         </div>
 
@@ -388,6 +416,7 @@ export function Editor({
           onChange={(event) => setBefore(event.target.value)}
           onKeyDown={handleEditorKeyDown}
           onPaste={handlePaste}
+          onBlur={saveDraftNow}
           hidden={tab !== "before"}
           rows={20}
           spellCheck={false}
@@ -401,6 +430,7 @@ export function Editor({
           onChange={(event) => setAfter(event.target.value)}
           onKeyDown={handleEditorKeyDown}
           onPaste={handlePaste}
+          onBlur={saveDraftNow}
           hidden={tab !== "after"}
           rows={20}
           spellCheck={false}
