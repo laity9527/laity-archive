@@ -7,6 +7,8 @@
  * - 2026-11-13: 初始创建（Phase C）。此前后台只能从概览「最近动态」的 5 条里进编辑，
  *               第 6 条及更早的草稿没有入口；本页补上列表、状态筛选与分页。
  *               只读列表，发布/下架/删除仍走原编辑页与 Server Action，不做批量操作。
+ * - 2026-11-16: B3 第一刀：行内加「发布 / 下架」——发布复用 publishLog（按库中正文算摘要 + 敏感扫描），
+ *               下架复用 unpublishLog；成功后回本页，结果由 Toast 提示。删除仍只在编辑页（需输 slug 确认）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -18,6 +20,10 @@ import {
   getAdminLogList,
   type AdminLogStatus,
 } from "@/lib/logs";
+import {
+  quickPublishAction,
+  quickUnpublishAction,
+} from "../log-actions";
 
 export const metadata: Metadata = {
   title: "日志",
@@ -230,6 +236,18 @@ export default async function AdminLogsPage({
               </span>
 
               <span className="ml-auto flex items-baseline gap-4 font-sans text-[11px]">
+                <form
+                  action={
+                    log.isPublished
+                      ? quickUnpublishAction
+                      : quickPublishAction
+                  }
+                >
+                  <input type="hidden" name="id" value={log.id} />
+                  <button type="submit" className="border-b border-ink text-ink">
+                    {log.isPublished ? "下架" : "发布"}
+                  </button>
+                </form>
                 <Link
                   href={`/admin/logs/${log.id}/edit`}
                   className="border-b border-ink text-ink"

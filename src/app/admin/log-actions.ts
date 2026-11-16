@@ -21,6 +21,9 @@
  *               改为无参（租户页是请求期取数，不需按 handle 失效）
  * - 2026-11-10: V2.0 Step 6 Commit 3：parseInput 收 isAiAssisted（表单带隐藏域才为 true），
  *               随 LogInput 落库（详情页据此打「AI 辅助生成」标签）
+ * - 2026-11-16: B3 第一刀：新增列表行内快捷动作 quickPublishAction / quickUnpublishAction——
+ *               只收 id、不接表单正文；写路径仍复用 publishLog（按库中正文算摘要 + 敏感扫描）与 unpublishLog，
+ *               成功后回列表页，错误码经 URL 回传由 Toast 展示
  */
 "use server";
 
@@ -264,4 +267,55 @@ export async function deleteLogAction(formData: FormData) {
 
   refreshLogViews();
   redirect(`/admin?deleted=1`);
+}
+
+// 列表行内快捷动作（B3）：只收 id、不接表单正文——发布仍走 publishLog，
+// 也就是按库中正文重算 SHA-256 并做敏感扫描（命中即回落 LOG_003，让用户去编辑页处理），
+// 语义与编辑页的「保存并发布」一致，不另开一套写路径
+export async function quickPublishAction(formData: FormData) {
+  const session = await requireAdminSession();
+
+  if (!session) {
+    redirect("/login?callbackUrl=%2Fadmin%2Flogs");
+  }
+
+  const id = readField(formData, "id");
+
+  if (!ID_PATTERN.test(id)) {
+    redirect("/admin/logs?error=VAL_001&field=id");
+  }
+
+  const result = await publishLog(id, session.userId, {
+    sensitiveConfirmed: false,
+  });
+
+  if (!result.ok) {
+    redirect(`/admin/logs?error=${result.code}`);
+  }
+
+  refreshLogViews();
+  redirect("/admin/logs?published=1");
+}
+
+export async function quickUnpublishAction(formData: FormData) {
+  const session = await requireAdminSession();
+
+  if (!session) {
+    redirect("/login?callbackUrl=%2Fadmin%2Flogs");
+  }
+
+  const id = readField(formData, "id");
+
+  if (!ID_PATTERN.test(id)) {
+    redirect("/admin/logs?error=VAL_001&field=id");
+  }
+
+  const result = await unpublishLog(id, session.userId);
+
+  if (!result.ok) {
+    redirect(`/admin/logs?error=${result.code}`);
+  }
+
+  refreshLogViews();
+  redirect("/admin/logs?unpublished=1");
 }
