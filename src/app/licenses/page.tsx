@@ -55,7 +55,7 @@ export default function LicensesPage() {
         ← 首页
       </Link>
 
-      <h1 className="mt-8 text-3xl font-medium">开源许可与致谢</h1>
+      <h1 className="mt-8 text-[32px] font-medium">开源许可与致谢</h1>
 
       <p className="mt-4 font-mono text-[11px] text-ink-soft">
         本页只列直接依赖；传递依赖的许可以各自上游仓库为准。清单由

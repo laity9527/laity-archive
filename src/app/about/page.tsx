@@ -92,7 +92,7 @@ export default function AboutPage() {
         <p className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
           COLOPHON
         </p>
-        <h1 className="mt-3 text-3xl font-medium tracking-tight">关于</h1>
+        <h1 className="mt-3 text-[32px] font-medium tracking-tight">关于</h1>
         <p className="mt-3 font-sans text-xs text-ink-soft">
           站主 · 这个档案库记什么 · 用什么做 · 怎么联系
         </p>

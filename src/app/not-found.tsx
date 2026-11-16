@@ -14,7 +14,7 @@ export default function NotFound() {
       <p className="font-mono text-[11px] tracking-[0.2em] text-ink-soft">
         404 · 页面不存在
       </p>
-      <h1 className="mt-6 text-3xl font-medium">这个地址本站没有对应页面</h1>
+      <h1 className="mt-6 text-[32px] font-medium">这个地址本站没有对应页面</h1>
       <p className="mt-4 text-lg text-ink-soft">
         可能是链接失效，也可能是本站把内容下架或删除了。可以从下面两个入口继续逛。
       </p>

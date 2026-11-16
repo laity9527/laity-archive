@@ -17,7 +17,7 @@ export default function AppError({ reset }: { reset: () => void }) {
       <p className="font-mono text-[11px] tracking-[0.2em] text-ink-soft">
         渲染出错了
       </p>
-      <h1 className="mt-6 text-3xl font-medium">这一页没能正常显示</h1>
+      <h1 className="mt-6 text-[32px] font-medium">这一页没能正常显示</h1>
       <p className="mt-4 text-lg text-ink-soft">
         可能是数据库连接或内容读取出了问题。可以再试一次，或者回到可访问的页面。
       </p>

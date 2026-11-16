@@ -69,7 +69,7 @@ export default async function TagPage({ params }: PageProps<"/tags/[tag]">) {
 
   return (
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
-      <h1 className="mb-12 text-4xl font-medium tracking-tight">标签：{normalized}</h1>
+      <h1 className="mb-12 text-[32px] font-medium tracking-tight">标签：{normalized}</h1>
       <p className="mb-12 font-sans text-sm text-ink-soft">
         {logs.length} 条已发布日志 ·{" "}
         <Link

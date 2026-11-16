@@ -67,7 +67,7 @@ export default function PrivacyPage() {
       </Link>
 
       <header className="mt-8 border-b border-hairline pb-8">
-        <h1 className="text-3xl font-medium">隐私与数据说明</h1>
+        <h1 className="text-[32px] font-medium">隐私与数据说明</h1>
         <p className="mt-4 font-mono text-[11px] text-ink-soft">
           这份说明只描述本站当前真实的行为，不承诺做不到的事。
         </p>

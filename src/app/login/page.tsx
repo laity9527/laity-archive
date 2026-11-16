@@ -72,7 +72,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <p className="mt-10 font-mono text-[9px] tracking-[0.2em] text-ink-soft">
             ADMINISTRATION
           </p>
-          <h1 className="mt-3 text-2xl font-medium tracking-tight md:text-4xl">
+          <h1 className="mt-3 text-[32px] font-medium tracking-tight">
             后台是写档案的地方，
             <br />
             不是另一个网站。
