@@ -9,10 +9,13 @@
  *               于是详情页在页级标题之外再多出第二个 h1——读屏的标题树和搜索引擎都只认一个
  * - 2026-11-11: F23/D34 加可选 tocIdPrefix：传入时 h1/h2/h3 按渲染序盖 `${prefix}-${n}` 锚点 id，
  *               与 src/lib/toc.ts 的 extractToc 同一计数口径；不传即原行为（Editor 预览零影响），h1→h2 降级保留
+ * - 2026-11-16: 重构 B0：代码块交给 CodeBlock（语言标签 + 复制），图片加 loading="lazy"/decoding="async"；
+ *               语言与正文都从 hast 节点读，不额外引插件，rehype-sanitize 仍是唯一边界
  */
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
+import { CodeBlock } from "@/components/CodeBlock";
 
 type MarkdownProps = {
   source: string;
@@ -20,11 +23,73 @@ type MarkdownProps = {
   tocIdPrefix?: string;
 };
 
+// hast 的最小形状：只用到 element / text 两种节点与 className
+type HastNode = {
+  type: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+  value?: string;
+};
+
+/**
+ * 从 <pre><code class="language-x">…</code></pre> 里读出语言与纯文本。
+ * 读不到就返回 null，调用方回落默认 <pre>（例如正文里手写的裸 pre）。
+ */
+function readCodeBlock(node: unknown): { lang: string; code: string } | null {
+  const root = node as HastNode | undefined;
+  const codeNode = root?.children?.find(
+    (child) => child.type === "element" && child.tagName === "code",
+  );
+
+  if (!codeNode) return null;
+
+  const raw = codeNode.properties?.className;
+  const classes = Array.isArray(raw)
+    ? raw.map(String)
+    : typeof raw === "string"
+      ? [raw]
+      : [];
+  const lang =
+    classes
+      .find((item) => item.startsWith("language-"))
+      ?.slice("language-".length) ?? "";
+  const code = (codeNode.children ?? [])
+    .map((child) => (child.type === "text" ? child.value ?? "" : ""))
+    .join("")
+    .replace(/\n$/, "");
+
+  return { lang, code };
+}
+
+const pre: Components["pre"] = ({ node, children }) => {
+  const parsed = readCodeBlock(node);
+
+  if (!parsed) {
+    return <pre>{children}</pre>;
+  }
+
+  return <CodeBlock lang={parsed.lang} code={parsed.code} />;
+};
+
+// 正文图片一律懒加载；点击放大由 ZoomableArticle 用事件委托接管。
+// node 是 hast 节点，不能落到 DOM 上（刻意丢弃）；alt 显式声明，缺省空串（装饰性）
+const img: Components["img"] = ({ node, alt, ...props }) => {
+  void node;
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img {...props} alt={alt ?? ""} loading="lazy" decoding="async" />
+  );
+};
+
 // 只降级标签：正文的层级关系由作者的 # 数量决定，页级 h1 归页面自己。
 // 清洗后的 h1 不带任何属性，所以这里只搬 children，不 spread 整个 props
 // （props 里混着 hast 的 node 对象，直接铺到 DOM 元素上会招来一条 React 警告）
 const COMPONENTS: Components = {
   h1: ({ children }) => <h2>{children}</h2>,
+  pre,
+  img,
 };
 
 export function Markdown({ source, tocIdPrefix }: MarkdownProps) {
@@ -44,6 +109,8 @@ export function Markdown({ source, tocIdPrefix }: MarkdownProps) {
           h3: ({ children }) => (
             <h3 id={`${tocIdPrefix}-${headingIndex++}`}>{children}</h3>
           ),
+          pre,
+          img,
         };
 
   return (

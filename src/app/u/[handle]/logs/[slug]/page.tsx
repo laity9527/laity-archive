@@ -22,6 +22,12 @@
  * - 2026-11-12: F26 标签聚合：header 标签改 Link 指向 /tags/[tag]
  * - 2026-11-13: 显著升级 B2：头部加阅读时长（纯函数 reading-time）；印章升级为档案凭据卡（复制链接 / 哈希）；
  *               尾部加前后篇与相关阅读（同标签优先、同项目兜底，见 lib/related.ts）
+ * - 2026-11-13: 本轮升级（SEO）：generateMetadata 补 canonical 与 OG article（发布时间/标签/作者），
+ *               正文头部输出 JSON-LD BlogPosting（序列化时转义 <，防 </script> 截断）
+ * - 2026-11-16: 重构 B0：「← 开发日志」回跳改为面包屑（档案 / 开发日志 / 项目 / 当前页）；
+ *               BEFORE / AFTER / 经验总结三段改用 SectionHead（编号 + 双线边界），经验总结收进 2px 棕左线引用块；
+ *               正文包进 ZoomableArticle 接管图片灯箱（事件委托，不注入 HTML）；
+ *               相邻日志与相关阅读加 no-print，打印时只留正文与印章
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -31,11 +37,15 @@ import {
   ArticleTocRail,
   type TocGroup,
 } from "@/components/ArticleToc";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Seal } from "@/components/Seal";
+import { SectionHead } from "@/components/SectionHead";
 import { Timeline } from "@/components/Timeline";
+import { ZoomableArticle } from "@/components/ZoomableArticle";
 import { getLogContext, getSafeLogBySlug } from "@/lib/logs";
 import { Markdown } from "@/lib/markdown";
 import { estimateReadingMinutes } from "@/lib/reading-time";
+import { siteName, siteUrl } from "@/lib/site";
 import { extractToc } from "@/lib/toc";
 
 // 列表页与搜索引擎要的摘要：优先用"经验总结"字段，它本身就是这条复盘的结论
@@ -58,6 +68,18 @@ export async function generateMetadata({
   return {
     title: log.title,
     description: describeLog(log),
+    // 规范地址：同一篇日志可能带查询参数或末尾斜杠进来，canonical 收敛到唯一 URL
+    alternates: { canonical: `/u/${handle}/logs/${slug}` },
+    openGraph: {
+      type: "article",
+      title: log.title,
+      description: describeLog(log),
+      url: `${siteUrl()}/u/${handle}/logs/${slug}`,
+      publishedTime: (log.publishedAt ?? log.beforeDate).toISOString(),
+      modifiedTime: log.updatedAt.toISOString(),
+      authors: [handle],
+      tags: log.tags,
+    },
   };
 }
 
@@ -96,6 +118,32 @@ export default async function LogDetailPage({
         : "相关阅读";
   const logPath = `/u/${handle}/logs/${slug}`;
 
+  // 结构化数据（BlogPosting）：让搜索引擎把每条日志识别为一篇带发布时间的文章。
+  // 序列化时把 < 转义成 \u003c——正文/标题里的 `</script>` 不能把内联脚本提前闭合。
+  // 这里不渲染任何作者 HTML，只输出 JSON，故不经过 rehype-sanitize 管线
+  const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: log.title,
+    description: describeLog(log),
+    datePublished: (log.publishedAt ?? log.beforeDate).toISOString(),
+    dateModified: log.updatedAt.toISOString(),
+    author: {
+      "@type": "Person",
+      name: handle,
+      url: `${siteUrl()}/u/${handle}`,
+    },
+    publisher: { "@type": "Organization", name: siteName, url: siteUrl() },
+    url: `${siteUrl()}${logPath}`,
+    mainEntityOfPage: `${siteUrl()}${logPath}`,
+    keywords: log.tags.join(","),
+    isPartOf: {
+      "@type": "Blog",
+      name: `${siteName} · 开发日志`,
+      url: `${siteUrl()}/logs`,
+    },
+  }).replace(/</g, "\\u003c");
+
   // F23：BEFORE/AFTER 各抽一组锚点（经验总结是短结论，不索引）；总标题数 ≥2 才画目录——
   // 单标题文章没有导航价值。两组前缀独立从 0 起，与 Markdown 的 tocIdPrefix 一一对应
   const tocGroups: TocGroup[] = [
@@ -108,6 +156,11 @@ export default async function LogDetailPage({
 
   return (
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
+      <script
+        type="application/ld+json"
+        // 结构化数据只能是字符串正文；< 已在序列化时转义，作者内容无法闭合标签
+        dangerouslySetInnerHTML={{ __html: jsonLd }}
+      />
       <div className="reading-progress" aria-hidden="true" />
       <div
         className={
@@ -123,14 +176,19 @@ export default async function LogDetailPage({
               : "mx-auto w-full max-w-[720px]"
           }
         >
-          <Link
-            href="/logs"
-            className="font-mono text-[11px] tracking-[0.2em] text-ink-soft hover:text-ink"
-          >
-            ← 开发日志
-          </Link>
+          <Breadcrumbs
+            items={[
+              { label: "档案", href: "/" },
+              { label: "开发日志", href: "/logs" },
+              {
+                label: log.project.name,
+                href: `/u/${handle}/projects/${log.project.slug}`,
+              },
+              { label: log.title },
+            ]}
+          />
 
-          <header className="mt-8 border-b border-hairline pb-8">
+          <header className="mt-6 pb-8 rule-double">
             <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
               {log.project.name}
             </p>
@@ -164,40 +222,41 @@ export default async function LogDetailPage({
 
           {showToc && <ArticleTocPanel groups={tocGroups} />}
 
-          <section className="mt-12">
-            <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-              BEFORE
-            </h2>
-            <div className="mt-4">
-              <Markdown
-                source={log.beforeContent}
-                tocIdPrefix={showToc ? "before" : undefined}
-              />
-            </div>
-          </section>
-
-          {log.afterContent && (
-            <section className="mt-12">
-              <h2 className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-                AFTER
-              </h2>
-              <div className="mt-4">
+          <ZoomableArticle>
+            <section className="mt-16">
+              <SectionHead index="01" title="BEFORE" mono />
+              <div className="mt-6">
                 <Markdown
-                  source={log.afterContent}
-                  tocIdPrefix={showToc ? "after" : undefined}
+                  source={log.beforeContent}
+                  tocIdPrefix={showToc ? "before" : undefined}
                 />
               </div>
             </section>
-          )}
 
-          {log.lessonLearned && (
-            <section className="mt-12">
-              <h2 className="font-sans text-[10px] text-ink-soft">经验总结</h2>
-              <div className="mt-4">
-                <Markdown source={log.lessonLearned} />
-              </div>
-            </section>
-          )}
+            {log.afterContent && (
+              <section className="mt-16">
+                <SectionHead index="02" title="AFTER" mono />
+                <div className="mt-6">
+                  <Markdown
+                    source={log.afterContent}
+                    tocIdPrefix={showToc ? "after" : undefined}
+                  />
+                </div>
+              </section>
+            )}
+
+            {log.lessonLearned && (
+              <section className="mt-16">
+                <SectionHead
+                  index={log.afterContent ? "03" : "02"}
+                  title="经验总结"
+                />
+                <blockquote className="mt-6 border-l-2 border-brown pl-5">
+                  <Markdown source={log.lessonLearned} />
+                </blockquote>
+              </section>
+            )}
+          </ZoomableArticle>
 
           {log.isAiAssisted && (
             <p className="mt-10 font-mono text-[10px] text-ink-soft">
@@ -225,7 +284,7 @@ export default async function LogDetailPage({
           {(context.older || context.newer) && (
             <nav
               aria-label="相邻日志"
-              className="mt-10 grid gap-6 border-t border-ink pt-6 sm:grid-cols-2"
+              className="no-print mt-10 grid gap-6 border-t border-ink pt-6 sm:grid-cols-2"
             >
               {context.older ? (
                 <Link
@@ -262,7 +321,7 @@ export default async function LogDetailPage({
           )}
 
           {context.related.length > 0 && (
-            <section className="mt-10 border-t border-hairline pt-5">
+            <section className="no-print mt-10 border-t border-hairline pt-5">
               <h2 className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
                 {relatedLabel}
               </h2>

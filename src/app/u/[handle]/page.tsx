@@ -7,6 +7,8 @@
  * - 2026-11-09: V2.0 Step 3 阶段一：创建。handle 不存在（库里无对应用户）走 notFound；
  *               看板与最新日志均按该租户 userId 取数（裁定 ① 的租户公开视图）；
  *               精选/看板/日志三处的跳转链接带本页 handle（/u/[handle]/... 体系）
+ * - 2026-11-13: 本轮升级：精选改调 pickFeatured（原先只 filter + slice，实际按最近更新取，
+ *               与首页「日志数优先」并不一致）；同时给本页补上 canonical 与 OG（原先只有 title）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -16,7 +18,8 @@ import { StatusBoard } from "@/components/StatusBoard";
 import { Timeline } from "@/components/Timeline";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { getLatestLogs } from "@/lib/logs";
-import { getArchiveBoard, resolveUserId } from "@/lib/projects";
+import { getArchiveBoard, pickFeatured, resolveUserId } from "@/lib/projects";
+import { siteUrl } from "@/lib/site";
 
 // 详情页类路由：按 handle 查库，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
@@ -32,9 +35,18 @@ export async function generateMetadata({
     return { title: "租户不存在" };
   }
 
+  const description = `${handle} 的数字档案：档案看板与最新开发日志。`;
+
   return {
     title: handle,
-    description: `${handle} 的数字档案：档案看板与最新开发日志。`,
+    description,
+    alternates: { canonical: `/u/${handle}` },
+    openGraph: {
+      type: "profile",
+      title: `${handle} · 数字档案`,
+      description,
+      url: `${siteUrl()}/u/${handle}`,
+    },
   };
 }
 
@@ -50,9 +62,8 @@ async function TenantOverview({
     getLatestLogs(3, userId),
   ]);
 
-  // 精选规则与首页同口径（无数据库字段）：有已发布日志的项目按最近更新取前 3；
-  // 零日志项目只进状态看板，不进精选
-  const featured = board.filter((project) => project.count > 0).slice(0, 3);
+  // 精选规则与首页同口径：从 pickFeatured 单源取（原先是 filter + slice，实际按最近更新取）
+  const featured = pickFeatured(board);
 
   return (
     <div className="md:flex md:items-start md:justify-between">

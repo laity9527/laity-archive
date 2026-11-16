@@ -14,7 +14,30 @@
   --foreground: #1a1a18;
 }
 
-@theme inline {
+/* 暗色（B1-a，2026-11-16）：只覆盖语义层，色相不动。
+   暖黑底 #141311 + 纸白字 #e8e3da（对比 14.53:1），辅助灰 #a8a196（7.25:1），
+   棕提明度到 #c08a5a（6.21:1）；正文不用 #fff/#000。
+   变量定义在 html 上，子元素按最近定义解析，Tailwind 的 var() 工具类自动跟随 */
+html[data-theme="dark"] {
+  --background: #141311;
+  --foreground: #e8e3da;
+  --color-ink-soft: #a8a196;
+  --color-hairline: #3a352d;
+  --color-brown: #c08a5a;
+  color-scheme: dark;
+}
+
+/* 搜索高亮在暗色下换成深棕底 + 纸白字（7.40:1）：棕底 + 黑字只有 2.34:1，不能用 */
+html[data-theme="dark"] mark {
+  background: #5a4128;
+  color: #e8e3da;
+}
+
+/* 注意：这里不能用 `@theme inline`。inline 会把色值直接内联进工具类
+   （实测产物为 `.text-ink-soft{color:#625d53}`），`html[data-theme="dark"]` 覆盖变量
+   就影响不到任何 Tailwind 工具类——暗色会变成“底变了、字没变”。
+   去掉 inline 后工具类编译为 var(--color-*)，暗色覆盖才能贯穿全站 */
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-paper: var(--background);
@@ -348,5 +371,170 @@ mark {
 @media (prefers-reduced-motion: reduce) {
   .toc-panel summary::after {
     transition: none;
+  }
+}
+
+/* ── B0：正文代码块（语言标签 + 复制） ─────────────────────────── */
+
+/* 双线：1px + 1px，只用于详情页头部这类「凭据」语义的边界 */
+.rule-double {
+  border-bottom: 3px double var(--foreground);
+}
+
+.code-block {
+  margin-top: 1.5em;
+  border: 1px solid var(--color-hairline);
+}
+
+.code-block__bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.code-block__lang {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+.code-block__copy {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 12px;
+  color: var(--color-ink-soft);
+  border-bottom: 1px solid transparent;
+}
+
+.code-block__copy:hover {
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+}
+
+/* 块内 pre 不再叠加 .log-body pre 的边框与内边距（同优先级，靠后覆盖） */
+.code-block pre {
+  margin: 0;
+  border: 0;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.code-block pre code {
+  font-size: inherit;
+}
+
+/* ── B0：图片灯箱（原生 dialog） ────────────────────────── */
+
+.log-body img {
+  cursor: zoom-in;
+}
+
+.lightbox {
+  max-width: none;
+  max-height: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--background);
+}
+
+.lightbox::backdrop {
+  background: rgb(10 9 8 / 0.84);
+}
+
+.lightbox__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  max-width: 90vw;
+}
+
+.lightbox__img {
+  max-width: 90vw;
+  max-height: 82vh;
+  object-fit: contain;
+  background: var(--background);
+}
+
+.lightbox__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 12px;
+  color: var(--color-hairline);
+}
+
+.lightbox__close {
+  color: var(--background);
+  border-bottom: 1px solid transparent;
+}
+
+.lightbox__close:hover {
+  border-bottom-color: var(--background);
+}
+
+/* ── B0：打印（存证场景拿走的正式那一页） ───────────────────── */
+
+@media print {
+  :root,
+  /* 暗色也要出黑字白底：html[data-theme] 的选择器优先级高于 :root，必须同列表里重申 */
+  html[data-theme="dark"] {
+    --background: #ffffff;
+    --foreground: #000000;
+    --color-ink-soft: #444444;
+    --color-hairline: #bbbbbb;
+    --color-brown: #5a4128;
+    color-scheme: light;
+  }
+
+  body > header,
+  body > footer,
+  .no-print,
+  .reading-progress,
+  .toc-rail,
+  .toc-panel,
+  .lightbox {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .log-body {
+    font-size: 12pt;
+    line-height: 1.7;
+  }
+
+  .code-block pre {
+    font-size: 9pt;
+  }
+
+  .code-block,
+  .log-body pre,
+  .log-body img,
+  .log-body blockquote {
+    break-inside: avoid;
+  }
+
+  .log-body h1,
+  .log-body h2,
+  .log-body h3 {
+    break-after: avoid;
+  }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #444444;
   }
 }

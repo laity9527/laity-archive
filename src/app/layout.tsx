@@ -11,6 +11,8 @@
  * - 2026-11-03: 默认标题从"开发复盘证据链"改为"开发复盘档案"——对外文案只描述事实，不暗示法律效果
  * - 2026-11-12: F27 RSS 订阅：metadata 加 alternates.types 指向 /feed.xml，全站 head 自动发现（官方文档原样写法，
  *               metadataBase 已就位，相对路径渲染为绝对 URL）
+ * - 2026-11-16: 重构 B1-a：body 首子元素插入主题脚本（先定 html[data-theme] 再绘制，消除闪白），
+ *               html 加 suppressHydrationWarning（dataset 由脚本在 hydrate 前改写）
  */
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Noto_Serif_SC } from "next/font/google";
@@ -76,10 +78,19 @@ const fontVariables = [
   jetbrainsMono.variable,
 ].join(" ");
 
+// 首屏主题：localStorage 优先，否则跟随系统。必须是阻塞脚本且在任何内容之前执行，
+// 否则纸白底会先画出来再变暗（闪白）。CSP 的 script-src 已放行 inline
+export const themeScript = `(function(){try{var s=localStorage.getItem("laity-theme");var m=window.matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.dataset.theme=s||(m?"dark":"light");}catch(e){}})();`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="zh-CN" className={`${fontVariables} h-full antialiased`}>
+    <html
+      lang="zh-CN"
+      className={`${fontVariables} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="flex min-h-full flex-col bg-paper font-sans text-ink">
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <SiteNav />
         <div className="flex-1">{children}</div>
         <SiteFooter

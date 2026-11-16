@@ -19,6 +19,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { isPublicRoute } from "@/lib/routes";
 
 // 首页由左侧字标承担，导航里不再放第二个指向 / 的链接（同页两个同链接是多余的）
@@ -64,22 +65,25 @@ export function SiteNav() {
         >
           LAITY
         </Link>
-        <nav aria-label="站点导航" className="ml-auto flex items-baseline gap-6">
-          {SECTIONS.map((section) => (
-            <Link
-              key={section.key}
-              href={section.href}
-              aria-current={activeKey === section.key ? "page" : undefined}
-              className={`border-b pb-1 font-sans text-xs ${
-                activeKey === section.key
-                  ? "border-brown text-brown"
-                  : "border-transparent text-ink-soft hover:text-ink"
-              }`}
-            >
-              {section.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="ml-auto flex items-baseline gap-6">
+          <nav aria-label="站点导航" className="flex items-baseline gap-6">
+            {SECTIONS.map((section) => (
+              <Link
+                key={section.key}
+                href={section.href}
+                aria-current={activeKey === section.key ? "page" : undefined}
+                className={`border-b pb-1 font-sans text-xs ${
+                  activeKey === section.key
+                    ? "border-brown text-brown"
+                    : "border-transparent text-ink-soft hover:text-ink"
+                }`}
+              >
+                {section.label}
+              </Link>
+            ))}
+          </nav>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
