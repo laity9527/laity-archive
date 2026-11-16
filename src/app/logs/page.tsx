@@ -43,6 +43,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { LoadingRows } from "@/components/LoadingRows";
 import { Timeline } from "@/components/Timeline";
 import { db } from "@/lib/db";
@@ -101,6 +102,10 @@ function filterClass(active: boolean) {
 }
 
 async function LogBoard({ searchParams }: LogsPageProps) {
+  // Cache Components 下读 searchParams 属请求期数据：先声明 connection() 停止预渲染，
+  // 否则壳里只有 fallback，内容以隐藏段下发却不会被揭示（实测：/logs 永远停在骨架）
+  await connection();
+
   const { project, tag, topic, q, sort: rawSort, cursor: rawCursor } = await searchParams;
   const projectFilter = pickParam(project);
   const tagFilter = pickParam(tag);
