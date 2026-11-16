@@ -50,6 +50,7 @@ import { db } from "@/lib/db";
 import { ID_PATTERN, pickParam } from "@/lib/forms";
 import { extractSnippet, highlightSegments } from "@/lib/highlight";
 import { getLogFacets, getLogList, searchLogsLimited, type LogSort } from "@/lib/logs";
+import { parseSort } from "@/lib/sort-preference";
 import { isTopicKey, topicLabel, type TopicKey } from "@/lib/topics";
 
 export const metadata: Metadata = {
@@ -117,8 +118,9 @@ async function LogBoard({ searchParams }: LogsPageProps) {
   const cursor = parseCursor(pickParam(rawCursor));
 
   // 排序只认两个值：不传 / 非法都回落 decided（按“哪天做的决策”），与首页“最新日志”口径区分
-  const sortFilter: LogSort =
-    pickParam(rawSort) === "published" ? "published" : "decided";
+  // 排序偏好由 proxy 层处理：带 ?sort= 时它顺手写 cookie，不带时若有偏好会 307 补上 sort，
+  // 所以这里只需要解析 URL（单一入口，页面不管 cookie）
+  const sortFilter: LogSort = parseSort(pickParam(rawSort));
 
   // 站内链接统一带当前排序，避免点筛选后顺序被悄悄重置
   const logsHrefWithSort = (params: {

@@ -26,6 +26,9 @@
  * - 2026-11-12: F26 标签聚合页真 404：matcher 增 /tags/:tag，readTagSegment + decodeTagParam/normalizeTag/
  *               hasPublishedTag 三段判定；非法值与无已发布日志的标签回同一 404，文案不泄露缺的是哪一层；
  *               四组色值字面量一字未动
+ * - 2026-11-16: 大厅排序记忆（matcher 增 /logs）：带 ?sort= 时写 cookie（非默认值才重定向），
+ *               不带 sort 且偏好为 published 时 307 补上参数。放在此处而非页面：
+ *               页面层读 cookies() 在 PPR 边界里拿不到值（实测），proxy 每请求都能可靠读写
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -33,9 +36,10 @@ import { getToken } from "next-auth/jwt";
 import { decodeTagParam, normalizeTag } from "@/lib/forms";
 import { hasPublishedTag, isPublishedLogSlug } from "@/lib/logs";
 import { isProjectSlug } from "@/lib/projects";
+import { SORT_COOKIE, parseSort } from "@/lib/sort-preference";
 
 export const config = {
-  matcher: ["/u/:handle/logs/:slug", "/u/:handle/projects/:slug", "/tags/:tag", "/admin/:path*"],
+  matcher: ["/u/:handle/logs/:slug", "/u/:handle/projects/:slug", "/tags/:tag", "/logs", "/admin/:path*"],
 };
 
 // 文案全部是常量，请求里的 slug 不会拼进 HTML
@@ -168,6 +172,36 @@ async function guardAdmin(request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 日志大厅的排序记忆（2026-11-16）：在边缘一次做完，页面只认 URL。
+  // - 带 ?sort=：把它写进 cookie（下次默认沿用）；
+  // - 不带 sort 且偏好为 published：307 补上参数（只对非默认值重定向，避免 /logs 永远带参数）。
+  // 之所以放在 proxy 而不是页面：页面层读 cookies 在 PPR 边界里拿不到值（实测），
+  // 而 proxy 每个请求都能可靠读写 cookie。
+  if (pathname === "/logs") {
+    const url = request.nextUrl.clone();
+    const sortParam = url.searchParams.get("sort");
+    const preference = request.cookies.get(SORT_COOKIE)?.value;
+
+    if (sortParam) {
+      const response = NextResponse.next();
+      response.cookies.set(SORT_COOKIE, parseSort(sortParam), {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+
+      return response;
+    }
+
+    if (preference === "published") {
+      url.searchParams.set("sort", "published");
+
+      return NextResponse.redirect(url);
+    }
+
+    return NextResponse.next();
+  }
 
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     return guardAdmin(request);

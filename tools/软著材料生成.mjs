@@ -193,6 +193,8 @@ const BANDS = [
       "src/lib/featured.ts",
       // text-stats.ts：编辑器字数统计纯函数（中文按字、拉丁按词），2026-11-16 抽出以便单测
       "src/lib/text-stats.ts",
+      // sort-preference.ts：大厅排序偏好的 cookie 名与合法值解析（2026-11-16）
+      "src/lib/sort-preference.ts",
       // B0/B1-a 新增的排版与交互组件（2026-11-16）：都是“排版 + 小块交互”的外壳，
       // 其数据来源（logs/projects DAL）与渲染入口（页面）均已在可见载体，登记 ③ 不动 ①+② 防线
       "src/components/SectionHead.tsx",
