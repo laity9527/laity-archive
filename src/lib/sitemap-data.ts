@@ -65,6 +65,7 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     { url: `${base}/` },
     { url: `${base}/logs` },
     { url: `${base}/tags` },
+    { url: `${base}/archive` },
     { url: `${base}/projects` },
     { url: `${base}/privacy` },
     { url: `${base}/licenses` },

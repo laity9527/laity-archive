@@ -42,6 +42,8 @@
  *               改用关系过滤后为 3 条（Log / Project / 上下文字表），对齐 AGENTS 的 ≤3 预算
  * - 2026-11-16: B4：新增 getTagIndex（/tags 索引页的唯一取数口）——只取 tags 一列，
  *               按显示名聚合计数，排序固定「频次降序 → 名称升序」；不做 tagsKey 双轨迁移
+ * - 2026-11-16: B4：新增 getArchive（/archive 归档页）——只取列表列，按 beforeDate 分年/月，
+ *               排序固定「年降序 → 月降序 → 日降序」，时间全部按 UTC 切片（与全站存时口径一致）
  */
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -337,8 +339,76 @@ export async function getLogFacets(): Promise<LogFacets> {
   };
 }
 
-export type TagIndexEntry = { tag: string; count: number };
+export type ArchiveEntry = {
+  id: string;
+  title: string;
+  slug: string;
+  handle: string;
+  projectName: string;
+  beforeDate: Date;
+};
 
+export type ArchiveMonth = { key: string; items: ArchiveEntry[] };
+
+export type ArchiveYear = { year: string; count: number; months: ArchiveMonth[] };
+
+/**
+ * 归档页（/archive）的唯一取数口：只取列表需要的列，不取正文。
+ * 分组按 beforeDate（“哪天做的决策”）而不是 publishedAt——归档回答“什么时候发生”，
+ * 与大厅的时间序一致；年份/月份按 UTC 切片，与全库存时口径一致，不在展示层做本地时区换算。
+ */
+export async function getArchive(): Promise<ArchiveYear[]> {
+  const rows = await db.log.findMany({
+    where: buildLogWhere({ requireOwner: true }),
+    orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      beforeDate: true,
+      project: { select: { name: true } },
+      user: { select: { handle: true } },
+    },
+  });
+
+  const years = new Map<string, Map<string, ArchiveEntry[]>>();
+
+  for (const row of rows) {
+    // 无主行前台从不展示（buildLogWhere 已过滤，这里仅为类型收窄）
+    if (!row.user) continue;
+
+    const iso = row.beforeDate.toISOString();
+    const year = iso.slice(0, 4);
+    const month = iso.slice(0, 7);
+    const entry: ArchiveEntry = {
+      id: row.id,
+      title: row.title,
+      slug: row.slug,
+      handle: row.user.handle,
+      projectName: row.project.name,
+      beforeDate: row.beforeDate,
+    };
+
+    const months = years.get(year) ?? new Map<string, ArchiveEntry[]>();
+    const items = months.get(month) ?? [];
+
+    items.push(entry);
+    months.set(month, items);
+    years.set(year, months);
+  }
+
+  return [...years.entries()]
+    .sort((a, b) => Number(b[0]) - Number(a[0]))
+    .map(([year, months]) => ({
+      year,
+      count: [...months.values()].reduce((sum, items) => sum + items.length, 0),
+      months: [...months.entries()]
+        .sort((a, b) => b[0].localeCompare(a[0]))
+        .map(([key, items]) => ({ key, items })),
+    }));
+}
+
+export type TagIndexEntry = { tag: string; count: number };
 /**
  * 标签索引页（/tags）的唯一取数口：只取 tags 一列，按显示名聚合计数。
  * 排序固定「频次降序 → 名称升序（zh-CN）」，保证同一份数据每次渲染顺序一致。

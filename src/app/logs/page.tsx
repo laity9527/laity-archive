@@ -568,7 +568,15 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 export default function LogsPage({ searchParams }: LogsPageProps) {
   return (
     <main id="main" className="mx-auto max-w-[1200px] px-6 py-24">
-      <h1 className="mb-12 text-4xl font-medium tracking-tight">开发日志</h1>
+      <div className="mb-12 flex flex-wrap items-baseline justify-between gap-4">
+        <h1 className="text-[32px] font-medium tracking-tight">开发日志</h1>
+        <Link
+          href="/archive"
+          className="border-b border-transparent text-xs text-ink-soft hover:border-ink hover:text-ink"
+        >
+          按年月归档 →
+        </Link>
+      </div>
       <Suspense fallback={<LoadingRows rows={4} />}>
         <LogBoard searchParams={searchParams} />
       </Suspense>
