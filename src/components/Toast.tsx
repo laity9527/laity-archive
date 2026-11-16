@@ -42,6 +42,11 @@ const SUCCESS: Record<string, { title: string; text: string }> = {
     text: "正文与历史摘要都保留，只是不再对访客显示。",
   },
   deleted: { title: "已删除", text: "这一条已从库中移除，无法撤销。" },
+  // 设置页的显示名保存：与“保存草稿”区分，避免出现“草稿已写入库”的错误语义
+  profileSaved: {
+    title: "已保存",
+    text: "显示名已更新，后台右上角与档案看板会立即生效。",
+  },
 };
 
 function formOf(pathname: string): "log" | "project" | undefined {

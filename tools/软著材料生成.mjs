@@ -297,6 +297,9 @@ const BANDS = [
       // Phase C 后台日志列表：状态筛选 + 标题搜索 + 分页的纯列表排版，
       // 与大厅页同属“折排版不折逻辑”；取数在 ③ 的 logs.ts，登记 ③（2026-11-13）
       "src/app/admin/logs/page.tsx",
+      // 设置页（2026-11-16 P5-1）：站点标识只读展示 + 个人显示名可改；写动作单独一个文件
+      "src/app/admin/settings/page.tsx",
+      "src/app/admin/settings-actions.ts",
       // 项目详情页让位给后窗口的站点外壳：项目列表页仍在 ④ 段，功能面不缺
       // V2.0 Step 3 阶段一：路由迁至 /u/[handle]/projects/[slug]，收录路径随目录迁移
       "src/app/u/[handle]/projects/[slug]/page.tsx",
