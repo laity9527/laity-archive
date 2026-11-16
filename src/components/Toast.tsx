@@ -10,11 +10,15 @@
  * - 2026-11-16: 改为渲染期派生消息 + 只记"已关闭哪一条"：effect 里同步 setState 会被
  *               react-hooks/set-state-in-effect 判错（React Compiler 规则），
  *               而"参数 → 文案"本来就是纯映射，不需要再存一份 state
+ * - 2026-11-16: 自测发现 Toast 未水合（关闭按钮无 fiber、不自动收起、URL 不清理），
+ *               根因是 `useSearchParams` 在当前 PPR 环境下该边界未完成水合；
+ *               改为 `useSyncExternalStore` 订阅 `location.search`（与 ThemeToggle 同一套），
+ *               不再依赖路由 hooks；后台操作回执均为整页重定向，不靠客户端导航触发
  */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { errorTextOf } from "@/lib/error-text";
 import { IconAlert, IconCheck, IconClose } from "@/components/icons";
 
@@ -47,8 +51,32 @@ function formOf(pathname: string): "log" | "project" | undefined {
   return undefined;
 }
 
+// location.search 作为外部存储：后台回执靠整页重定向产生新 URL，
+// 这里只需在挂载/前进后退时能读到当前值；不监听 pushState（我们自己不靠它在客户端换参）
+function subscribeToLocation(onChange: () => void) {
+  window.addEventListener("popstate", onChange);
+
+  return () => window.removeEventListener("popstate", onChange);
+}
+
+function getLocationSearch() {
+  return window.location.search;
+}
+
+// 服务端与 hydration 阶段读不到 location：返回空串，挂载后再由 store 校正
+function getServerSearch() {
+  return "";
+}
+
 export function Toast() {
-  const params = useSearchParams();
+  // 直接订阅 location.search：不依赖 useSearchParams（该 hook 在 PPR 边界里会让整个组件
+  // 等路由就绪才水合，实测表现为“看得见但点不动、也不自动收起”）
+  const search = useSyncExternalStore(
+    subscribeToLocation,
+    getLocationSearch,
+    getServerSearch,
+  );
+  const params = useMemo(() => new URLSearchParams(search), [search]);
   const pathname = usePathname();
   const router = useRouter();
 
