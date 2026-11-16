@@ -18,9 +18,18 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { IconSearch } from "@/components/icons";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { isPublicRoute } from "@/lib/routes";
+
+// 面板按需加载：未打开时不进首屏包（只多一个按钮上的图标）
+const CommandPalette = dynamic(
+  () => import("@/components/CommandPalette").then((mod) => mod.CommandPalette),
+  { ssr: false },
+);
 
 // 首页由左侧字标承担，导航里不再放第二个指向 / 的链接（同页两个同链接是多余的）
 const SECTIONS = [
@@ -32,6 +41,21 @@ const SECTIONS = [
 
 export function SiteNav() {
   const pathname = usePathname();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // ⌘K / Ctrl+K 全局唤起；监听器很小，留在导航里，面板实体按需加载
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   if (!isPublicRoute(pathname)) {
     return null;
@@ -85,9 +109,23 @@ export function SiteNav() {
               </Link>
             ))}
           </nav>
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            aria-label="打开搜索（快捷键 Command K）"
+            className="flex items-baseline gap-2 border-b border-transparent pb-1 text-ink-soft hover:border-ink hover:text-ink"
+          >
+            <span aria-hidden>
+              <IconSearch size={13} />
+            </span>
+            <span className="font-mono text-[10px] tracking-[0.08em]">⌘K</span>
+          </button>
           <ThemeToggle />
         </div>
       </div>
+      {paletteOpen && (
+        <CommandPalette onClose={() => setPaletteOpen(false)} />
+      )}
     </header>
   );
 }

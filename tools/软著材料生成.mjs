@@ -196,6 +196,10 @@ const BANDS = [
       "src/components/icons/index.tsx",
       // 站点导航外壳：渲染三项导航、当前项高亮与主题切换按钮；判定逻辑在 routes.ts、交互在 ThemeToggle
       "src/components/SiteNav.tsx",
+      // 命令面板（2026-11-16 B4）：⌘K 全局搜索；查询走 /api/search，键盘交互与渲染都在本组件
+      "src/components/CommandPalette.tsx",
+      // 搜索接口（2026-11-16 B4）：一次返回日志/项目/标签三组候选，日志复用 searchLogsLimited
+      "src/app/api/search/route.ts",
       // Toast：后台操作回执浮层（读 URL 参数 → 提示 → 清查询串）；文案仍走 error-text 单源
       "src/components/Toast.tsx",
       // 根布局：字体挂载 + metadata + 首屏主题脚本 + 导航/页脚组合（无业务逻辑，视觉都在 globals.css）
