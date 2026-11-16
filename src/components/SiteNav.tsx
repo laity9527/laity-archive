@@ -26,6 +26,7 @@ import { isPublicRoute } from "@/lib/routes";
 const SECTIONS = [
   { key: "projects", href: "/projects", label: "作品档案" },
   { key: "logs", href: "/logs", label: "开发日志" },
+  { key: "tags", href: "/tags", label: "标签" },
   { key: "about", href: "/about", label: "关于" },
 ] as const;
 
@@ -41,11 +42,13 @@ export function SiteNav() {
       ? "home"
       : pathname.startsWith("/logs")
         ? "logs"
-        : pathname.startsWith("/projects")
-          ? "projects"
-          : pathname === "/about" || pathname.startsWith("/about/")
-            ? "about"
-            : null;
+        : pathname.startsWith("/tags")
+          ? "tags"
+          : pathname.startsWith("/projects")
+            ? "projects"
+            : pathname === "/about" || pathname.startsWith("/about/")
+              ? "about"
+              : null;
 
   return (
     <header className="border-b border-hairline">

@@ -40,6 +40,8 @@
  * - 2026-11-13: 性能预算实测后的修正：handle 不再先 resolveUserId 查一次 User，直接在 where 里用关系过滤
  *               （user: { handle }）——实测详情页页面侧 4 条 SQL，其中 1 条是这条多余的租户解析；
  *               改用关系过滤后为 3 条（Log / Project / 上下文字表），对齐 AGENTS 的 ≤3 预算
+ * - 2026-11-16: B4：新增 getTagIndex（/tags 索引页的唯一取数口）——只取 tags 一列，
+ *               按显示名聚合计数，排序固定「频次降序 → 名称升序」；不做 tagsKey 双轨迁移
  */
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -333,6 +335,32 @@ export async function getLogFacets(): Promise<LogFacets> {
       count: topicCounts.get(topic.key) ?? 0,
     })),
   };
+}
+
+export type TagIndexEntry = { tag: string; count: number };
+
+/**
+ * 标签索引页（/tags）的唯一取数口：只取 tags 一列，按显示名聚合计数。
+ * 排序固定「频次降序 → 名称升序（zh-CN）」，保证同一份数据每次渲染顺序一致。
+ * 口径与大厅一致（isPublished + 有主行），不做 tagsKey 双轨（标签归一化留给 B4 迁移批）。
+ */
+export async function getTagIndex(): Promise<TagIndexEntry[]> {
+  const rows = await db.log.findMany({
+    where: buildLogWhere({ requireOwner: true }),
+    select: { tags: true },
+  });
+
+  const counts = new Map<string, number>();
+
+  for (const row of rows) {
+    for (const tag of row.tags) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+
+  return [...counts]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"));
 }
 
 export type LogContextItem = {

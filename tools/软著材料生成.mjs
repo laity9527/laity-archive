@@ -378,6 +378,8 @@ const BANDS = [
       // 总行数 10699、总页数 214、提交 60 页均不变。
       // 语义降级（已知并接受）：本页不再“必须整份可见”；将来后窗口切口若进入本页，其头部会被静默折走，
       // 属“折排版”口径的正常结果，不是漏登记（它仍在收录清单里、assertComplete 仍会核到）。
+      // 标签索引页（2026-11-16 B4）：标签云排版 + getTagIndex 取数调用，逻辑都在 logs.ts 与 tags/[tag] 页
+      "src/app/tags/page.tsx",
       "src/app/tags/[tag]/page.tsx",
     ],
   },

@@ -64,6 +64,7 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   const entries: SitemapEntry[] = [
     { url: `${base}/` },
     { url: `${base}/logs` },
+    { url: `${base}/tags` },
     { url: `${base}/projects` },
     { url: `${base}/privacy` },
     { url: `${base}/licenses` },
