@@ -192,23 +192,8 @@ export async function getArchiveBoard(userId?: string): Promise<ArchiveBoardEntr
   }));
 }
 
-/**
- * 精选口径单源：有已发布日志的项目按「日志数优先、再按最近更新」取前 N
- * （只看最近更新会让只有 1 条日志的工具排到主项目之前）；首页与租户主页同调此函数。
- */
-export function pickFeatured(
-  board: readonly ArchiveBoardEntry[],
-  take = 3,
-): ArchiveBoardEntry[] {
-  return [...board]
-    .filter((project) => project.count > 0)
-    .sort(
-      (a, b) =>
-        b.count - a.count ||
-        (b.latest?.getTime() ?? 0) - (a.latest?.getTime() ?? 0),
-    )
-    .slice(0, Math.max(take, 0));
-}
+// 精选口径已抽到 src/lib/featured.ts（纯函数、可单测）；这里再导出，页面引用路径不变
+export { pickFeatured } from "@/lib/featured";
 
 // cache()：单请求内元信息与页面共享同一次查询，不是跨请求缓存。
 // handle 走关系过滤（不再先查一次 User 拿 userId）——与 logs.ts 的详情查询同口径，省一次往返
