@@ -19,8 +19,11 @@
  * - 2026-11-09: V2.0 Step 4-B：管理侧读写全部按 userId 隔离——listProjectIds/listProjects/getProjectById/
  *               getAdminOverview 加 userId 过滤；saveProject 创建带 userId、更新改 updateMany({id,userId})，
  *               deleteProject 改 deleteMany({id,userId})，0 行命中一律 PRJ_004（跨租户与不存在同表现）
+ * - 2026-11-13: 查询去重：resolveUserId / getPublicProjectBySlug 包 React cache()（单请求内只查一次）；
+ *               新增 pickFeatured 精选口径单源
  */
 import { Prisma } from "@prisma/client";
+import { cache } from "react";
 import { db } from "@/lib/db";
 
 // 合法取值与 prisma/schema.prisma 的注释保持一致；改这里要同步改 schema 注释
@@ -189,16 +192,29 @@ export async function getArchiveBoard(userId?: string): Promise<ArchiveBoardEntr
   }));
 }
 
-export async function getPublicProjectBySlug(slug: string, handle: string) {
-  // V2.0 Step 3：handle 由路由传入（/u/[handle]/projects/[slug]），默认参数已移除
-  const userId = await resolveUserId(handle);
+/**
+ * 精选口径单源：有已发布日志的项目按「日志数优先、再按最近更新」取前 N
+ * （只看最近更新会让只有 1 条日志的工具排到主项目之前）；首页与租户主页同调此函数。
+ */
+export function pickFeatured(
+  board: readonly ArchiveBoardEntry[],
+  take = 3,
+): ArchiveBoardEntry[] {
+  return [...board]
+    .filter((project) => project.count > 0)
+    .sort(
+      (a, b) =>
+        b.count - a.count ||
+        (b.latest?.getTime() ?? 0) - (a.latest?.getTime() ?? 0),
+    )
+    .slice(0, Math.max(take, 0));
+}
 
-  if (!userId) {
-    return null;
-  }
-
-  return db.project.findUnique({
-    where: { userId_slug: { userId, slug } },
+// cache()：单请求内元信息与页面共享同一次查询，不是跨请求缓存。
+// handle 走关系过滤（不再先查一次 User 拿 userId）——与 logs.ts 的详情查询同口径，省一次往返
+export const getPublicProjectBySlug = cache(async (slug: string, handle: string) => {
+  return db.project.findFirst({
+    where: { slug, user: { handle } },
     select: {
       slug: true,
       name: true,
@@ -209,33 +225,27 @@ export async function getPublicProjectBySlug(slug: string, handle: string) {
       createdAt: true,
     },
   });
-}
+});
 
 // 后台编辑回填用：id 来自 URL，带上 userId 后别家的项目查不到（回落新建表单，不泄露存在性）
 export async function getProjectById(id: string, userId: string) {
   return db.project.findFirst({ where: { id, userId } });
 }
 
-// 过渡期公开查询的 userId 解析口：按 handle 取 id（不存在返回 null，调用方自行转 null/false）
-export async function resolveUserId(handle: string) {
+// 公开查询的 userId 解析口（不存在返回 null）；cache：单请求内同一 handle 只查一次
+export const resolveUserId = cache(async (handle: string) => {
   const user = await db.user.findUnique({
     where: { handle },
     select: { id: true },
   });
 
   return user?.id ?? null;
-}
+});
 
-// Proxy 前置判定只关心 slug 命中与否，select slug 让这次查询停留在唯一索引层面
+// Proxy 前置判定只关心 slug 命中与否；handle 走关系过滤，不再先查一次 User（同 logs.ts 口径）
 export async function isProjectSlug(slug: string, handle: string) {
-  const userId = await resolveUserId(handle);
-
-  if (!userId) {
-    return false;
-  }
-
-  const hit = await db.project.findUnique({
-    where: { userId_slug: { userId, slug } },
+  const hit = await db.project.findFirst({
+    where: { slug, user: { handle } },
     select: { slug: true },
   });
 

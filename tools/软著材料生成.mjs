@@ -138,7 +138,9 @@ const BANDS = [
     files: [
       "src/lib/content-hash.ts",
       "src/lib/publish.ts",
-      "src/lib/projects.ts",
+      // src/lib/projects.ts 于 2026-11-13（第十二轮 D39）自 ② 平移进折走段 ③：
+      // 本轮给 cache()/pickFeatured 加的行把 ①+② 顶过前窗口，proxy.ts 被 1500 切口切开；
+      // 它是数据访问层（DAL），与已在 ③ 的 logs.ts 同类，调用的页面全在 ④ 可见，逻辑不丢
       "src/lib/sensitive-scan.ts",
       "src/lib/oss.ts",
       "src/auth.ts",
@@ -181,6 +183,9 @@ const BANDS = [
       // logs.ts 是数据访问层（DAL），取数逻辑的调用方（页面/动作）都在 ③④ 可见；
       // 2026-11-10 第十六次配平：与 github-sync 一同让位，确保 auth/proxy/publish/projects/content-hash 整份在前窗口
       "src/lib/logs.ts",
+      // projects.ts 2026-11-13（D39）自 ② 平移至此：cache()/pickFeatured 的新增行把 ①+② 顶过前窗口，
+      // proxy.ts 被 1500 切口切开；与本段的 logs.ts 同为 DAL，调用方页面均在 ④ 可见
+      "src/lib/projects.ts",
       // log-search 是 V2.1 全局搜索的匹配纯函数（四字段大小写不敏感子串匹配），
       // 调用方 searchLogs 在 logs.ts 内、页面在 ④；与 ai-prompt/object-key 同类放 ③，不动 ①+② 行数
       "src/lib/log-search.ts",

@@ -43,15 +43,15 @@ Route Handler 口径）**，决策索引同步（D1–D36）。既有 D1–D34 �
 > 文档体系按五层防线运转：事实基座（AGENTS.md）→ 规格锁定（SPEC.md，V1.0 冻结）→
 > 决策记录（本文件）→ 验收门禁（四道门禁 + CI）→ 过程存证（docs/01、docs/02）。
 
-- **形态**：单人档案库——Next.js App Router 全栈单体，无注册、无 UGC，不设独立 API 层（仅 `/api/health` 与 NextAuth 端点）。
+- **形态**：多租户开发者档案库（V2.2，2026-11-13 据实测校正）——Next.js App Router 全栈单体：GitHub OAuth 一键登录，每个账号只读写自己的 Project/Log（数据层强制 `userId` 复合条件）；无自建注册、无 UGC，不设独立 API 层（仅 `/api/health`、`/feed.xml`、`/admin/export` 与 NextAuth 端点）。
 - **技术栈分层（版本为实测值，锁定项，改动需单独立项批准）**：
   表现层 Next.js 16.4.3（App Router + RSC + `cacheComponents`/PPR）· 样式 Tailwind CSS 4.3.3
-  （`@tailwindcss/turbopack`，无其他 UI 库/图标库）· 会话与准入 next-auth 4.24.15（Credentials，仅 `/admin`）·
+  （`@tailwindcss/turbopack`，无其他 UI 库/图标库）· 会话与准入 next-auth 4.24.15（框架内置 GitHub OAuth，`/admin` 为个人控制台）·
   数据访问 Prisma 6.19.3 · 存储 PostgreSQL 16（Docker，库名 laity）· 图片对象 阿里云 OSS（ali-oss 6.23.0）·
   边缘 nginx（TLS / 安全头 / 登录限流 / XFF 覆写）· 工具链 TypeScript 5.9.3 + npm（禁 pnpm/yarn/bun）。
 - **分层与数据流**：
   - 访客界面（RSC 直读库，PPR：静态壳 + 请求期数据）：`src/app/**` 页面路由 → `src/lib/**`（唯一数据访问层）→ Prisma Client → PostgreSQL 16。
-  - 后台（口令登录）：`src/app/admin/**` → Server Actions（`requireAdminSession()` 统一准入门）→ 同一 `src/lib` 层。
+  - 后台（GitHub OAuth 登录，个人控制台）：`src/app/admin/**` → Server Actions（`requireAdminSession()` 统一准入门）→ 同一 `src/lib` 层。
   - 生产边缘：nginx（TLS / 安全头 / 登录限流 / XFF 覆写）→ `app`（standalone 容器）→ `db`（容器）。
 - **三条关键链路**：
   1. 发布：表单 → `parseInput` → `saveLog`（写库）→ `publishLog`（按库中正文算 SHA-256 + 记服务器时间）→ `redirect(?published=1)`。
@@ -59,7 +59,7 @@ Route Handler 口径）**，决策索引同步（D1–D36）。既有 D1–D34 �
   3. 上传：`Editor` → `uploadImage`（收 Blob）→ `object-key` 生成键 + `image-signature` 判类型 → OSS → 外链回填。
 - **唯一真相点（改这里就改全局，别处不得重算/重定义）**：
   `content-hash.ts`（摘要口径）、`site.ts`（站点标识）、`routes.ts`（路由归属）、`error-text.ts`（错误文案）、`forms.ts`（表单规则与限额）、`time.ts`（时间格式化）。
-- **信任边界**：库口令、`NEXTAUTH_SECRET`、`ADMIN_PASSWORD`、OSS AK 四类只进 `.env`；生产走 `${VAR:?}` + preflight 硬卡，不进仓库、不进产物。
+- **信任边界**：库口令、`NEXTAUTH_SECRET`、`ENCRYPTION_KEY`、`GITHUB_ID`/`GITHUB_SECRET`、OSS AK、`AI_API_KEY` 只进 `.env`；生产走 `${VAR:?}` + preflight 硬卡，不进仓库、不进产物（`ADMIN_PASSWORD` 随 D33 退役，见到别再加回）。
 
 ## 零·补、历史决策裁剪说明（读 ADR 前先看这一节）
 
@@ -792,7 +792,47 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
   `tools/软著材料生成.mjs`（BANDS 登记：`rss.ts` 与 route 均在 ③）、说明书 4.5（并入段落）与第十节
   （删「订阅源」）。
 
-## 决策索引（D1–D38 一览）
+### D39：第 12 轮「查询去重 + 读路径索引 + SEO 结构化数据」——把性能预算变成代码事实（已实施 2026-11-13）
+
+- 背景：`AGENTS.md` 的性能预算写着「任一前台页面 Prisma 查询数 ≤ 3」，但日志详情页实际是 5 次：
+  `generateMetadata` 与页面组件各解析一次 handle（2× User）+ 各查一次详情（2× Log），再加一次
+  上下文查询（1× Log）。两个函数各自「正确地」只查一次，问题出在**同一次请求里被调了两遍**。
+  预算写在文档里、没有任何代码或测试拦住它，就只是一句愿望。
+- 决策一（查询去重）：用 React `cache()` 包 `resolveUserId`、`getSafeLogBySlug`、
+  `getPublicProjectBySlug`。作用域是**单次请求**，不是跨请求缓存，也不与 `revalidatePath` 冲突。
+  选 `cache()` 而不是在页面里手传 userId：元信息函数与页面组件之间没有共享参数的通道，
+  手传会逼着把 `getSafeLogBySlug` 拆成「解析」与「查询」两半，调用方各写一遍。
+  代价：一次请求内的重复调用不再各自读库，**发布后的下一次请求仍取新值**（验证：发布/改稿后刷新即变）。
+- 决策二（读路径索引，O4 结案）：`Log` 补 `@@index([isPublished, beforeDate])` 与
+  `@@index([tags], type: Gin)`。原索引以 `userId` 开头，全站大厅的 `where: {isPublished}` 用不上；
+  标签筛选与标签聚合页的 `tags: {has}` 同样无索引。迁移 `20261113111156_hall_read_indexes` 只加索引、
+  不改列，回滚就是删两条 `DROP INDEX`。
+- 决策三（精选口径单源）：租户主页的注释写着「与首页同口径」，实现却是 `filter + slice(0, 3)`
+  （实际按最近更新取），与首页「日志数优先」并不一致。抽 `pickFeatured()` 纯函数，两页同调。
+  这类**注释与实现漂移**比缺功能更隐蔽：读注释的人会以为改一处就够。
+- 决策四（SEO 升级）：日志详情补 `alternates.canonical`、OG `article`（发布时间/标签/作者）与
+  内联 JSON-LD `BlogPosting`；租户主页补 canonical 与 OG `profile`。JSON-LD 序列化时把 `<` 转成
+  `\u003c`，作者正文里的 `</script>` 无法提前闭合内联脚本；除 JSON 外不渲染任何作者 HTML，
+  不绕开 Markdown 的 rehype-sanitize 管线。
+- 判据（本轮实测）：四道门禁全 0（lint / tsc / build / test 192）；`prisma migrate dev` 应用成功，
+  `pg_indexes` 可见 `Log_isPublished_beforeDate_idx`（btree）与 `Log_tags_idx`（gin）；
+  详情页 200，HTML 含 `rel="canonical"`、`og:type`，JSON-LD 可被 `ConvertFrom-Json` 解析且
+  `@type=BlogPosting`、`keywords` 为标签串。
+- 事后实测（2026-11-13 补，推翻上一版的「未覆盖」记录）：查询数后来数出来了，而且推翻了原先的推断：
+  ① 上版记的「dev 响应命中 PPR 缓存、窗口里只有一条 `SELECT 1`」是**筛选写错**——Prisma 的语句在
+  `LOG: execute <名>: SELECT ...` 行里，不在 `statement:` 行里，只筛后者当然什么都看不到；
+  ② 实测页面侧为 **4 条**（User + Log + Project + 上下文字表），预想的 3 条并不成立：
+  `include: { project }` 会额外发一条 SQL，而 `getSafeLogBySlug` 还多查了一次 `User` 换 `userId`；
+  ③ 改成关系过滤（`where: { slug, isPublished: true, user: { handle } }`）后降为 **3 条**；
+  同一手法把 Proxy 的 `isPublishedLogSlug` / `isProjectSlug` 也各减一条（Proxy 每页 2 → 1 条）。
+- 实测基线（Prisma 调用 / SQL 语句含 Proxy）：`/` 3/7、`/logs` 2/5、`/projects` 1/3、
+  `/u/[handle]` 3/7、日志详情 2/4、项目详情 3/6、`/sitemap.xml` 3/5。按「Prisma 调用数」判全部达标；
+  「SQL 语句数」随 `include` 个数线性增长，不适合当阈值——两者口径已写进 `AGENTS.md` 的性能预算节。
+- 连带：`src/lib/projects.ts`、`src/lib/logs.ts`、`src/app/page.tsx`、`src/app/u/[handle]/page.tsx`、
+  `src/app/u/[handle]/logs/[slug]/page.tsx`、`prisma/schema.prisma` + 迁移、`AGENTS.md`（性能预算未改，
+  本轮只把实现对齐到它）、`ISSUES.md`（新增两条）、软著材料重出。
+
+## 决策索引（D1–D39 一览）
 
 编号按落定顺序分配，因此在正文里并非按数字排列。下表按编号汇总，便于反查；状态与正文保持同步。
 
@@ -836,6 +876,7 @@ Conventional commit 前缀等）逐条登记在 SPEC 第八节 C1–C10，一律
 | D36 | 全站数据导出（F25）：JSON 格式 + 零新增依赖裁定，Route Handler 下载口径（初版动作返 Response 方案被推翻） | **已实施（2026-11-12）** |
 | D37 | 标签聚合页口径（F26）：精确匹配 + proxy 真 404 + 链接落点（列表行/详情头部，筛选 chip 不动） | **已实施（2026-11-12）** |
 | D38 | RSS 订阅口径（F27）：手写 XML 零依赖 + 200 字符纯文本摘要 + 请求期取数 + alternates 自动发现 | **已实施（2026-11-12）** |
+| D39 | 查询去重（`cache()`）+ 读路径索引（isPublished/beforeDate、tags GIN）+ 精选口径单源 + SEO 结构化数据 | **已实施（2026-11-13）**，查询数已实测（详情页 4→3 条 SQL） |
 
 ## 二、分阶段路线图（7 个 Phase，每个都是可运行最小闭环；Phase 8/9 为待裁决备选）
 

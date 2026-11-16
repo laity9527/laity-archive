@@ -35,8 +35,14 @@
  *               8 个主题计数；首页因此为 3 次查询，仍在 O8 的 ≤3 预算内
  * - 2026-11-13: Phase C 后台日志列表：新增 getAdminLogList（状态筛选 + 标题搜索 + 页码分页），
  *               只取列表列，不取正文；前台查询口径（isPublished）不用于后台
+ * - 2026-11-13: 查询去重（本轮升级）：getSafeLogBySlug 用 React cache() 包一层——
+ *               generateMetadata 与页面组件都会调它，未包时一个 URL 查两遍库；cache 只在单次请求内生效
+ * - 2026-11-13: 性能预算实测后的修正：handle 不再先 resolveUserId 查一次 User，直接在 where 里用关系过滤
+ *               （user: { handle }）——实测详情页页面侧 4 条 SQL，其中 1 条是这条多余的租户解析；
+ *               改用关系过滤后为 3 条（Log / Project / 上下文字表），对齐 AGENTS 的 ≤3 预算
  */
 import { Prisma } from "@prisma/client";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { escapeLikePattern, matchLog } from "@/lib/log-search";
 import { resolveUserId } from "@/lib/projects";
@@ -435,32 +441,22 @@ export async function getLatestLogs(take: number, userId?: string) {
   return owned;
 }
 
-export async function getSafeLogBySlug(slug: string, handle: string) {
-  // V2.0 Step 3：handle 由路由传入（/u/[handle]/logs/[slug]），默认参数已移除
-  const userId = await resolveUserId(handle);
-
-  if (!userId) {
-    return null;
-  }
-
+export const getSafeLogBySlug = cache(async (slug: string, handle: string) => {
+  // handle 直接用关系过滤写进 where：不再先查一次 User 拿 userId（实测那是一次多余的往返），
+  // 未知 handle 与 slug 不存在同样返回 null，口径不变
   return db.log.findFirst({
-    // findFirst 的 where 只收字面字段：复合唯一键名（userId_slug）在 findUnique/upsert 里可用，
-    // 这里用 userId+slug 两字段同样命中 @@unique 索引（isPublished 只做草稿隔离）
-    where: { userId, slug, isPublished: true },
+    // user 关系过滤走 User.handle 唯一索引，Log 侧仍命中 @@unique([userId, slug]) 的前缀
+    where: { slug, isPublished: true, user: { handle } },
     include: { project: projectSelect },
   });
-}
+});
 
-// Proxy 前置判定只关心命中与否，Select id 让这次查询停留在索引层面
+// Proxy 前置判定只关心命中与否，Select id 让这次查询停留在索引层面；
+// handle 直接用关系过滤（与 getSafeLogBySlug 同口径），不再先用一次 User 查询换 userId
+// ——Proxy 在每次详情请求上都跑，省下的是每请求一次来回
 export async function isPublishedLogSlug(slug: string, handle: string) {
-  const userId = await resolveUserId(handle);
-
-  if (!userId) {
-    return false;
-  }
-
   const hit = await db.log.findFirst({
-    where: { userId, slug, isPublished: true },
+    where: { slug, isPublished: true, user: { handle } },
     select: { id: true },
   });
 

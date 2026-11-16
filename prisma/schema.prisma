@@ -18,6 +18,10 @@
 // - 2026-11-10: V2.0 Step 6 Commit 3：Log 加 isAiAssisted（AI 辅助生成标记，默认 false）；
 //               详情页据此在正文末尾打「[ AI 辅助生成 · 作者审校 ]」标签；
 //               迁移由本人本地执行 npx prisma migrate dev --name add_is_ai_assisted
+// - 2026-11-13: 本轮升级（O4）：补两条读路径索引——@@index([isPublished, beforeDate]) 服务全站大厅
+//               （原先只有以 userId 开头的复合索引，全局 where: {isPublished} 用不上）；
+//               @@index([tags], type: Gin) 服务标签筛选、标签聚合页前置判定与搜索的 tags 分支。
+//               迁移：npx prisma migrate dev --name hall_read_indexes（只加索引，不改列）
 
 generator client {
   provider = "prisma-client-js"
@@ -94,5 +98,9 @@ model Log {
   @@unique([userId, sourceCommitSha])
   // 为租户视图查询（用户 + 已发布 + 时间）先建复合索引
   @@index([userId, isPublished, beforeDate])
+  // 全站大厅：where isPublished + orderBy beforeDate desc（不带 userId），上面的复合索引用不上
+  @@index([isPublished, beforeDate])
+  // 标签数组：筛选（has/hasSome）、标签聚合页前置判定与搜索的 tags 分支都走它
+  @@index([tags], type: Gin)
   @@index([projectId])
 }
