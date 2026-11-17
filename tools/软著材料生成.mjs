@@ -300,6 +300,11 @@ const BANDS = [
       "src/app/admin/projects/page.tsx",
       "src/app/admin/logs/new/page.tsx",
       "src/app/admin/logs/[id]/edit/page.tsx",
+      // 导入 Markdown（2026-11-16 G10）：文件在浏览器本地读取，服务端动作复用 parseInput/saveLog，
+      // 只建草稿、slug 冲突不覆盖；登记 ③（后台排版与动作层）
+      "src/app/admin/logs/import/page.tsx",
+      "src/components/MarkdownImportFields.tsx",
+      "src/lib/markdown-import.ts",
       // 草稿预览页（2026-11-16 A5）：登录态可见的详情页同构排版，不写 token、不出登录态；
       // 与后台列表/编辑页同属后台排版层，登记 ③
       "src/app/admin/logs/[id]/preview/page.tsx",

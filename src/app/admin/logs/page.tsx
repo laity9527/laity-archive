@@ -141,12 +141,20 @@ export default async function AdminLogsPage({
           </p>
           <h1 className="mt-2 text-3xl font-medium tracking-tight">日志</h1>
         </div>
-        <Link
-          href="/admin/logs/new"
-          className="border border-ink px-4 py-2 font-sans text-xs text-ink hover:bg-ink hover:text-paper"
-        >
-          新建日志
-        </Link>
+        <span className="flex flex-wrap items-baseline gap-3">
+          <Link
+            href="/admin/logs/import"
+            className="border border-hairline px-4 py-2 font-sans text-xs text-ink hover:border-ink"
+          >
+            导入
+          </Link>
+          <Link
+            href="/admin/logs/new"
+            className="border border-ink px-4 py-2 font-sans text-xs text-ink hover:bg-ink hover:text-paper"
+          >
+            新建日志
+          </Link>
+        </span>
       </header>
 
       <p className="mt-4 font-sans text-[11px] text-ink-soft">

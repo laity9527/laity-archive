@@ -24,6 +24,8 @@
  * - 2026-11-16: B3 第一刀：新增列表行内快捷动作 quickPublishAction / quickUnpublishAction——
  *               只收 id、不接表单正文；写路径仍复用 publishLog（按库中正文算摘要 + 敏感扫描）与 unpublishLog，
  *               成功后回列表页，错误码经 URL 回传由 Toast 展示
+ * - 2026-11-16: 评审 G10：新增 importLogAction——导入 Markdown 只建草稿，
+ *               slug 冲突由 saveLog 的 LOG_001 回传（不覆盖），成功后进编辑页补齐标签与时间
  */
 "use server";
 
@@ -172,6 +174,36 @@ export async function saveLogAction(formData: FormData) {
 
   refreshLogViews();
   redirect(`/admin/logs/${result.id}/edit?saved=1`);
+}
+
+/**
+ * 导入 Markdown（G10）：只创建草稿，不发布。
+ * slug 冲突由 saveLog 的 LOG_001 回传（不覆盖已有日志）；成功后进编辑页补齐时间与标签。
+ */
+export async function importLogAction(formData: FormData) {
+  const backTo = "/admin/logs/import";
+  const session = await requireAdminSession();
+
+  if (!session) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(backTo)}`);
+  }
+
+  const parsed = parseInput(formData);
+
+  if (!parsed.ok) {
+    reject(backTo, parsed.field);
+  }
+
+  await assertProjectExists(parsed.input.projectId, session.userId, backTo);
+
+  const result = await saveLog(parsed.input, session.userId);
+
+  if (!result.ok) {
+    redirect(`${backTo}?error=${result.code}`);
+  }
+
+  refreshLogViews();
+  redirect(`/admin/logs/${result.id}/edit?saved=1&imported=1`);
 }
 
 export async function publishLogAction(formData: FormData) {
