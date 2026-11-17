@@ -37,6 +37,7 @@ export const DEPENDENCY_LICENSES: DependencyLicense[] = [
   { name: "typescript", license: "Apache-2.0", purpose: "类型系统与编译（开发期）" },
   { name: "eslint", license: "MIT", purpose: "静态检查（开发期）" },
   { name: "eslint-config-next", license: "MIT", purpose: "Next 官方 ESLint 配置（开发期）" },
+  { name: "typescript-eslint", license: "MIT", purpose: "TypeScript ESLint 工具链（开发期，锁到修复版 8.73.0）" },
   { name: "@types/node", license: "MIT", purpose: "Node 类型定义（开发期）" },
   { name: "@types/react", license: "MIT", purpose: "React 类型定义（开发期）" },
   { name: "@types/react-dom", license: "MIT", purpose: "React DOM 类型定义（开发期）" },
