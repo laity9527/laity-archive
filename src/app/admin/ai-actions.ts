@@ -14,7 +14,8 @@
 
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
-import { AiError, generateAiDraft } from "@/lib/ai-client";
+import { recordAudit } from "@/lib/audit";
+import { AiError, generateAiDraft, resolveAiConfig } from "@/lib/ai-client";
 import { AI_MAX_COMMITS, buildContextPrompt, buildPrompt, extractCommits, parseAiResponse } from "@/lib/ai-prompt";
 
 export type AiDraftActionResult =
@@ -46,6 +47,9 @@ export async function generateAiDraftAction(formData: FormData): Promise<AiDraft
   const title = readText(formData.get("title"));
   const beforeContent = readText(formData.get("beforeContent"));
   const afterContent = readText(formData.get("afterContent"));
+  // 编辑页表单带隐藏 id；新建页尚未入库，所以只有编辑态能落到具体日志上
+  const logId = readText(formData.get("id"));
+  const startedAt = Date.now();
 
   // Commit 列表由 GitHub 同步写在 AFTER（"- 消息" 行），BEFORE 里混着的概率性出现
   const commits = [...extractCommits(afterContent), ...extractCommits(beforeContent)];
@@ -79,6 +83,20 @@ export async function generateAiDraftAction(formData: FormData): Promise<AiDraft
     if (!draft) {
       console.error("[ai] 返回无法解析：", raw.slice(0, 200));
       return { ok: false, code: "AI_005" };
+    }
+
+    // 审计只落到已入库的日志；新建页没有 id，不伪造 targetId
+    if (logId) {
+      await recordAudit({
+        actorId: session.userId,
+        action: "ai.generate",
+        targetType: "log",
+        targetId: logId,
+        meta: {
+          model: resolveAiConfig().modelName,
+          durationMs: Date.now() - startedAt,
+        },
+      });
     }
 
     return { ok: true, data: draft };
