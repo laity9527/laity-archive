@@ -64,6 +64,7 @@ import {
 } from "@/lib/archive";
 import { escapeLikePattern, matchLog } from "@/lib/log-search";
 import { resolveUserId } from "@/lib/projects";
+import { seriesProgress, type SeriesInfo } from "@/lib/series";
 import type { AdminLogSort } from "@/lib/sort-preference";
 import {
   pickNeighbors,
@@ -514,6 +515,8 @@ export type LogContext = {
   relatedReason: RelatedReason | null;
   // 正文内链（G1）的目标表：slug → 标题，只含已发布日志；页面据此决定渲染为链接还是保留原文
   catalog: { slug: string; title: string }[];
+  // 系列进度（G2）：同一次查询的行集里算，不另发 SQL；没系列或未命中为 null
+  seriesInfo: SeriesInfo | null;
 };
 
 /**
@@ -523,9 +526,11 @@ export type LogContext = {
  */
 export async function getLogContext(current: {
   id: string;
+  slug: string;
   userId: string | null;
   tags: string[];
   projectId: string;
+  series: string | null;
 }): Promise<LogContext> {
   // 无主行前台从不展示；类型上 userId 可空，这里提前返回，不把 null 送进 where
   if (!current.userId) {
@@ -535,6 +540,7 @@ export async function getLogContext(current: {
       related: [],
       relatedReason: null,
       catalog: [],
+      seriesInfo: null,
     };
   }
 
@@ -547,6 +553,7 @@ export async function getLogContext(current: {
       tags: true,
       projectId: true,
       beforeDate: true,
+      series: true,
     },
     orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
   });
@@ -563,8 +570,9 @@ export async function getLogContext(current: {
     newer,
     related: items,
     relatedReason: reason,
-    // 同一批 rows 已经在内存里：给 G1 一份 slug → 标题的表，不额外查库
+    // 同一批 rows 已经在内存里：给 G1 一份 slug → 标题的表，G2 的系列进度也从这里算，不额外查库
     catalog: rows.map(({ slug, title }) => ({ slug, title })),
+    seriesInfo: seriesProgress(rows, current.slug),
   };
 }
 
@@ -648,6 +656,35 @@ export async function isPublishedLogSlug(slug: string, handle: string) {
 export async function hasPublishedTag(tag: string): Promise<boolean> {
   const hit = await db.log.findFirst({
     where: { isPublished: true, tags: { has: tag } },
+    select: { id: true },
+  });
+
+  return hit !== null;
+}
+
+/**
+ * 系列页取数（V3.1 / G2）：同一作者、同一个系列名的已发布日志，按决策时间升序。
+ * 不建系列表——同名即同系列；空结果由页面/Proxy 判定为不存在。
+ */
+export async function getSeriesLogs(series: string, handle: string) {
+  return db.log.findMany({
+    where: { isPublished: true, series, user: { handle } },
+    orderBy: [{ beforeDate: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      beforeDate: true,
+      project: { select: { name: true } },
+    },
+  });
+}
+
+// Proxy 前置判定：该 handle 下是否存在名为 series 的已发布系列
+// （层一 handle 不存在也回 false；与日志/项目/标签同一口径，不泄露缺的是哪一层）
+export async function hasPublishedSeries(series: string, handle: string) {
+  const hit = await db.log.findFirst({
+    where: { isPublished: true, series, user: { handle } },
     select: { id: true },
   });
 

@@ -192,6 +192,10 @@ const BANDS = [
       // publish-trend.ts：后台概览近 12 周发布桶（UTC 周一切分），调用方 projects.ts 的 getAdminOverview；
       // 纯函数放 ③ 以便单测直接验证周界，不动 ①+② 防线（2026-11-16 G12）
       "src/lib/publish-trend.ts",
+      // series.ts：系列进度纯函数（同名即同系列、beforeDate 升序、slug 作同日次键），
+      // 调用方详情页与 logs.ts 的 getLogContext（均已在可见载体）；登记 ③（V3.1 G2）
+      "src/lib/series.ts",
+      "src/app/u/[handle]/series/[name]/page.tsx",
       // featured.ts：精选口径纯函数（日志数优先 → 最近更新），从 projects.ts 抽出以便单测（2026-11-16）
       "src/lib/featured.ts",
       // text-stats.ts：编辑器字数统计纯函数（中文按字、拉丁按词），2026-11-16 抽出以便单测

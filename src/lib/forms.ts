@@ -109,6 +109,8 @@ export const LIMITS = {
   lesson: 500,
   projectName: 80,
   projectSummary: 200,
+  // 系列名（V3.1 G2）：自由文本，与日志标题同量级；不建系列表，同名即同系列
+  series: 40,
 } as const;
 
 // 登录回调只认本站相对路径。挡三种跳外站的写法：协议相对 `//host`、

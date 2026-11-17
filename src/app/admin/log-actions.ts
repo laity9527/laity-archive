@@ -64,6 +64,8 @@ function parseInput(formData: FormData): ParseResult {
   const rawAfter = readField(formData, "afterDate");
   const afterDate = rawAfter ? parseDate(rawAfter) : null;
   const tags = parseTags(readField(formData, "tags"));
+  // 系列名可空；超长拒收而不是静默截断，避免两条日志因截断意外并成同一系列
+  const series = readField(formData, "series").trim();
   const rawId = readField(formData, "id");
 
   if (rawId && !ID_PATTERN.test(rawId)) {
@@ -84,6 +86,7 @@ function parseInput(formData: FormData): ParseResult {
     slug: readField(formData, "slug"),
     title: readField(formData, "title"),
     tags,
+    series,
     beforeContent: readField(formData, "beforeContent"),
     afterContent: readField(formData, "afterContent"),
     beforeDate,
@@ -106,6 +109,10 @@ function parseInput(formData: FormData): ParseResult {
 
   if (tags.length > LIMITS.tags || tags.some((tag) => tag.length > LIMITS.tag)) {
     return { ok: false, field: "tags" };
+  }
+
+  if (series.length > LIMITS.series) {
+    return { ok: false, field: "series" };
   }
 
   if (input.beforeContent.length === 0) {

@@ -28,6 +28,8 @@ export type LogInput = {
   slug: string;
   title: string;
   tags: string[];
+  // 系列名（V3.1 G2）：可空，自由文本；写库前 trim，空串存 null
+  series?: string;
   beforeContent: string;
   afterContent?: string;
   beforeDate: Date;
@@ -78,6 +80,7 @@ export async function saveLog(
     slug: input.slug,
     title: input.title,
     tags: normalizeTagList(input.tags),
+    series: input.series?.trim() || null,
     beforeContent: input.beforeContent,
     afterContent: input.afterContent || null,
     beforeDate: input.beforeDate,

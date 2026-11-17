@@ -321,6 +321,18 @@ export default async function EditLogPage({
         </label>
 
         <label className="flex flex-col gap-2">
+          <span className="font-sans text-[10px] text-ink-soft">系列（可空）</span>
+          <input
+            name="series"
+            defaultValue={log.series ?? ""}
+            maxLength={LIMITS.series}
+            aria-invalid={bad("series") || undefined}
+            aria-describedby={bad("series") ? "form-error" : undefined}
+            className="border border-hairline bg-transparent px-3 py-2 text-sm text-ink"
+          />
+        </label>
+
+        <label className="flex flex-col gap-2">
           <span className="font-sans text-[10px] text-ink-soft">BEFORE 日期（本地时间，存库转 UTC）</span>
           <input
             type="datetime-local"

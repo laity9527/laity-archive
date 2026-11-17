@@ -29,17 +29,26 @@
  * - 2026-11-16: 大厅排序记忆（matcher 增 /logs）：带 ?sort= 时写 cookie（非默认值才重定向），
  *               不带 sort 且偏好为 published 时 307 补上参数。放在此处而非页面：
  *               页面层读 cookies() 在 PPR 边界里拿不到值（实测），proxy 每请求都能可靠读写
+ * - 2026-11-16: V3.1 G2：matcher 增 /u/:handle/series/:name，双层判定 handle + 该系列是否已有
+ *               已发布日志；空系列回与日志/项目/标签同一张 404（不泄露缺的是哪一层）
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { decodeTagParam, normalizeTag } from "@/lib/forms";
-import { hasPublishedTag, isPublishedLogSlug } from "@/lib/logs";
+import { hasPublishedSeries, hasPublishedTag, isPublishedLogSlug } from "@/lib/logs";
 import { isProjectSlug } from "@/lib/projects";
 import { SORT_COOKIE, parseSort } from "@/lib/sort-preference";
 
 export const config = {
-  matcher: ["/u/:handle/logs/:slug", "/u/:handle/projects/:slug", "/tags/:tag", "/logs", "/admin/:path*"],
+  matcher: [
+    "/u/:handle/logs/:slug",
+    "/u/:handle/projects/:slug",
+    "/u/:handle/series/:name",
+    "/tags/:tag",
+    "/logs",
+    "/admin/:path*",
+  ],
 };
 
 // 文案全部是常量，请求里的 slug 不会拼进 HTML
@@ -61,6 +70,13 @@ const NOT_FOUND_COPY = {
   tag: {
     title: "404 · 标签不存在",
     heading: "这个标签不存在",
+    hint: "它可能还没有已发布的日志，或者链接已经失效。",
+    backHref: "/logs",
+    backText: "← 返回日志列表",
+  },
+  series: {
+    title: "404 · 系列不存在",
+    heading: "这个系列不存在",
     hint: "它可能还没有已发布的日志，或者链接已经失效。",
     backHref: "/logs",
     backText: "← 返回日志列表",
@@ -114,7 +130,10 @@ function notFoundResponse(kind: NotFoundKind) {
 }
 
 // 从 /u/<handle>/<kind>/<slug> 提取 handle 与 slug；段可能带 URL 编码，decode 失败一律 null
-function readTenantSegment(pathname: string, kind: "logs" | "projects") {
+function readTenantSegment(
+  pathname: string,
+  kind: "logs" | "projects" | "series",
+) {
   if (!pathname.startsWith("/u/")) {
     return null;
   }
@@ -237,6 +256,15 @@ export async function proxy(request: NextRequest) {
     return (await isProjectSlug(projectHit.slug, projectHit.handle))
       ? NextResponse.next()
       : notFoundResponse("project");
+  }
+
+  // 系列页（V3.1 / G2）：层一 handle 存在、层二该系列至少有一篇已发布；未知 handle / 空系列同回 404
+  const seriesHit = readTenantSegment(pathname, "series");
+
+  if (seriesHit) {
+    return (await hasPublishedSeries(seriesHit.slug, seriesHit.handle))
+      ? NextResponse.next()
+      : notFoundResponse("series");
   }
 
   // matcher 只放行上面两类租户动态路由与 /admin；走到这里说明 matcher 被改宽了，放行比误拦安全

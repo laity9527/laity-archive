@@ -75,6 +75,8 @@ model Log {
   user          User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String?
   tags          String[]
+  // 系列名（2026-11-16 V3.1 G2）：自由文本、可空；同一作者同名即同系列，按 beforeDate 升序排“第 n/m 篇”
+  series        String?
   beforeContent String
   afterContent  String?
   beforeDate    DateTime
@@ -98,6 +100,8 @@ model Log {
   @@unique([userId, sourceCommitSha])
   // 为租户视图查询（用户 + 已发布 + 时间）先建复合索引
   @@index([userId, isPublished, beforeDate])
+  // 系列页与详情页进度：按作者 + 已发布 + 系列名过滤
+  @@index([userId, isPublished, series])
   // 全站大厅：where isPublished + orderBy beforeDate desc（不带 userId），上面的复合索引用不上
   @@index([isPublished, beforeDate])
   // 标签数组：筛选（has/hasSome）、标签聚合页前置判定与搜索的 tags 分支都走它

@@ -70,6 +70,7 @@ export type LogField =
   | "slug"
   | "title"
   | "tags"
+  | "series"
   | "beforeDate"
   | "afterDate"
   | "beforeContent"
@@ -91,6 +92,7 @@ const VAL_FIELD_TEXT: {
     slug: "slug 要小写字母开头，只用字母、数字与连字符，2–64 位。",
     title: `标题必填，且不超过 ${LIMITS.title} 字。`,
     tags: `标签最多 ${LIMITS.tags} 个，单个不超过 ${LIMITS.tag} 字。`,
+    series: `系列名不超过 ${LIMITS.series} 字，可留空。`,
     beforeDate: "BEFORE 日期没填或不是可解析的时间。",
     afterDate: "AFTER 日期要能解析，且不早于 BEFORE。",
     beforeContent: "BEFORE 正文不能为空。",

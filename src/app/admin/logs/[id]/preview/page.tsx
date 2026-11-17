@@ -66,9 +66,11 @@ export default async function PreviewLogPage({ params }: PreviewLogPageProps) {
   // 草稿目标不会出现在表里，仍显示 `[[slug]]` 原文
   const context = await getLogContext({
     id: log.id,
+    slug: log.slug,
     userId: log.userId,
     tags: log.tags,
     projectId: log.projectId,
+    series: log.series,
   });
   const logLinks = {
     links: Object.fromEntries(

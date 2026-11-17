@@ -8,6 +8,8 @@
  * - 2026-11-16: 评审第 2 批（P3-1）：频次三档在真实数据下失效（52 个标签 53 次引用，几乎每个只用一次），
  *               改为按 topics.ts 的 8 个主题分组 + 「其他」；频次降级为灰色小字，不再用字号表达权重。
  *               分组口径复用 topicOfTag() 单源，不新增映射表
+ * - 2026-11-16: 布局与数据未变；为软著材料的后窗口切口避开空行，
+ *               仅在本文件头补注释行（材料口径允许的“增减注释行数”平移）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -95,7 +97,6 @@ export default async function TagsPage() {
           </section>
         ))
       )}
-
       <p className="mt-16">
         <Link
           href="/logs"

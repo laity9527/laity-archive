@@ -103,9 +103,11 @@ export default async function LogDetailPage({
   // B2：前后篇与相关阅读共用一次列表查询；阅读时长是纯函数，不碰数据库
   const context = await getLogContext({
     id: log.id,
+    slug: log.slug,
     userId: log.userId,
     tags: log.tags,
     projectId: log.projectId,
+    series: log.series,
   });
   const minutes = estimateReadingMinutes(
     [log.beforeContent, log.afterContent ?? "", log.lessonLearned ?? ""].join(
@@ -232,6 +234,19 @@ export default async function LogDetailPage({
             {minutes > 0 && (
               <p className="mt-4 font-sans text-[11px] text-ink-soft">
                 约 <span className="font-mono">{minutes}</span> 分钟读完
+              </p>
+            )}
+            {context.seriesInfo && (
+              <p className="mt-3 font-sans text-[11px] text-ink-soft">
+                系列 ·{" "}
+                <Link
+                  href={`/u/${handle}/series/${encodeURIComponent(context.seriesInfo.name)}`}
+                  className="text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                >
+                  {context.seriesInfo.name}
+                </Link>{" "}
+                · 第 <span className="font-mono">{context.seriesInfo.position}</span> /{" "}
+                <span className="font-mono">{context.seriesInfo.total}</span> 篇
               </p>
             )}
           </header>
