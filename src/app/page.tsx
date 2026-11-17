@@ -195,7 +195,7 @@ async function ArchiveOverview() {
                           {log.lessonLearned}
                         </p>
                       ) : null}
-                      <p className="mt-2 font-mono text-[11px] text-ink-soft">
+                      <p className="mt-2 font-mono text-xs text-ink-soft">
                         {log.project.name}
                         {log.tags.length > 0 ? ` · ${log.tags.join(" · ")}` : ""}
                       </p>
@@ -208,7 +208,7 @@ async function ArchiveOverview() {
         </div>
       </section>
 
-      <section className="mt-24">
+      <section className="mt-16">
         <SectionHead
           index="04"
           title="按主题"
@@ -242,17 +242,17 @@ async function ArchiveOverview() {
 
 export default function Home() {
   return (
-    <main id="main" className="mx-auto max-w-[1200px] px-6 py-24">
-      <header className="border-b border-ink pb-12">
+    <main id="main" className="mx-auto max-w-[1200px] px-6 py-16 max-md:py-10">
+      <header className="border-b border-ink pb-10">
         <h1 className="text-balance text-[clamp(2.5rem,5.2vw,3.5rem)] font-medium leading-[1.08] tracking-tight">
           数字档案，记录每一次工程决策。
         </h1>
-        <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-soft">
+        <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-ink-soft">
           收集项目作品与开发复盘，构建一份可信的数字履历。
         </p>
       </header>
 
-      <div className="mt-12">
+      <div className="mt-10">
         <Suspense fallback={<LoadingRows rows={3} />}>
           <ArchiveOverview />
         </Suspense>

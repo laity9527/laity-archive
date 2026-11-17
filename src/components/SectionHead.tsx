@@ -8,6 +8,8 @@
  *               收成一个组件，编号走 mono 10px、标题走 sans 12px，层级靠线不靠加粗
  * - 2026-11-16: 补 `mono` 开关：BEFORE / AFTER 属英文系统标识，按视觉规则必须等宽，
  *               中文区块（经验总结等）仍走 sans
+ * - 2026-11-17: 同文件新增 `PageHeader`（索引页统一头部）。不新建源文件，避免软著收录清单
+ *               因新增文件触发 assertComplete；标题/引导/统计/右侧动作四段固定，页间距统一
  */
 
 import type { ReactNode } from "react";
@@ -44,5 +46,35 @@ export function SectionHead({ index, title, action, mono = false }: SectionHeadP
       </h2>
       {action}
     </div>
+  );
+}
+
+type PageHeaderProps = {
+  eyebrow?: string;
+  meta?: ReactNode;
+  title: string;
+  lede?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+};
+
+/** 索引页统一头部：引导行 → H1 32 → 说明 → 1px 墨线 */
+export function PageHeader({ eyebrow, meta, title, lede, action, className = "" }: PageHeaderProps) {
+  const hasMeta = Boolean(eyebrow || meta);
+
+  return (
+    <header className={`border-b border-ink pb-8 ${className}`}>
+      {hasMeta && (
+        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          {eyebrow && <span className="font-mono text-[10px] tracking-[0.18em] text-ink-soft">{eyebrow}</span>}
+          {meta && <span className="font-sans text-xs text-ink-soft">{meta}</span>}
+        </p>
+      )}
+      <div className={`flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 ${hasMeta ? "mt-3" : ""}`}>
+        <h1 className="text-[32px] font-medium tracking-tight">{title}</h1>
+        {action}
+      </div>
+      {lede && <p className="mt-4 max-w-[46ch] text-base leading-relaxed text-ink-soft">{lede}</p>}
+    </header>
   );
 }

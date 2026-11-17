@@ -45,6 +45,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { LoadingRows } from "@/components/LoadingRows";
+import { PageHeader } from "@/components/SectionHead";
 import { Timeline } from "@/components/Timeline";
 import { db } from "@/lib/db";
 import { ID_PATTERN, pickParam } from "@/lib/forms";
@@ -245,7 +246,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
   const rail = (
     <nav aria-label="日志筛选">
       <div>
-        <div className="mb-3 font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+        <div className="mb-3 font-mono text-xs tracking-[0.18em] text-ink-soft">
           项目
         </div>
         <ul className="space-y-1.5">
@@ -260,7 +261,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
               className="flex items-baseline justify-between gap-3 text-xs"
             >
               <span className={railLabel(!projectFilter)}>全部</span>
-              <span className="font-mono text-[9px] text-ink-soft">
+              <span className="font-mono text-xs text-ink-soft">
                 {totalLogs}
               </span>
             </Link>
@@ -280,7 +281,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 <span className={railLabel(projectFilter === slug)}>
                   {name}
                 </span>
-                <span className="font-mono text-[9px] text-ink-soft">
+                <span className="font-mono text-xs text-ink-soft">
                   {count}
                 </span>
               </Link>
@@ -290,7 +291,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
       </div>
 
       <div className="mt-7 border-t border-hairline pt-4">
-        <div className="mb-3 font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+        <div className="mb-3 font-mono text-xs tracking-[0.18em] text-ink-soft">
           主题
         </div>
         <ul className="space-y-1.5">
@@ -305,7 +306,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
               className="flex items-baseline justify-between gap-3 text-xs"
             >
               <span className={railLabel(!topicFilter)}>全部主题</span>
-              <span className="font-mono text-[9px] text-ink-soft">
+              <span className="font-mono text-xs text-ink-soft">
                 {totalLogs}
               </span>
             </Link>
@@ -325,7 +326,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 <span className={railLabel(topicFilter === item.key)}>
                   {item.label}
                 </span>
-                <span className="font-mono text-[9px] text-ink-soft">
+                <span className="font-mono text-xs text-ink-soft">
                   {item.count}
                 </span>
               </Link>
@@ -335,11 +336,11 @@ async function LogBoard({ searchParams }: LogsPageProps) {
       </div>
 
       <div className="mt-7 border-t border-hairline pt-4">
-        <div className="mb-3 font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+        <div className="mb-3 font-mono text-xs tracking-[0.18em] text-ink-soft">
           标签
         </div>
         {tagFilter && (
-          <p className="mb-2 text-[11px]">
+          <p className="mb-2 text-xs">
             <Link
               href={logsHrefWithSort({
                 project: projectFilter,
@@ -353,10 +354,11 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           </p>
         )}
         <details className="group">
-          <summary className="cursor-pointer list-none font-mono text-[10px] text-ink-soft hover:text-ink [&::-webkit-details-marker]:hidden">
-            [ 全部 {tagOptions.length} 个标签 ]
+          <summary className="cursor-pointer list-none font-mono text-xs text-ink-soft hover:text-ink [&::-webkit-details-marker]:hidden">
+            <span className="group-open:hidden">全部 {tagOptions.length} 个标签 →</span>
+            <span className="hidden group-open:inline">收起标签 ↑</span>
           </summary>
-          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-[11px]">
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-xs">
             {tagOptions.map(tagChip)}
           </div>
         </details>
@@ -365,7 +367,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
       {hasFilter && (
         <Link
           href="/logs"
-          className="mt-7 inline-block border-b border-ink text-[11px] text-ink"
+          className="mt-7 inline-block border-b border-ink text-xs text-ink"
         >
           清除全部筛选 ×
         </Link>
@@ -384,7 +386,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
     return (
       <p className="mt-3 font-sans text-sm leading-relaxed text-ink">
-        <span className="font-mono text-[10px] tracking-[0.2em] text-ink-soft">
+        <span className="font-mono text-xs tracking-[0.2em] text-ink-soft">
           {label}
         </span>{" "}
         {snip.leadingEllipsis && "…"}
@@ -398,10 +400,10 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
   return (
     <>
-      <form method="get" className="mb-8 flex items-baseline gap-3">
+      <form method="get" className="mb-6 flex items-baseline gap-3">
         <label
           htmlFor="log-search"
-          className="shrink-0 font-sans text-xs text-ink-soft"
+          className="sr-only"
         >
           搜索
         </label>
@@ -410,8 +412,8 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           type="search"
           name="q"
           defaultValue={qFilter}
-          placeholder="标题 / 正文 / 标签"
-          className="min-w-0 max-w-[320px] flex-1 border-b border-hairline bg-transparent py-1 font-sans text-sm text-ink"
+          placeholder="搜索标题、正文或标签"
+          className="min-w-0 max-w-[420px] flex-1 border-b border-hairline bg-transparent py-1 font-sans text-sm text-ink"
           aria-label="搜索日志"
         />
         <input type="hidden" name="project" value={projectFilter ?? ""} />
@@ -421,7 +423,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
           type="submit"
           className="border-b border-ink font-sans text-sm text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
         >
-          搜索
+          搜索 →
         </button>
       </form>
 
@@ -433,11 +435,11 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 筛选
                 {activeChips.length > 0 ? ` · ${activeChips.length} 项` : ""}
               </span>
-              <span className="font-mono text-[10px] text-ink-soft group-open:hidden">
-                [ 展开 ]
+              <span className="font-mono text-xs text-ink-soft group-open:hidden">
+                展开
               </span>
-              <span className="hidden font-mono text-[10px] text-ink-soft group-open:inline">
-                [ 收起 ]
+              <span className="hidden font-mono text-xs text-ink-soft group-open:inline">
+                收起
               </span>
             </summary>
             <div className="mt-5">{rail}</div>
@@ -446,12 +448,14 @@ async function LogBoard({ searchParams }: LogsPageProps) {
         </aside>
 
         <div className="min-w-0">
-          <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-hairline pb-3 text-[11px] text-ink-soft">
+          <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-hairline pb-3 text-xs text-ink-soft">
             <span className="font-sans text-xs text-ink-soft">
               {hasFilter ? `本页 ${items.length} 条` : `共 ${totalLogs} 条`}
-              <span className="ml-2 font-mono text-[10px] text-ink-soft">
-                {page.nextCursor ? "还有下一页" : "已到末页"}
-              </span>
+              {page.nextCursor && (
+                <span className="ml-2 font-mono text-xs text-ink-soft">
+                  还有下一页
+                </span>
+              )}
             </span>
             <span className="ml-auto flex items-baseline gap-3 font-sans text-xs">
               <span className="text-ink-soft">排序</span>
@@ -629,7 +633,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                   q: qFilter,
                   cursor: page.nextCursor,
                 })}
-                className="border-b border-ink font-mono text-[11px] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+                className="border-b border-ink font-mono text-xs text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
               >
                 下一页 →
               </Link>
@@ -643,16 +647,9 @@ async function LogBoard({ searchParams }: LogsPageProps) {
 
 export default function LogsPage({ searchParams }: LogsPageProps) {
   return (
-    <main id="main" className="mx-auto max-w-[1200px] px-6 py-24">
-      <div className="mb-12 flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-[32px] font-medium tracking-tight">开发日志</h1>
-        <Link
-          href="/archive"
-          className="border-b border-transparent text-xs text-ink-soft hover:border-ink hover:text-ink"
-        >
-          按年月归档 →
-        </Link>
-      </div>
+    <main id="main" className="mx-auto max-w-[1200px] px-6 py-16 max-md:py-10">
+      <PageHeader className="mb-10" title="开发日志"
+        action={<Link href="/archive" className="border-b border-transparent text-xs text-ink-soft hover:border-ink hover:text-ink">按年月归档 →</Link>} />
       <Suspense fallback={<LoadingRows rows={4} />}>
         <LogBoard searchParams={searchParams} />
       </Suspense>

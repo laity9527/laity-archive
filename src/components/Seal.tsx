@@ -38,22 +38,22 @@ export function Seal({ contentHash, publishedAt, title, path }: SealProps) {
           className="flex h-16 w-16 shrink-0 -rotate-1 flex-col items-center justify-center border border-ink text-center font-mono text-[8px] leading-[1.5] tracking-[0.08em] text-ink"
         >
           <span>LAITY</span>
-          <span>内容摘要</span>
+          <span>DIGEST</span>
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+          <p className="font-mono text-xs tracking-[0.18em] text-ink-soft">
             内容摘要 · CONTENT DIGEST
           </p>
-          <p className="mt-2 break-all font-mono text-[11px] leading-relaxed text-ink">
+          <p className="mt-2 break-all font-mono text-xs leading-relaxed text-ink">
             {contentHash}
           </p>
-          <p className="mt-2 font-sans text-[11px] text-ink-soft">
+          <p className="mt-2 font-sans text-xs text-ink-soft">
             发布时间 ·{" "}
             <span className="font-mono">{formatUtc(publishedAt)}</span>
           </p>
 
-          <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-2 font-sans text-[11px]">
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-2 font-sans text-xs">
             {path && (
               <CopyButton text={path} label="复制链接" withOrigin />
             )}
@@ -63,7 +63,7 @@ export function Seal({ contentHash, publishedAt, title, path }: SealProps) {
               <summary className="w-fit cursor-pointer list-none border-b border-transparent text-ink-soft hover:border-ink hover:text-ink [&::-webkit-details-marker]:hidden">
                 如何核对
               </summary>
-              <p className="mt-2 max-w-[560px] font-sans text-[11px] leading-relaxed text-ink-soft">
+              <p className="mt-2 max-w-[560px] font-sans text-xs leading-relaxed text-ink-soft">
                 摘要口径：标题 + 换行 + BEFORE 正文 + 换行 + AFTER
                 正文，按 UTF-8 取 SHA-256 小写十六进制；发布时间取服务器时间。
                 在本地用同一段文本复算，结果应与上面的值一致。

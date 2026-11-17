@@ -13,6 +13,7 @@
  */
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageHeader } from "@/components/SectionHead";
 import { siteContactEmail } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -80,7 +81,7 @@ export default function AboutPage() {
   const contactEmail = siteContactEmail();
 
   return (
-    <main id="main" className="mx-auto max-w-[720px] px-6 py-24">
+    <main id="main" className="mx-auto max-w-[720px] px-6 py-16 max-md:py-10">
       <Link
         href="/"
         className="font-sans text-xs text-ink-soft hover:text-ink"
@@ -88,18 +89,15 @@ export default function AboutPage() {
         ← 返回首页
       </Link>
 
-      <header className="mt-8 border-b border-hairline pb-8">
-        <p className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
-          COLOPHON
-        </p>
-        <h1 className="mt-3 text-[32px] font-medium tracking-tight">关于</h1>
-        <p className="mt-3 font-sans text-xs text-ink-soft">
-          站主 · 这个档案库记什么 · 用什么做 · 怎么联系
-        </p>
-      </header>
+      <PageHeader
+        className="mt-6"
+        eyebrow="COLOPHON"
+        title="关于"
+        lede="站主 · 这个档案库记什么 · 用什么做 · 怎么联系"
+      />
 
       <section className="mt-12">
-        <h2 className="font-sans text-[10px] text-ink-soft">个人简介</h2>
+        <h2 className="font-sans text-sm text-ink-soft">个人简介</h2>
         <div className="mt-4 space-y-4 text-base leading-relaxed">
           {PROFILE.map((paragraph) => (
             <p key={paragraph.slice(0, 16)}>{paragraph}</p>
@@ -108,7 +106,7 @@ export default function AboutPage() {
       </section>
 
       <section className="mt-12 border-t border-hairline pt-12">
-        <h2 className="font-sans text-[10px] text-ink-soft">技术栈</h2>
+        <h2 className="font-sans text-sm text-ink-soft">技术栈</h2>
 
         <div className="mt-5 space-y-5">
           {STACK_GROUPS.map((group) => (
@@ -116,7 +114,7 @@ export default function AboutPage() {
               key={group.label}
               className="sm:grid sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-6"
             >
-              <p className="font-sans text-[10px] text-ink-soft sm:pt-0.5">
+              <p className="font-sans text-xs text-ink-soft sm:pt-0.5">
                 {group.label}
               </p>
               <ul className="mt-2 space-y-1.5 sm:mt-0">
@@ -134,12 +132,12 @@ export default function AboutPage() {
           ))}
         </div>
 
-        <p className="mt-6 border-t border-hairline pt-4 font-sans text-[11px] leading-relaxed text-ink-soft">
+        <p className="mt-6 border-t border-hairline pt-4 font-sans text-xs leading-relaxed text-ink-soft">
           不写版本号：版本是实测值，唯一口径在 AGENTS.md。字体：
           <span className="font-mono">{FONTS.join(" · ")}</span>
           （全部开源可商用）。
         </p>
-        <p className="mt-2 font-sans text-[11px] leading-relaxed text-ink-soft">
+        <p className="mt-2 font-sans text-xs leading-relaxed text-ink-soft">
           依赖与许可证逐条列在
           <Link
             href="/licenses"
@@ -152,7 +150,7 @@ export default function AboutPage() {
       </section>
 
       <section className="mt-12 border-t border-hairline pt-12">
-        <h2 className="font-sans text-[10px] text-ink-soft">联系方式</h2>
+        <h2 className="font-sans text-sm text-ink-soft">联系方式</h2>
         <dl className="mt-4 space-y-3 text-xs">
           <div className="flex flex-wrap items-baseline gap-x-4">
             <dt className="w-20 shrink-0 font-sans text-ink-soft">邮箱</dt>
@@ -183,7 +181,7 @@ export default function AboutPage() {
             </dd>
           </div>
         </dl>
-        <p className="mt-6 font-sans text-[11px] leading-relaxed text-ink-soft">
+        <p className="mt-6 font-sans text-xs leading-relaxed text-ink-soft">
           邮箱由服务器环境变量提供，配置之后这一行才会出现真实地址；在此之前它显示「待补充」——
           本站不写占位邮箱，也不虚构社交账号与第三方主页。站内联系方式与数据处理的完整口径，
           写在

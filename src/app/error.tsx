@@ -14,7 +14,7 @@ import Link from "next/link";
 export default function AppError({ reset }: { reset: () => void }) {
   return (
     <main id="main" className="mx-auto max-w-[720px] px-6 py-24">
-      <p className="font-mono text-[11px] tracking-[0.2em] text-ink-soft">
+      <p className="font-mono text-xs tracking-[0.2em] text-ink-soft">
         渲染出错了
       </p>
       <h1 className="mt-6 text-[32px] font-medium">这一页没能正常显示</h1>
@@ -25,13 +25,13 @@ export default function AppError({ reset }: { reset: () => void }) {
         <button
           type="button"
           onClick={reset}
-          className="border border-ink px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-ink"
+          className="border border-ink px-4 py-2 font-mono text-xs tracking-[0.2em] text-ink"
         >
           重试
         </button>
         <Link
           href="/"
-          className="border-b border-ink font-mono text-[11px] tracking-[0.2em] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+          className="border-b border-ink font-mono text-xs tracking-[0.2em] text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
         >
           返回首页 →
         </Link>

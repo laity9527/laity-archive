@@ -29,8 +29,8 @@ export function SiteFooter({ icp, policeIcp, contactEmail }: SiteFooterProps) {
 
   return (
     <footer className="border-t border-hairline">
-      <div className="mx-auto flex max-w-[1200px] flex-wrap items-baseline gap-x-8 gap-y-3 px-6 py-8 font-mono text-[10px] tracking-[0.2em] text-ink-soft">
-        <span className="text-ink">LAITY</span>
+      <div className="mx-auto flex max-w-[1200px] flex-wrap items-baseline gap-x-8 gap-y-3 px-6 py-8 font-sans text-xs text-ink-soft">
+        <span className="font-mono text-[10px] tracking-[0.2em] text-ink">LAITY</span>
         <Link
           href="/privacy"
           className="border-b border-transparent hover:border-ink hover:text-ink"
@@ -72,7 +72,7 @@ export function SiteFooter({ icp, policeIcp, contactEmail }: SiteFooterProps) {
               {icp}
             </a>
           )}
-          <span>© 2026 LAITY</span>
+          <span className="font-mono text-[10px] tracking-[0.2em]">© 2026 LAITY</span>
         </span>
       </div>
     </footer>

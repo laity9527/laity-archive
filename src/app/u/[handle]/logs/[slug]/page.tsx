@@ -173,7 +173,7 @@ export default async function LogDetailPage({
   const showToc = tocGroups.reduce((sum, group) => sum + group.items.length, 0) >= 2;
 
   return (
-    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
+    <main id="main" className="mx-auto max-w-[1080px] px-6 py-16 max-md:py-8">
       <script
         type="application/ld+json"
         // 结构化数据只能是字符串正文；< 已在序列化时转义，作者内容无法闭合标签
@@ -212,55 +212,45 @@ export default async function LogDetailPage({
             ]}
           />
 
-          <header className="mt-6 pb-8 rule-double">
-            <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
-              {log.project.name}
-            </p>
-            <h1 className="mt-3 text-3xl font-medium tracking-tight">
+          <header className="mt-3 pb-5 rule-double">
+            <h1 className="text-[32px] font-medium leading-[1.2] tracking-tight max-md:text-[30px]">
               {log.title}
             </h1>
-            <div className="@container mt-6">
-              <Timeline beforeDate={log.beforeDate} afterDate={log.afterDate} />
+            <div className="@container mt-3">
+              <Timeline
+                beforeDate={log.beforeDate}
+                afterDate={log.afterDate}
+                variant="inline"
+              />
             </div>
-            {log.tags.length > 0 && (
-              <p className="mt-6 font-mono text-[11px] text-ink-soft">
-                {log.tags.map((item, i) => (
-                  <span key={item}>
-                    {i > 0 && " · "}
-                    <Link
-                      href={`/tags/${encodeURIComponent(item)}`}
-                      className="hover:text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
-                    >
-                      {item}
-                    </Link>
-                  </span>
-                ))}
-              </p>
-            )}
-            {minutes > 0 && (
-              <p className="mt-4 font-sans text-[11px] text-ink-soft">
-                约 <span className="font-mono">{minutes}</span> 分钟读完
-              </p>
-            )}
-            {context.seriesInfo && (
-              <p className="mt-3 font-sans text-[11px] text-ink-soft">
-                系列 ·{" "}
-                <Link
-                  href={`/u/${handle}/series/${encodeURIComponent(context.seriesInfo.name)}`}
-                  className="text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
-                >
-                  {context.seriesInfo.name}
-                </Link>{" "}
-                · 第 <span className="font-mono">{context.seriesInfo.position}</span> /{" "}
-                <span className="font-mono">{context.seriesInfo.total}</span> 篇
-              </p>
+            {(log.tags.length > 0 || minutes > 0 || context.seriesInfo) && (
+              <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-2">
+                {log.tags.length > 0 && (
+                  <p className="font-mono text-xs text-ink-soft">
+                    {log.tags.map((item, i) => (
+                      <span key={item}>
+                        {i > 0 && " · "}
+                        <Link href={`/tags/${encodeURIComponent(item)}`} className="hover:text-ink hover:underline hover:decoration-1 hover:underline-offset-4">{item}</Link>
+                      </span>
+                    ))}
+                  </p>
+                )}
+                {minutes > 0 && (
+                  <p className="font-sans text-xs text-ink-soft">约 <span className="font-mono">{minutes}</span> 分钟读完</p>
+                )}
+                {context.seriesInfo && (
+                  <p className="font-sans text-xs text-ink-soft">
+                    系列 ·{" "}
+                    <Link href={`/u/${handle}/series/${encodeURIComponent(context.seriesInfo.name)}`} className="text-ink hover:underline hover:decoration-1 hover:underline-offset-4">{context.seriesInfo.name}</Link>{" "}
+                    · 第 <span className="font-mono">{context.seriesInfo.position}</span> / <span className="font-mono">{context.seriesInfo.total}</span> 篇
+                  </p>
+                )}
+              </div>
             )}
           </header>
 
-          {showToc && <ArticleTocPanel groups={tocGroups} />}
-
           <ZoomableArticle>
-            <section className="mt-16">
+            <section className="mt-6">
               <SectionHead index="01" title="BEFORE" mono />
               <div className="mt-6">
                 <Markdown
@@ -270,6 +260,8 @@ export default async function LogDetailPage({
                 />
               </div>
             </section>
+
+            {showToc && <ArticleTocPanel groups={tocGroups} />}
 
             {log.afterContent && (
               <section className="mt-16">
@@ -331,7 +323,7 @@ export default async function LogDetailPage({
                   href={`/u/${handle}/logs/${context.older.slug}`}
                   className="group block"
                 >
-                  <span className="font-mono text-[9px] tracking-[0.16em] text-ink-soft">
+                  <span className="font-mono text-xs tracking-[0.16em] text-ink-soft">
                     ← 上一篇
                   </span>
                   <span className="mt-1 block text-sm font-medium group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">
@@ -347,7 +339,7 @@ export default async function LogDetailPage({
                   href={`/u/${handle}/logs/${context.newer.slug}`}
                   className="group block sm:text-right"
                 >
-                  <span className="font-mono text-[9px] tracking-[0.16em] text-ink-soft">
+                  <span className="font-mono text-xs tracking-[0.16em] text-ink-soft">
                     下一篇 →
                   </span>
                   <span className="mt-1 block text-sm font-medium group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">
@@ -362,7 +354,7 @@ export default async function LogDetailPage({
 
           {context.related.length > 0 && (
             <section className="no-print mt-10 border-t border-hairline pt-5">
-              <h2 className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+              <h2 className="font-mono text-xs tracking-[0.18em] text-ink-soft">
                 {relatedLabel}
               </h2>
               <ul className="mt-2">

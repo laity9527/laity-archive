@@ -21,6 +21,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { listPublicProjects } from "@/lib/projects";
+import { PageHeader } from "@/components/SectionHead";
 
 export const metadata: Metadata = {
   title: "作品档案",
@@ -36,7 +37,7 @@ export default async function ProjectsPage() {
   const projects = await listPublicProjects();
 
   return (
-    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
+    <main id="main" className="mx-auto max-w-[1080px] px-6 py-16 max-md:py-10">
       <Link
         href="/"
         className="font-sans text-xs text-ink-soft hover:text-ink"
@@ -44,22 +45,8 @@ export default async function ProjectsPage() {
         ← 首页
       </Link>
 
-      <header className="mt-10 border-b border-ink pb-8">
-        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-mono text-[10px] tracking-[0.18em] text-ink-soft">
-            ARCHIVE
-          </span>
-          <span className="font-sans text-xs text-ink-soft">
-            {projects.length} 个项目
-          </span>
-        </p>
-        <h1 className="mt-3 text-[32px] font-medium tracking-tight">
-          作品档案
-        </h1>
-        <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-soft">
-          按作品维度看档案：一个项目下的判断与验证，都收在同一页里。
-        </p>
-      </header>
+      <PageHeader className="mt-8" eyebrow="ARCHIVE" meta={`${projects.length} 个项目`} title="作品档案"
+        lede="按作品维度看档案：一个项目下的判断与验证，都收在同一页里。" />
 
       {projects.length === 0 ? (
         <p className="border-t border-ink py-6 font-sans text-xs text-ink-soft">

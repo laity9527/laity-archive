@@ -14,9 +14,30 @@ import { formatUtc } from "@/lib/time";
 type TimelineProps = {
   beforeDate: Date;
   afterDate: Date | null;
+  /** stacked：列表与首页的竖排时间轴；inline：详情页头部的单行读数，少占一屏 */
+  variant?: "stacked" | "inline";
 };
 
-export function Timeline({ beforeDate, afterDate }: TimelineProps) {
+export function Timeline({ beforeDate, afterDate, variant = "stacked" }: TimelineProps) {
+  if (variant === "inline") {
+    return (
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-xs">
+        <span className="text-[10px] tracking-[0.18em] text-ink-soft">BEFORE</span>
+        <time dateTime={beforeDate.toISOString()} className="text-ink">
+          {formatUtc(beforeDate)}
+        </time>
+        <span aria-hidden className="text-ink-soft">→</span>
+        <span className="text-[10px] tracking-[0.18em] text-ink-soft">AFTER</span>
+        <time
+          dateTime={afterDate ? afterDate.toISOString() : undefined}
+          className="text-ink-soft"
+        >
+          {afterDate ? formatUtc(afterDate) : "进行中"}
+        </time>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full shrink-0 @[36rem]:w-[200px]">
       <span

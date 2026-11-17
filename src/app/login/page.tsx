@@ -72,10 +72,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <p className="mt-10 font-mono text-[9px] tracking-[0.2em] text-ink-soft">
             ADMINISTRATION
           </p>
-          <h1 className="mt-3 text-[32px] font-medium tracking-tight">
-            后台是写档案的地方，
-            <br />
-            不是另一个网站。
+          <h1 className="mt-3 text-[32px] font-medium leading-[1.2] tracking-tight max-md:text-[28px]">
+            后台是写档案的地方。
+            <span className="mt-2 block font-sans text-lg font-normal leading-snug text-ink-soft">
+              不是另一个网站。
+            </span>
           </h1>
           <p className="mt-5 max-w-[420px] text-sm leading-relaxed text-ink-soft">
             登录后可以新建项目与日志、从 GitHub 拉取提交草稿、导出全部数据。访客不需要账号，前台的日志与项目档案直接可读。
@@ -84,7 +85,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <p className="mt-10 font-mono text-[10px] tracking-[0.2em] text-ink-soft">
             LAITY ARCHIVE
           </p>
-          <p className="mt-2 font-sans text-[11px] leading-relaxed text-ink-soft">
+          <p className="mt-2 font-sans text-xs leading-relaxed text-ink-soft">
             仅站主一个账号 · GitHub OAuth
             <br />
             登录信息不进入前台页面
@@ -92,7 +93,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </section>
 
         <section className="flex flex-col justify-center border-t border-hairline p-8 md:border-l md:border-t-0">
-          <p className="font-sans text-[10px] text-ink-soft">后台登录</p>
+          <p className="font-sans text-xs text-ink-soft">后台登录</p>
 
           {errorCode && (
             <p
@@ -107,7 +108,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             <SignInButton callbackUrl={callbackUrl} />
           </div>
 
-          <p className="mt-3 font-sans text-[11px] leading-relaxed text-ink-soft">
+          <p className="mt-3 font-sans text-xs leading-relaxed text-ink-soft">
+            为什么用 GitHub：本站不存密码，登录只用于确认站主身份。
+          </p>
+
+          <p className="mt-2 font-sans text-xs leading-relaxed text-ink-soft">
             登录后回到你刚才想去的页面。
           </p>
 
@@ -117,7 +122,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             </div>
           )}
 
-          <p className="mt-8 border-t border-hairline pt-4 font-sans text-[11px] leading-relaxed text-ink-soft">
+          <p className="mt-8 border-t border-hairline pt-4 font-sans text-xs leading-relaxed text-ink-soft">
             无账号？前台内容无需登录。
           </p>
         </section>

@@ -160,10 +160,10 @@ export function ArticleTocPanel({ groups }: { groups: TocGroup[] }) {
   if (!visible) return null;
   const count = groups.reduce((sum, g) => sum + g.items.length, 0);
   return (
-    <details className="toc-panel mt-8 lg:hidden">
+    <details className="toc-panel mt-6 lg:hidden">
       <summary className="font-sans text-[12px] text-ink-soft">
         <span>目录</span>
-        <span className="toc-panel-count font-mono text-[10px]">{count} 节</span>
+        <span className="toc-panel-count font-mono text-xs">{count} 节</span>
       </summary>
       <div className="toc-panel-body">
         <TocLinks groups={groups} activeId={activeId} />

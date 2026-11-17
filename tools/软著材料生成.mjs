@@ -219,6 +219,10 @@ const BANDS = [
       // B0/B1-a 新增的排版与交互组件（2026-11-16）：都是“排版 + 小块交互”的外壳，
       // 其数据来源（logs/projects DAL）与渲染入口（页面）均已在可见载体，登记 ③ 不动 ①+② 防线
       "src/components/SectionHead.tsx",
+      // 2026-11-17 P0：Timeline 自 ④ 下移。它是纯排版组件（竖排/单行两种），
+      // 详情页与列表里的调用处仍在可见窗口；本轮字号调整把 globals.css 余量压到 54，
+      // 下移后余量 148（≥BOUNDARY_MARGIN=100），排版与交互逻辑均未改。
+      "src/components/Timeline.tsx",
       "src/components/Breadcrumbs.tsx",
       "src/components/CodeBlock.tsx",
       "src/components/ZoomableArticle.tsx",
@@ -447,13 +451,6 @@ const BANDS = [
     name: "站点外壳（样式令牌 + 根布局 + 导航）与访客可见界面，末段为对外公示页（开源致谢 / 关于；隐私页、404 外壳与页脚自本轮起进折走段）",
     files: [
       "src/app/globals.css",
-      // layout.tsx 于 2026-11-16（B2）自 ④ 平移进折走段 ③：根布局只做字体挂载、metadata 与导航/页脚组合，
-      // 主题脚本与视觉规则分别在 ThemeToggle / globals.css；平移是为了给 ④ 腾出后窗口容量（本轮余量 62 行被拒件）
-      // SiteNav 于 2026-11-16（B1-a）自 ④ 平移进折走段 ③：它是导航外壳（渲染导航项 + 主题切换），
-      // 判定逻辑在 routes.ts、交互在 ThemeToggle，均已在可见载体；
-      // 平移是为了给 B0 新增的首页/详情样式腾出后窗口容量
-      // StatusBoard.tsx 于本轮自 ④ 平移进折走段 ③（2026-11-05，D30 A1，见 ③ 段注释）
-      "src/components/Timeline.tsx",
       "src/app/page.tsx",
       // 日志大厅页已于 2026-11-13 平移进折走段 ③（B1–B4 收尾，见 ③ 段注释）：
       // 取数/主题/时间轴均在窗口内，折走的是列表排版；首页与详情页仍整份保留在后窗口。

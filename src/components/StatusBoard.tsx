@@ -56,13 +56,13 @@ export function StatusBoard({ entries }: StatusBoardProps) {
           >
             {entry.name}
           </Link>
-          <span className="font-sans text-[11px] text-ink-soft">
+          <span className="font-sans text-xs text-ink-soft">
             {kindLabel(entry.kind)}
           </span>
-          <span className="font-sans text-[11px] text-ink-soft">
+          <span className="font-sans text-xs text-ink-soft">
             {statusLabel(entry.status)}
           </span>
-          <span className="ml-auto text-[11px] text-ink-soft">
+          <span className="ml-auto text-xs text-ink-soft">
             <span className="font-sans">{`${logsCountLabel(entry.count)} · `}</span>
             {entry.latest ? (
               <span className="font-mono">{entry.latest.toISOString().slice(0, 10)}</span>

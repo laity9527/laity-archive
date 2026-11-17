@@ -16,7 +16,7 @@
  */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SectionHead } from "@/components/SectionHead";
+import { PageHeader, SectionHead } from "@/components/SectionHead";
 import { getTagIndex, type TagIndexEntry } from "@/lib/logs";
 import { TOPICS, topicOfTag } from "@/lib/topics";
 
@@ -50,21 +50,9 @@ export default async function TagsPage() {
   }
 
   return (
-    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
-      <header className="border-b border-ink pb-8">
-        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-mono text-[10px] tracking-[0.18em] text-ink-soft">
-            TAGS
-          </span>
-          <span className="font-sans text-xs text-ink-soft">
-            {tags.length} 个标签 · 被引用 {total} 次 · 分 {groups.length} 组
-          </span>
-        </p>
-        <h1 className="mt-3 text-[32px] font-medium tracking-tight">标签</h1>
-        <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-soft">
-          标签是这套档案的横切面：同一个技术判断，可能散在不同的项目与月份里。
-        </p>
-      </header>
+    <main id="main" className="mx-auto max-w-[1080px] px-6 py-16 max-md:py-10">
+      <PageHeader eyebrow="TAGS" meta={`${tags.length} 个标签 · 被引用 ${total} 次 · 分 ${groups.length} 组`} title="标签"
+        lede="标签是这套档案的横切面：同一个技术判断，可能散在不同的项目与月份里。" />
 
       {tags.length === 0 ? (
         <p className="mt-10 border-t border-ink py-6 font-sans text-sm text-ink-soft">
@@ -77,7 +65,7 @@ export default async function TagsPage() {
               index={String(index + 1).padStart(2, "0")}
               title={group.label}
               action={
-                <span className="font-mono text-[10px] text-ink-soft">
+                <span className="font-mono text-xs text-ink-soft">
                   {group.items.length} 个
                 </span>
               }
@@ -90,7 +78,7 @@ export default async function TagsPage() {
                     className="border-b border-transparent text-[15px] hover:border-ink"
                   >
                     {tag}
-                    <span className="ml-1.5 font-mono text-[10px] text-ink-soft">
+                    <span className="ml-1.5 font-mono text-xs text-ink-soft">
                       {count}
                     </span>
                   </Link>

@@ -12,6 +12,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getArchive } from "@/lib/logs";
 import { shouldShowYearBar } from "@/lib/archive";
+import { PageHeader } from "@/components/SectionHead";
 
 export const metadata: Metadata = {
   title: "归档",
@@ -27,21 +28,9 @@ export default async function ArchivePage() {
   const total = years.reduce((sum, year) => sum + year.count, 0);
 
   return (
-    <main id="main" className="mx-auto max-w-[1080px] px-6 py-24">
-      <header className="border-b border-ink pb-8">
-        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-mono text-[10px] tracking-[0.18em] text-ink-soft">
-            ARCHIVE
-          </span>
-          <span className="font-sans text-xs text-ink-soft">
-            共 {total} 条已发布 · {years.length} 个年份
-          </span>
-        </p>
-        <h1 className="mt-3 text-[32px] font-medium tracking-tight">归档</h1>
-        <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-soft">
-          按年月回看：每一条都记着「哪天做的决策」，而不是「哪天写完的」。
-        </p>
-      </header>
+    <main id="main" className="mx-auto max-w-[1080px] px-6 py-16 max-md:py-10">
+      <PageHeader eyebrow="ARCHIVE" meta={`共 ${total} 条已发布 · ${years.length} 个年份`} title="归档"
+        lede="按年月回看：每一条都记着「哪天做的决策」，而不是「哪天写完的」。" />
 
       {years.length === 0 ? (
         <p className="mt-10 border-t border-ink py-6 font-sans text-sm text-ink-soft">
@@ -64,7 +53,7 @@ export default async function ArchivePage() {
                   className="border-b border-transparent font-mono text-xs text-ink-soft hover:border-ink hover:text-ink"
                 >
                   {year.year}{" "}
-                  <span className="text-[10px] text-ink-soft">{year.count}</span>
+                  <span className="text-xs text-ink-soft">{year.count}</span>
                 </a>
               ))}
             </nav>
@@ -75,14 +64,14 @@ export default async function ArchivePage() {
                 <h2 className="font-mono text-2xl tracking-[0.08em] text-ink">
                   {year.year}
                 </h2>
-                <span className="font-mono text-[10px] text-ink-soft">
+                <span className="font-mono text-xs text-ink-soft">
                   {year.count} 条
                 </span>
               </div>
 
               {year.months.map((month) => (
                 <div key={month.key} className="mt-8">
-                  <p className="font-mono text-[10px] tracking-[0.16em] text-ink-soft">
+                  <p className="font-mono text-xs tracking-[0.16em] text-ink-soft">
                     {month.key}
                   </p>
                   <ul className="mt-3 border-t border-hairline">
@@ -91,7 +80,7 @@ export default async function ArchivePage() {
                         key={item.id}
                         className="flex flex-wrap items-baseline gap-x-6 gap-y-1 border-b border-hairline py-3"
                       >
-                        <span className="font-mono text-[11px] text-ink-soft">
+                        <span className="font-mono text-xs text-ink-soft">
                           {item.beforeDate.toISOString().slice(0, 10)}
                         </span>
                         <Link

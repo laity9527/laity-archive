@@ -53,12 +53,12 @@ export function DevLoginForm({ callbackUrl }: { callbackUrl: string }) {
 
   return (
     <form onSubmit={onSubmit} className="grid gap-3">
-      <p className="font-sans text-[10px] text-ink-soft">
+      <p className="font-sans text-xs text-ink-soft">
         本地调试登录 · 仅开发环境
       </p>
 
       <label className="flex flex-col gap-1">
-        <span className="font-sans text-[10px] text-ink-soft">用户名</span>
+        <span className="font-sans text-xs text-ink-soft">用户名</span>
         <input
           name="username"
           defaultValue="admin"
@@ -69,7 +69,7 @@ export function DevLoginForm({ callbackUrl }: { callbackUrl: string }) {
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="font-sans text-[10px] text-ink-soft">密码</span>
+        <span className="font-sans text-xs text-ink-soft">密码</span>
         <input
           name="password"
           type="password"
@@ -80,7 +80,7 @@ export function DevLoginForm({ callbackUrl }: { callbackUrl: string }) {
       </label>
 
       {error && (
-        <p role="alert" className="font-sans text-[11px] text-ink">
+        <p role="alert" className="font-sans text-xs text-ink">
           {error}
         </p>
       )}
@@ -93,7 +93,7 @@ export function DevLoginForm({ callbackUrl }: { callbackUrl: string }) {
         {pending ? "登录中…" : "本地登录"}
       </button>
 
-      <p className="font-sans text-[10px] leading-relaxed text-ink-soft">
+      <p className="font-sans text-xs leading-relaxed text-ink-soft">
         生产构建不启用；密码由服务端 DEV_LOGIN_PASSWORD 提供。
       </p>
     </form>
