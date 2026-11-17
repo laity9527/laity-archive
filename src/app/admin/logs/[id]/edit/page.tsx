@@ -23,6 +23,7 @@
  * - 2026-11-13: Phase C 编辑器：保存/发布按钮从表单底部提到顶部粘性操作条；
  *               新增「发布检查」摘要（标题 / BEFORE / 敏感扫描 / 摘要），口径仍以服务端保存时为准
  * - 2026-11-13: 发布检查改实时（PublishCheck 监听表单 input/change）；服务端仍会在保存/发布时再校验
+ * - 2026-11-16: 评审 A5：状态行加「预览」——跳到登录态可见的草稿预览页（同详情页排版，不出登录态）
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -148,6 +149,12 @@ export default async function EditLogPage({
         {log.user && (
           <>
             <span>/u/{log.user.handle}/logs/{log.slug}</span>
+            <Link
+              href={`/admin/logs/${log.id}/preview`}
+              className="border-b border-ink text-ink"
+            >
+              预览
+            </Link>
             {log.isPublished && (
               <Link
                 href={`/u/${log.user.handle}/logs/${log.slug}`}

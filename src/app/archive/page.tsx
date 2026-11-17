@@ -6,10 +6,12 @@
  * 修改记录：
  * - 2026-11-16: 初始创建（重构方案 V3 / B4）。大厅解决"筛"，归档解决"按时间回看"：
  *               年份一个区块、月份一个小标题，条目行只到标题粒度；分组与排序口径在 getArchive 单源
+ * - 2026-11-16: 评审 G5：条目 >30 时年份下方加年份跳转条（阈值与判据在 archive.ts，默认不显示）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getArchive } from "@/lib/logs";
+import { shouldShowYearBar } from "@/lib/archive";
 
 export const metadata: Metadata = {
   title: "归档",
@@ -47,8 +49,28 @@ export default async function ArchivePage() {
         </p>
       ) : (
         <div className="mt-12 space-y-16">
+          {shouldShowYearBar(total) && (
+            <nav
+              aria-label="按年份跳转"
+              className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-y border-hairline py-3"
+            >
+              <span className="font-mono text-[10px] tracking-[0.16em] text-ink-soft">
+                YEAR
+              </span>
+              {years.map((year) => (
+                <a
+                  key={year.year}
+                  href={`#${year.year}`}
+                  className="border-b border-transparent font-mono text-xs text-ink-soft hover:border-ink hover:text-ink"
+                >
+                  {year.year}{" "}
+                  <span className="text-[10px] text-ink-soft">{year.count}</span>
+                </a>
+              ))}
+            </nav>
+          )}
           {years.map((year) => (
-            <section key={year.year} id={year.year}>
+            <section key={year.year} id={year.year} className="scroll-mt-8">
               <div className="flex items-baseline justify-between border-b border-ink pb-2">
                 <h2 className="font-mono text-2xl tracking-[0.08em] text-ink">
                   {year.year}

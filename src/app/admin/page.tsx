@@ -22,6 +22,8 @@
  * - 2026-11-13: Phase C 概览重排：标题区补「新建日志」主入口；三项计数改卡片；
  *               「最近动态」改「继续处理」只列草稿（getAdminOverview 同步改 recentDrafts），
  *               同步/导出/项目入口收进「数据与发布」区；横幅与动作语义未动
+ * - 2026-11-16: 评审 G12：四张计数卡下加「近 12 周发布」纯 CSS 柱状条（周一起算、UTC 切桶），
+ *               只展示发布节奏，不引图表库；取数由 getAdminOverview 一并返回
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -61,8 +63,15 @@ export default async function AdminHomePage({
     redirect("/login?callbackUrl=%2Fadmin");
   }
 
-  const { projectCount, publishedCount, draftCount, publishedThisWeek, recentDrafts } =
-    await getAdminOverview(session.userId);
+  const {
+    projectCount,
+    publishedCount,
+    draftCount,
+    publishedThisWeek,
+    recentDrafts,
+    trendStarts,
+    weeklyPublishes,
+  } = await getAdminOverview(session.userId);
 
   const stats = [
     { label: "项目总数", value: projectCount },
@@ -70,6 +79,12 @@ export default async function AdminHomePage({
     { label: "草稿", value: draftCount },
     { label: "近 7 天发布", value: publishedThisWeek },
   ];
+
+  // 趋势条：高度按本周峰值归一；0 条给 2px 细线，避免“没有柱子”看不清哪一周是空的
+  const trendTotal = weeklyPublishes.reduce((sum, count) => sum + count, 0);
+  const trendPeak = Math.max(...weeklyPublishes, 0);
+  const trendScale = Math.max(trendPeak, 1);
+  const trendDay = (date: Date) => `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
 
   return (
     <>
@@ -143,6 +158,45 @@ export default async function AdminHomePage({
           </div>
         ))}
       </div>
+
+      <section className="mt-8 border border-hairline p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <p className="font-sans text-[10px] text-ink-soft">近 12 周发布</p>
+          <p className="font-mono text-[10px] text-ink-soft">
+            共 {trendTotal} 条 · 单周最高 {trendPeak}
+          </p>
+        </div>
+
+        <div
+          role="img"
+          aria-label={`近 12 周发布趋势：共 ${trendTotal} 条，单周最高 ${trendPeak} 条`}
+          className="mt-4 flex h-16 items-end gap-1 border-b border-hairline"
+        >
+          {weeklyPublishes.map((count, index) => {
+            const start = trendStarts[index];
+            const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+            const height =
+              count === 0
+                ? "2px"
+                : `${Math.max(8, Math.round((count / trendScale) * 100))}%`;
+
+            return (
+              <div
+                key={start.toISOString()}
+                aria-hidden="true"
+                title={`${trendDay(start)}–${trendDay(end)} · ${count} 条`}
+                className={`flex-1 ${count === 0 ? "bg-hairline" : "bg-ink"}`}
+                style={{ height }}
+              />
+            );
+          })}
+        </div>
+
+        <div className="mt-2 flex justify-between font-mono text-[9px] text-ink-soft">
+          <span>{trendDay(trendStarts[0])}</span>
+          <span>本周</span>
+        </div>
+      </section>
 
       <section className="mt-12">
         <div className="flex flex-wrap items-baseline justify-between gap-3">

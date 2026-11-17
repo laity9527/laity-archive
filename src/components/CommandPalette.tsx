@@ -7,6 +7,7 @@
  * - 2026-11-16: 初始创建（重构方案 V3 / B4）。此前搜索只存在于 /logs 页内；面板由 SiteNav 按需挂载
  *               （未打开时不加载组件），查询走 /api/search，结果限 6 条日志 / 4 个项目 / 6 个标签。
  *               键盘：↑↓ 移动、Enter 跳转、Esc 关闭；焦点在打开时进输入框，关闭交还触发按钮
+ * - 2026-11-16: 评审 G3：结果底部加「在大厅中查看全部结果」，把 q 交给 /logs 的搜索（面板只展示前 6 条日志）
  */
 "use client";
 
@@ -217,6 +218,25 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
             </ul>
           )}
         </div>
+
+        {/* 面板只给前 6 条日志；完整结果（含筛选、排序、分页）在大厅 */}
+        {q.trim() && (
+          <div className="mt-3 border-t border-hairline pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                router.push(`/logs?q=${encodeURIComponent(q.trim())}`);
+              }}
+              className="flex w-full items-baseline justify-between gap-4 py-1 text-left font-sans text-xs text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
+            >
+              <span>在大厅中查看全部结果</span>
+              <span aria-hidden className="font-mono text-[10px] text-ink-soft">
+                →
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

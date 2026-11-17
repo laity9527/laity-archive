@@ -49,6 +49,10 @@
  *               游标仍用 id，两种排序下分页都稳定
  * - 2026-11-16: B4：新增 getTagFeedItems（/tags/[tag]/feed.xml 取数口）——同标签下最新 20 篇已发布，
  *               只取 feed 需要的列（标题/链接/发布时间/摘要/标签），不取全文
+ * - 2026-11-16: 评审 G1：getLogContext 额外返回 catalog（本租户已发布日志的 slug + 标题）——
+ *               内链目标解析复用这次已有查询，详情页 Prisma 调用仍为 2，不因内链抬高预算
+ * - 2026-11-16: 评审 A2（排序部分）：getAdminLogList 新增 sort（updated / oldest / title），
+ *               排序全部带 id 作次键——同一时间戳的行在翻页时不因顺序不定而错位
  */
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -60,6 +64,7 @@ import {
 } from "@/lib/archive";
 import { escapeLikePattern, matchLog } from "@/lib/log-search";
 import { resolveUserId } from "@/lib/projects";
+import type { AdminLogSort } from "@/lib/sort-preference";
 import {
   pickNeighbors,
   pickRelated,
@@ -507,6 +512,8 @@ export type LogContext = {
   newer: LogContextItem | null;
   related: LogContextItem[];
   relatedReason: RelatedReason | null;
+  // 正文内链（G1）的目标表：slug → 标题，只含已发布日志；页面据此决定渲染为链接还是保留原文
+  catalog: { slug: string; title: string }[];
 };
 
 /**
@@ -522,7 +529,13 @@ export async function getLogContext(current: {
 }): Promise<LogContext> {
   // 无主行前台从不展示；类型上 userId 可空，这里提前返回，不把 null 送进 where
   if (!current.userId) {
-    return { older: null, newer: null, related: [], relatedReason: null };
+    return {
+      older: null,
+      newer: null,
+      related: [],
+      relatedReason: null,
+      catalog: [],
+    };
   }
 
   const rows = await db.log.findMany({
@@ -545,7 +558,14 @@ export async function getLogContext(current: {
   );
   const { items, reason } = pickRelated(rows, current, 3, excludeIds);
 
-  return { older, newer, related: items, relatedReason: reason };
+  return {
+    older,
+    newer,
+    related: items,
+    relatedReason: reason,
+    // 同一批 rows 已经在内存里：给 G1 一份 slug → 标题的表，不额外查库
+    catalog: rows.map(({ slug, title }) => ({ slug, title })),
+  };
 }
 
 export type TopicCount = {
@@ -649,6 +669,10 @@ export type AdminLogStatus = "all" | "draft" | "published";
 export type AdminLogListParams = {
   status?: AdminLogStatus;
   q?: string;
+  // 按项目 slug 筛选（2026-11-16 评审 A3）；不传即全部项目
+  project?: string;
+  // 排序（2026-11-16 评审 A2）：最近更新 / 最早更新 / 标题；不传即最近更新
+  sort?: AdminLogSort;
   page?: number;
   pageSize?: number;
 };
@@ -674,12 +698,19 @@ export async function getAdminLogList(
         ? { isPublished: true }
         : {}),
     ...(q ? { title: { contains: q, mode: "insensitive" } } : {}),
+    // 项目 slug 是客户端可控值：用关系过滤，不存在的 slug 自然得到空集（不抛错）
+    ...(params.project ? { project: { slug: params.project } } : {}),
   };
 
   const [items, total, all, published, draft] = await Promise.all([
     db.log.findMany({
       where,
-      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      orderBy:
+        params.sort === "title"
+          ? [{ title: "asc" }, { id: "asc" }]
+          : params.sort === "oldest"
+            ? [{ updatedAt: "asc" }, { id: "asc" }]
+            : [{ updatedAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {

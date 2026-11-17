@@ -9,7 +9,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { groupArchive, type ArchiveEntry } from "../src/lib/archive.ts";
+import { groupArchive, shouldShowYearBar, YEAR_BAR_MIN_ENTRIES, type ArchiveEntry } from "../src/lib/archive.ts";
 
 function entry(id: string, iso: string): ArchiveEntry {
   return {
@@ -106,4 +106,15 @@ test("count 是组内条目总数，不是月份数", () => {
 
   assert.equal(years[0].count, 3);
   assert.equal(years[0].months.length, 2);
+});
+
+test("年份跳转条：等于阈值为假，超过阈值才显示", () => {
+  assert.equal(shouldShowYearBar(YEAR_BAR_MIN_ENTRIES), false);
+  assert.equal(shouldShowYearBar(YEAR_BAR_MIN_ENTRIES + 1), true);
+});
+
+test("年份跳转条：空库、单条与非法数字都不显示", () => {
+  assert.equal(shouldShowYearBar(0), false);
+  assert.equal(shouldShowYearBar(1), false);
+  assert.equal(shouldShowYearBar(Number.NaN), false);
 });

@@ -6,10 +6,11 @@
  * 修改记录：
  * - 2026-11-16: 初始创建。排序记忆的合法性判定抽到 src/lib/sort-preference.ts，
  *               用测试钉死“UI 之外的脏值（大小写、旧值、空值）”不会改变排序语义
+ * - 2026-11-16: 评审 A2：补后台排序值（updated / oldest / title）的解析用例
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseSort } from "../src/lib/sort-preference.ts";
+import { parseAdminSort, parseSort } from "../src/lib/sort-preference.ts";
 
 test("published 原样保留", () => {
   assert.equal(parseSort("published"), "published");
@@ -29,4 +30,18 @@ test("大小写与旧值等脏值一律回落 decided", () => {
   assert.equal(parseSort("PUBLISHED"), "decided");
   assert.equal(parseSort("before"), "decided");
   assert.equal(parseSort("published "), "decided");
+});
+
+test("后台排序：updated / oldest / title 原样保留", () => {
+  assert.equal(parseAdminSort("updated"), "updated");
+  assert.equal(parseAdminSort("oldest"), "oldest");
+  assert.equal(parseAdminSort("title"), "title");
+});
+
+test("后台排序：空值与非法值回落最近更新", () => {
+  assert.equal(parseAdminSort(undefined), "updated");
+  assert.equal(parseAdminSort(null), "updated");
+  assert.equal(parseAdminSort(""), "updated");
+  assert.equal(parseAdminSort("TITLE"), "updated");
+  assert.equal(parseAdminSort("published"), "updated");
 });

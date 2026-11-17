@@ -28,6 +28,8 @@
  *               BEFORE / AFTER / 经验总结三段改用 SectionHead（编号 + 双线边界），经验总结收进 2px 棕左线引用块；
  *               正文包进 ZoomableArticle 接管图片灯箱（事件委托，不注入 HTML）；
  *               相邻日志与相关阅读加 no-print，打印时只留正文与印章
+ * - 2026-11-16: 评审 G1：正文 `[[slug]]` 渲染为同作者已发布日志的内链（显示目标标题）；
+ *               目标表取自已有的 getLogContext 查询，未命中保留原文；"被引用"反向列表另轮裁定
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -116,6 +118,14 @@ export default async function LogDetailPage({
       : context.relatedReason === "project"
         ? "同项目最近发布"
         : "相关阅读";
+  // G1 内链解析表：只用本租户已发布日志，草稿与别家 slug 不在表中——未命中就保留原文，
+  // 既不造死链，也不会因链接暴露未发布内容的存在性
+  const logLinks = {
+    links: Object.fromEntries(
+      context.catalog.map((item) => [item.slug, item.title]),
+    ),
+    href: (target: string) => `/u/${handle}/logs/${target}`,
+  };
   const logPath = `/u/${handle}/logs/${slug}`;
 
   // 结构化数据（BlogPosting）：让搜索引擎把每条日志识别为一篇带发布时间的文章。
@@ -235,6 +245,7 @@ export default async function LogDetailPage({
                 <Markdown
                   source={log.beforeContent}
                   tocIdPrefix={showToc ? "before" : undefined}
+                  logLinks={logLinks}
                 />
               </div>
             </section>
@@ -246,6 +257,7 @@ export default async function LogDetailPage({
                   <Markdown
                     source={log.afterContent}
                     tocIdPrefix={showToc ? "after" : undefined}
+                    logLinks={logLinks}
                   />
                 </div>
               </section>
@@ -258,7 +270,7 @@ export default async function LogDetailPage({
                   title="经验总结"
                 />
                 <blockquote className="mt-6 border-l-2 border-brown pl-5">
-                  <Markdown source={log.lessonLearned} />
+                  <Markdown source={log.lessonLearned} logLinks={logLinks} />
                 </blockquote>
               </section>
             )}

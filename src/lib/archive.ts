@@ -7,6 +7,8 @@
  * - 2026-11-16: 初始创建。原先分组写在 getArchive() 里、与查询耦合，无法单测；
  *               抽成纯函数后分组规则（年降序 → 月降序 → 日内保持传入顺序）可用 node --test 钉死。
  *               时间一律按 UTC 切片，与全库存时口径一致，不在展示层做时区换算
+ * - 2026-11-16: 评审 G5：新增年份跳转条的显隐阈值（shouldShowYearBar）。
+ *               阈值写成导出常量，页面与单测读同一处，避免“页面上写 30、测试里写 31”
  */
 
 export type ArchiveEntry = {
@@ -21,6 +23,16 @@ export type ArchiveEntry = {
 export type ArchiveMonth = { key: string; items: ArchiveEntry[] };
 
 export type ArchiveYear = { year: string; count: number; months: ArchiveMonth[] };
+
+/**
+ * 年份跳转条的最低条目数。条目少时（当前 12 条）每个年份只隔一两屏，
+ * 再添一层导航只是多一层东西；超过 30 条才真正需要“直接跳到某年”。
+ */
+export const YEAR_BAR_MIN_ENTRIES = 30;
+
+export function shouldShowYearBar(total: number): boolean {
+  return Number.isFinite(total) && total > YEAR_BAR_MIN_ENTRIES;
+}
 
 /**
  * 入参约定：已按 `beforeDate` 倒序（与大厅一致）；本函数只做分组与年/月排序，

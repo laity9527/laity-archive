@@ -11,16 +11,22 @@
  *               与 src/lib/toc.ts 的 extractToc 同一计数口径；不传即原行为（Editor 预览零影响），h1→h2 降级保留
  * - 2026-11-16: 重构 B0：代码块交给 CodeBlock（语言标签 + 复制），图片加 loading="lazy"/decoding="async"；
  *               语言与正文都从 hast 节点读，不额外引插件，rehype-sanitize 仍是唯一边界
+ * - 2026-11-16: 评审 G1：可选 logLinks，把正文 `[[slug]]` 改成指向同作者已发布日志的内链；
+ *               只在传入解析表时启用（编辑预览不传即原样显示），改写发生在 sanitize 之前，清洗仍是唯一边界
  */
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
+import type { PluggableList } from "unified";
 import { CodeBlock } from "@/components/CodeBlock";
+import { rehypeLogLinks, type LogLinkResolver } from "@/lib/log-links";
 
 type MarkdownProps = {
   source: string;
   // 锚点 id 前缀（F23）：详情页传 "before"/"after"，Editor 预览不传即不盖 id
   tocIdPrefix?: string;
+  // 正文内链解析表（G1）：详情页传入同作者已发布日志的 slug → 标题；不传即禁用
+  logLinks?: LogLinkResolver;
 };
 
 // hast 的最小形状：只用到 element / text 两种节点与 className
@@ -92,7 +98,7 @@ const COMPONENTS: Components = {
   img,
 };
 
-export function Markdown({ source, tocIdPrefix }: MarkdownProps) {
+export function Markdown({ source, tocIdPrefix, logLinks }: MarkdownProps) {
   // 计数器是每次渲染独立的闭包：StrictMode 双渲染各自从 0 起，序号不会串；
   // react-markdown 按文档序同步渲染标题，与 extractToc 的抽取序一一对应（错位由 ArticleToc 客户端自证兜底）
   let headingIndex = 0;
@@ -115,7 +121,14 @@ export function Markdown({ source, tocIdPrefix }: MarkdownProps) {
 
   return (
     <div className="log-body text-ink">
-      <ReactMarkdown components={components} rehypePlugins={[rehypeSanitize]}>
+      <ReactMarkdown
+        components={components}
+        rehypePlugins={
+          (logLinks
+            ? [[rehypeLogLinks, logLinks], rehypeSanitize]
+            : [rehypeSanitize]) as PluggableList
+        }
+      >
         {source}
       </ReactMarkdown>
     </div>

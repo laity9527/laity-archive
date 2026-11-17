@@ -21,10 +21,17 @@
  *               deleteProject 改 deleteMany({id,userId})，0 行命中一律 PRJ_004（跨租户与不存在同表现）
  * - 2026-11-13: 查询去重：resolveUserId / getPublicProjectBySlug 包 React cache()（单请求内只查一次）；
  *               新增 pickFeatured 精选口径单源
+ * - 2026-11-16: 评审 G12：getAdminOverview 补近 12 周发布桶（多一次只取 publishedAt 的查询），
+ *               分桶规则落在 src/lib/publish-trend.ts 的纯函数，页面只负责画柱
+ * - 2026-11-16: 评审 A3：新增 listProjectOptions（后台筛选下拉只要 slug + 名称）
  */
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
 import { db } from "@/lib/db";
+import {
+  bucketWeeklyPublishes,
+  trendWeekStarts,
+} from "@/lib/publish-trend";
 
 // 合法取值与 prisma/schema.prisma 的注释保持一致；改这里要同步改 schema 注释
 export const PROJECT_KINDS: string[] = ["product", "tool", "site"];
@@ -212,6 +219,18 @@ export const getPublicProjectBySlug = cache(async (slug: string, handle: string)
   });
 });
 
+// 后台筛选用的项目选项（只 slug + 名称）：与 listProjects 分开，避免为了一个下拉
+// 把每个项目的日志计数一起查回来
+export async function listProjectOptions(
+  userId: string,
+): Promise<{ slug: string; name: string }[]> {
+  return db.project.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    select: { slug: true, name: true },
+  });
+}
+
 // 后台编辑回填用：id 来自 URL，带上 userId 后别家的项目查不到（回落新建表单，不泄露存在性）
 export async function getProjectById(id: string, userId: string) {
   return db.project.findFirst({ where: { id, userId } });
@@ -240,32 +259,63 @@ export async function isProjectSlug(slug: string, handle: string) {
 export async function getAdminOverview(userId: string) {
   // 「本周」定义为滚动 7 天（不是自然周）：单人站关心的是“最近有没有产出”，
   // 自然周会让周一早上看板归零，误导性大于信息量
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  // 趋势按自然周（周一为周首）切 12 桶：看的是“节奏”，与上面的滚动 7 天不是一个问题
+  const trendStarts = trendWeekStarts(now);
 
-  const [projectCount, publishedCount, draftCount, publishedThisWeek, recentDrafts] =
-    await Promise.all([
-      db.project.count({ where: { userId } }),
-      db.log.count({ where: { userId, isPublished: true } }),
-      db.log.count({ where: { userId, isPublished: false } }),
-      db.log.count({
-        where: { userId, isPublished: true, publishedAt: { gte: weekAgo } },
-      }),
-      db.log.findMany({
-        where: { userId, isPublished: false },
-        orderBy: { updatedAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          isPublished: true,
-          updatedAt: true,
-          project: { select: { name: true } },
-        },
-      }),
-    ]);
+  const [
+    projectCount,
+    publishedCount,
+    draftCount,
+    publishedThisWeek,
+    recentDrafts,
+    trendRows,
+  ] = await Promise.all([
+    db.project.count({ where: { userId } }),
+    db.log.count({ where: { userId, isPublished: true } }),
+    db.log.count({ where: { userId, isPublished: false } }),
+    db.log.count({
+      where: { userId, isPublished: true, publishedAt: { gte: weekAgo } },
+    }),
+    db.log.findMany({
+      where: { userId, isPublished: false },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        isPublished: true,
+        updatedAt: true,
+        project: { select: { name: true } },
+      },
+    }),
+    // 只取发布时间一列：12 周窗口外的行不进内存，桶由纯函数切
+    db.log.findMany({
+      where: {
+        userId,
+        isPublished: true,
+        publishedAt: { gte: trendStarts[0] },
+      },
+      select: { publishedAt: true },
+    }),
+  ]);
 
-  return { projectCount, publishedCount, draftCount, publishedThisWeek, recentDrafts };
+  const weeklyPublishes = bucketWeeklyPublishes(
+    trendRows.flatMap((row) => (row.publishedAt ? [row.publishedAt] : [])),
+    now,
+  );
+
+  return {
+    projectCount,
+    publishedCount,
+    draftCount,
+    publishedThisWeek,
+    recentDrafts,
+    trendStarts,
+    weeklyPublishes,
+  };
 }
 
 export async function saveProject(

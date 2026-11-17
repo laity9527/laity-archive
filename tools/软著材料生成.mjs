@@ -189,6 +189,9 @@ const BANDS = [
       // archive.ts：归档分组的纯函数（年/月切分与排序），调用方 logs.ts 的 getArchive 已在 ③；
       // 抽出来是为了让分组规则可以被 tests/archive.test.ts 单独钉住（2026-11-16）
       "src/lib/archive.ts",
+      // publish-trend.ts：后台概览近 12 周发布桶（UTC 周一切分），调用方 projects.ts 的 getAdminOverview；
+      // 纯函数放 ③ 以便单测直接验证周界，不动 ①+② 防线（2026-11-16 G12）
+      "src/lib/publish-trend.ts",
       // featured.ts：精选口径纯函数（日志数优先 → 最近更新），从 projects.ts 抽出以便单测（2026-11-16）
       "src/lib/featured.ts",
       // text-stats.ts：编辑器字数统计纯函数（中文按字、拉丁按词），2026-11-16 抽出以便单测
@@ -240,6 +243,9 @@ const BANDS = [
       // ai-client 是 Step 6 的 OpenAI 兼容协议客户端（Bearer 认证 + 30 秒超时），与 token-crypto 同属"一层壳"；
       // 调用方动作层在 ③，与 github-sync 同族放 ③，①+② 零余量防线不动
       "src/lib/ai-client.ts",
+      // log-links 是 G1 正文内链（2026-11-16）的纯函数层：切分 `[[slug]]`、抽引用、改写 hast；
+      // 调用方 markdown.tsx 就在本段，详情页在 ④，登记 ③ 不动 ①+② 防线
+      "src/lib/log-links.ts",
       // Markdown 出口只是 react-markdown + rehype-sanitize 的一层壳（34 行），消毒规则在调用处（④ 的详情页）与注释里都看得见；
       // 本轮 forms/logs/admin-password 三处各涨几行，①+② 到 1511 把 proxy.ts 切开，由它让位
       "src/lib/markdown.tsx",
@@ -294,6 +300,9 @@ const BANDS = [
       "src/app/admin/projects/page.tsx",
       "src/app/admin/logs/new/page.tsx",
       "src/app/admin/logs/[id]/edit/page.tsx",
+      // 草稿预览页（2026-11-16 A5）：登录态可见的详情页同构排版，不写 token、不出登录态；
+      // 与后台列表/编辑页同属后台排版层，登记 ③
+      "src/app/admin/logs/[id]/preview/page.tsx",
       // Phase C 后台日志列表：状态筛选 + 标题搜索 + 分页的纯列表排版，
       // 与大厅页同属“折排版不折逻辑”；取数在 ③ 的 logs.ts，登记 ③（2026-11-13）
       "src/app/admin/logs/page.tsx",

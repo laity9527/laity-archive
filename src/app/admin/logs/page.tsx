@@ -9,6 +9,9 @@
  *               只读列表，发布/下架/删除仍走原编辑页与 Server Action，不做批量操作。
  * - 2026-11-16: B3 第一刀：行内加「发布 / 下架」——发布复用 publishLog（按库中正文算摘要 + 敏感扫描），
  *               下架复用 unpublishLog；成功后回本页，结果由 Toast 提示。删除仍只在编辑页（需输 slug 确认）
+ * - 2026-11-16: 评审 G9/A3：加项目筛选（下拉复用 listProjectOptions 的 slug+名称），
+ *               与状态 tab、标题搜索、分页互相保留；项目用关系过滤，不存在的 slug 得空集而非报错
+ * - 2026-11-16: 评审 A2/A5：加排序（URL 参数，不写 cookie）与每行「预览」入口（登录态草稿预览）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -20,6 +23,8 @@ import {
   getAdminLogList,
   type AdminLogStatus,
 } from "@/lib/logs";
+import { listProjectOptions } from "@/lib/projects";
+import { parseAdminSort, type AdminLogSort } from "@/lib/sort-preference";
 import {
   bulkUnpublishAction,
   quickPublishAction,
@@ -39,6 +44,8 @@ type AdminLogsPageProps = {
   searchParams: Promise<{
     status?: string | string[];
     q?: string | string[];
+    project?: string | string[];
+    sort?: string | string[];
     page?: string | string[];
   }>;
 };
@@ -47,6 +54,13 @@ const STATUSES: { key: AdminLogStatus; label: string }[] = [
   { key: "all", label: "全部" },
   { key: "draft", label: "草稿" },
   { key: "published", label: "已发布" },
+];
+
+// 后台排序只有三个选项：列表的主要用途是“接着改”，所以默认最近更新在前
+const SORTS: { key: AdminLogSort; label: string }[] = [
+  { key: "updated", label: "最近更新" },
+  { key: "oldest", label: "最早更新" },
+  { key: "title", label: "标题 A–Z" },
 ];
 
 function parseStatus(value: string | undefined): AdminLogStatus {
@@ -62,6 +76,8 @@ function parsePage(value: string | undefined) {
 function listHref(params: {
   status?: AdminLogStatus;
   q?: string;
+  project?: string;
+  sort?: AdminLogSort;
   page?: number;
 }) {
   const query = new URLSearchParams();
@@ -72,6 +88,14 @@ function listHref(params: {
 
   if (params.q) {
     query.set("q", params.q);
+  }
+
+  if (params.project) {
+    query.set("project", params.project);
+  }
+
+  if (params.sort && params.sort !== "updated") {
+    query.set("sort", params.sort);
   }
 
   if (params.page && params.page > 1) {
@@ -89,6 +113,8 @@ export default async function AdminLogsPage({
   const params = await searchParams;
   const status = parseStatus(pickParam(params.status));
   const q = pickParam(params.q);
+  const project = pickParam(params.project);
+  const sort = parseAdminSort(pickParam(params.sort));
   const page = parsePage(pickParam(params.page));
   await connection();
   const session = await requireAdminSession();
@@ -97,9 +123,14 @@ export default async function AdminLogsPage({
     redirect("/login?callbackUrl=%2Fadmin%2Flogs");
   }
 
-  const result = await getAdminLogList(session.userId, { status, q, page });
+  // 下拉只取 slug 与名称；项目多了也只多一行选项，不额外查日志计数
+  const [result, projectOptions] = await Promise.all([
+    getAdminLogList(session.userId, { status, q, project, sort, page }),
+    listProjectOptions(session.userId),
+  ]);
   const { items, total, pageCount, counts } = result;
-  const hasFilter = Boolean(q) || status !== "all";
+  const projectName = projectOptions.find((item) => item.slug === project)?.name;
+  const hasFilter = Boolean(q) || Boolean(project) || status !== "all";
 
   return (
     <>
@@ -138,7 +169,7 @@ export default async function AdminLogsPage({
           return (
             <Link
               key={item.key}
-              href={listHref({ status: item.key, q })}
+              href={listHref({ status: item.key, q, project, sort })}
               aria-current={active ? "true" : undefined}
               className={`border-b pb-1 font-sans text-xs ${
                 active
@@ -148,6 +179,31 @@ export default async function AdminLogsPage({
             >
               {item.label}{" "}
               <span className="font-mono text-[10px]">{count}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <nav
+        aria-label="排序"
+        className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-2"
+      >
+        <span className="font-sans text-[10px] text-ink-soft">排序</span>
+        {SORTS.map((item) => {
+          const active = sort === item.key;
+
+          return (
+            <Link
+              key={item.key}
+              href={listHref({ status, q, project, sort: item.key })}
+              aria-current={active ? "true" : undefined}
+              className={`border-b pb-0.5 font-sans text-[11px] ${
+                active
+                  ? "border-ink text-ink"
+                  : "border-transparent text-ink-soft hover:border-ink hover:text-ink"
+              }`}
+            >
+              {item.label}
             </Link>
           );
         })}
@@ -171,6 +227,32 @@ export default async function AdminLogsPage({
         {status !== "all" && (
           <input type="hidden" name="status" value={status} />
         )}
+        {sort !== "updated" && (
+          <input type="hidden" name="sort" value={sort} />
+        )}
+        {projectOptions.length > 0 && (
+          <span className="flex items-baseline gap-2">
+            <label
+              htmlFor="admin-log-project"
+              className="font-sans text-[10px] text-ink-soft"
+            >
+              项目
+            </label>
+            <select
+              id="admin-log-project"
+              name="project"
+              defaultValue={project ?? ""}
+              className="border-b border-hairline bg-transparent py-1 font-sans text-sm text-ink"
+            >
+              <option value="">全部项目</option>
+              {projectOptions.map((item) => (
+                <option key={item.slug} value={item.slug}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </span>
+        )}
         <button
           type="submit"
           className="border-b border-ink font-sans text-xs text-ink"
@@ -186,6 +268,14 @@ export default async function AdminLogsPage({
           </Link>
         )}
       </form>
+
+      {project && (
+        <p className="mt-3 font-sans text-[11px] text-ink-soft">
+          {projectName
+            ? `当前只看项目「${projectName}」`
+            : "当前项目筛选没有匹配的项目，结果为空"}
+        </p>
+      )}
 
       {/* 批量操作只做“下架”：发布需逐条确认摘要与敏感扫描，删除是破坏性动作 */}
       <form
@@ -280,6 +370,12 @@ export default async function AdminLogsPage({
                 >
                   编辑
                 </Link>
+                <Link
+                  href={`/admin/logs/${log.id}/preview`}
+                  className="border-b border-ink text-ink"
+                >
+                  预览
+                </Link>
                 {log.isPublished && log.user && (
                   <Link
                     href={`/u/${log.user.handle}/logs/${log.slug}`}
@@ -297,12 +393,12 @@ export default async function AdminLogsPage({
       {items.length > 0 && (
         <div className="mt-8 flex flex-wrap items-baseline justify-between gap-3 border-t border-hairline pt-4 font-sans text-[11px] text-ink-soft">
           <span>
-            第 {page} / {pageCount} 页 · 共 {total} 条
+            {hasFilter ? "筛选后 " : ""}第 {page} / {pageCount} 页 · 共 {total} 条
           </span>
           <span className="flex items-baseline gap-4">
             {page > 1 && (
               <Link
-                href={listHref({ status, q, page: page - 1 })}
+                href={listHref({ status, q, project, sort, page: page - 1 })}
                 className="border-b border-ink text-ink"
               >
                 ← 上一页
@@ -310,7 +406,7 @@ export default async function AdminLogsPage({
             )}
             {page < pageCount && (
               <Link
-                href={listHref({ status, q, page: page + 1 })}
+                href={listHref({ status, q, project, sort, page: page + 1 })}
                 className="border-b border-ink text-ink"
               >
                 下一页 →
