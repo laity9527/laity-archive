@@ -199,6 +199,11 @@ const BANDS = [
       // 发布写入在 publish.ts，读取方编辑页与快照页均在 ③（V3.1 G8）
       "src/lib/published-snapshot.ts",
       "src/app/admin/logs/[id]/snapshot/page.tsx",
+      // 公开预览（V3.1 G7，负责人批准）：token 生成/哈希、DAL、动作与公开只读页；登记 ③
+      "src/lib/preview-token.ts",
+      "src/lib/preview.ts",
+      "src/app/admin/preview-actions.ts",
+      "src/app/preview/[token]/page.tsx",
       "src/app/u/[handle]/series/[name]/page.tsx",
       // 系列索引页（V3.1 G2 补）：按系列名 groupBy 计数，链到各系列页；登记 ③
       "src/app/u/[handle]/series/page.tsx",
