@@ -46,7 +46,13 @@ export type SaveLogResult =
   | { ok: false; code: "LOG_001" | "LOG_002" };
 
 export type PublishLogResult =
-  | { ok: true; contentHash: string; slug: string }
+  | {
+      ok: true;
+      contentHash: string;
+      slug: string;
+      publishedAt: string;
+      scanHits: number;
+    }
   | { ok: false; code: "LOG_002" | "LOG_003" };
 
 export type UnpublishLogResult =
@@ -152,18 +158,19 @@ export async function publishLog(
   }
 
   // 扫的是库里将要公开的正文，不是表单声称的内容；未带确认标记就不放行（LOG_003）
-  if (
-    !opts.sensitiveConfirmed &&
-    hasBlockingHit(
-      scanSensitive(
-        [log.title, log.beforeContent, log.afterContent, log.lessonLearned]
-          .filter(Boolean)
-          .join("\n"),
-      ),
-    )
-  ) {
+  const scanText = [log.title, log.beforeContent, log.afterContent, log.lessonLearned]
+    .filter(Boolean)
+    .join("\n");
+  const hits = scanSensitive(scanText);
+
+  if (!opts.sensitiveConfirmed && hasBlockingHit(hits)) {
     return { ok: false, code: "LOG_003" };
   }
+
+  // 回执只报阻断级命中的条数；提示级（邮箱等）不参与"已确认发布"的口径
+  const scanHits = hits
+    .filter((hit) => !hit.advisory)
+    .reduce((sum, hit) => sum + hit.count, 0);
 
   const contentHash = computeContentHash(
     log.title,
@@ -198,7 +205,7 @@ export async function publishLog(
     return { ok: false, code: "LOG_002" };
   }
 
-  return { ok: true, contentHash, slug: log.slug };
+  return { ok: true, contentHash, slug: log.slug, publishedAt: publishedAt.toISOString(), scanHits };
 }
 
 // 下架只翻 isPublished；历史 contentHash 与 publishedAt 保留，与 D9 退回草稿的口径一致

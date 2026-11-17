@@ -256,7 +256,13 @@ export async function publishLogAction(formData: FormData) {
   }
 
   refreshLogViews();
-  redirect(`${backTo}?published=1`);
+  const receipt = new URLSearchParams({
+    published: "1",
+    receiptHash: result.contentHash.slice(0, 8),
+    receiptAt: result.publishedAt,
+    receiptHits: String(result.scanHits),
+  });
+  redirect(`${backTo}?${receipt.toString()}`);
 }
 
 export async function unpublishLogAction(formData: FormData) {

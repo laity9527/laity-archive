@@ -67,6 +67,9 @@ type EditLogPageProps = {
     field?: string | string[];
     saved?: string | string[];
     published?: string | string[];
+    receiptHash?: string | string[];
+    receiptAt?: string | string[];
+    receiptHits?: string | string[];
     unpublished?: string | string[];
     preview?: string | string[];
     previewExpires?: string | string[];
@@ -136,6 +139,10 @@ export default async function EditLogPage({
   const errorText = errorCode ? errorTextOf(errorCode, "log", errorField) : null;
   const saved = pickParam(query.saved);
   const published = pickParam(query.published);
+  const receiptHash = pickParam(query.receiptHash);
+  const receiptAt = pickParam(query.receiptAt);
+  const receiptHits = pickParam(query.receiptHits);
+  const hasReceipt = Boolean(published && receiptHash && receiptAt && receiptHits !== undefined);
   const unpublished = pickParam(query.unpublished);
   const preview = pickParam(query.preview);
   const previewExpires = pickParam(query.previewExpires);
@@ -277,11 +284,36 @@ export default async function EditLogPage({
         </p>
       )}
 
-      {published && (
-        <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
-          已发布，前台可见
-        </p>
-      )}
+      {published &&
+        (hasReceipt ? (
+          <div
+            role="status"
+            className="mt-6 border border-ink px-4 py-3 font-sans text-xs leading-relaxed text-ink"
+          >
+            <p className="font-mono text-[10px] tracking-[0.18em] text-ink-soft">
+              PUBLISH RECEIPT
+            </p>
+            <ol className="mt-2 space-y-1">
+              <li>
+                扫描 · {Number(receiptHits ?? 0)} 处命中
+                {Number(receiptHits ?? 0) > 0 ? "，已确认发布" : ""}
+              </li>
+              <li>
+                摘要 · <span className="font-mono">{receiptHash}…</span> 已写入
+              </li>
+              <li>
+                发布时间 ·{" "}
+                <span className="font-mono">
+                  {receiptAt?.replace("T", " ").slice(0, 19)} UTC
+                </span>
+              </li>
+            </ol>
+          </div>
+        ) : (
+          <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
+            已发布，前台可见
+          </p>
+        ))}
 
       {unpublished && (
         <p role="alert" className="mt-6 border border-ink px-4 py-3 font-mono text-xs text-ink">
