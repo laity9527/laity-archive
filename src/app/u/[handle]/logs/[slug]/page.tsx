@@ -40,7 +40,7 @@ import {
   type TocGroup,
 } from "@/components/ArticleToc";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Seal } from "@/components/Seal";
+import { EvidencePanel, Stamp } from "@/components/Seal";
 import { SectionHead } from "@/components/SectionHead";
 import { Timeline } from "@/components/Timeline";
 import { ZoomableArticle } from "@/components/ZoomableArticle";
@@ -171,6 +171,11 @@ export default async function LogDetailPage({
       : []),
   ].filter((group) => group.items.length > 0);
   const showToc = tocGroups.reduce((sum, group) => sum + group.items.length, 0) >= 2;
+  const evidence =
+    log.contentHash && log.publishedAt
+      ? { contentHash: log.contentHash, publishedAt: log.publishedAt }
+      : null;
+  const hasRail = showToc || Boolean(evidence);
 
   return (
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-16 max-md:py-8">
@@ -182,14 +187,14 @@ export default async function LogDetailPage({
       <div className="reading-progress" aria-hidden="true" />
       <div
         className={
-          showToc
+          hasRail
             ? "lg:grid lg:grid-cols-[minmax(0,720px)_minmax(0,1fr)] lg:gap-10"
             : undefined
         }
       >
         <article
           className={
-            showToc
+            hasRail
               ? "mx-auto w-full max-w-[720px] lg:mx-0"
               : "mx-auto w-full max-w-[720px]"
           }
@@ -261,6 +266,20 @@ export default async function LogDetailPage({
               </div>
             </section>
 
+            {evidence && (
+              <div className="mt-8 lg:hidden print:hidden">
+                <EvidencePanel
+                  variant="mobile"
+                  contentHash={evidence.contentHash}
+                  publishedAt={evidence.publishedAt}
+                  sourceCommitSha={log.sourceCommitSha}
+                  repoUrl={log.project.repoUrl}
+                  title={log.title}
+                  path={logPath}
+                />
+              </div>
+            )}
+
             {showToc && <ArticleTocPanel groups={tocGroups} />}
 
             {log.afterContent && (
@@ -295,13 +314,8 @@ export default async function LogDetailPage({
             </p>
           )}
 
-          {log.contentHash && log.publishedAt ? (
-            <Seal
-              contentHash={log.contentHash}
-              publishedAt={log.publishedAt}
-              title={log.title}
-              path={logPath}
-            />
+          {evidence ? (
+            <Stamp publishedAt={evidence.publishedAt} />
           ) : (
             // 前台只渲染已发布日志，走到这里说明摘要字段缺失——宁可显式告警，也不能"安静地没有印章"
             <div className="mt-16 border border-ink p-5 font-mono text-[11px] leading-relaxed text-ink">
@@ -404,7 +418,21 @@ export default async function LogDetailPage({
             </section>
           )}
         </article>
-        {showToc && <ArticleTocRail groups={tocGroups} />}
+        {hasRail && (
+          <aside className="hidden lg:block print:block">
+            {evidence && (
+              <EvidencePanel
+                contentHash={evidence.contentHash}
+                publishedAt={evidence.publishedAt}
+                sourceCommitSha={log.sourceCommitSha}
+                repoUrl={log.project.repoUrl}
+                title={log.title}
+                path={logPath}
+              />
+            )}
+            {showToc && <ArticleTocRail groups={tocGroups} />}
+          </aside>
+        )}
       </div>
     </main>
   );

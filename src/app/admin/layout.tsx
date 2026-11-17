@@ -59,7 +59,7 @@ export default async function AdminLayout({
       </a>
       <AdminNav userName={session.user?.name ?? "已登录"} />
       <div className="min-w-0 flex-1">
-        <main id="main" className="mx-auto max-w-[1080px] px-6 py-10 md:py-12">
+        <main id="main" className="mx-auto max-w-[1200px] px-6 py-10 md:py-12">
           {children}
         </main>
       </div>

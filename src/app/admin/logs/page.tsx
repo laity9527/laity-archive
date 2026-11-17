@@ -321,8 +321,8 @@ export default async function AdminLogsPage({
       ) : (
         <div className="mt-8 overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-left">
-            <thead>
-              <tr className="border-y border-hairline font-sans text-[10px] text-ink-soft">
+            <thead className="sticky top-0 z-10 bg-paper">
+              <tr className="border-y border-hairline font-sans text-xs text-ink-soft">
                 <th scope="col" className="w-8 py-2">
                   <span className="sr-only">选择</span>
                 </th>

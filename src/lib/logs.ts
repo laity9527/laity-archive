@@ -94,7 +94,7 @@ export type SafeLogFilter = {
 };
 
 const projectSelect = {
-  select: { name: true, slug: true, kind: true, status: true },
+  select: { name: true, slug: true, kind: true, status: true, repoUrl: true },
 } as const;
 
 // 列表/搜索的默认页大小。查询层与将来的页面分页共用这一个值，避免页面与查询各写一套。
