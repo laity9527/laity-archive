@@ -44,7 +44,7 @@ import { Seal } from "@/components/Seal";
 import { SectionHead } from "@/components/SectionHead";
 import { Timeline } from "@/components/Timeline";
 import { ZoomableArticle } from "@/components/ZoomableArticle";
-import { getLogContext, getSafeLogBySlug } from "@/lib/logs";
+import { getLogContext, getSafeLogBySlug, getLogBacklinks } from "@/lib/logs";
 import { Markdown } from "@/lib/markdown";
 import { estimateReadingMinutes } from "@/lib/reading-time";
 import { siteName, siteUrl } from "@/lib/site";
@@ -108,6 +108,12 @@ export default async function LogDetailPage({
     tags: log.tags,
     projectId: log.projectId,
     series: log.series,
+  });
+  // G1 第二刀：反向引用只查同作者已发布日志；草稿里的引用不算，且不泄露未发布内容
+  const backlinks = await getLogBacklinks({
+    userId: log.userId,
+    slug,
+    take: 10,
   });
   const minutes = estimateReadingMinutes(
     [log.beforeContent, log.afterContent ?? "", log.lessonLearned ?? ""].join(
@@ -361,6 +367,32 @@ export default async function LogDetailPage({
               </h2>
               <ul className="mt-2">
                 {context.related.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-hairline py-2.5"
+                  >
+                    <Link
+                      href={`/u/${handle}/logs/${item.slug}`}
+                      className="text-sm hover:underline hover:decoration-1 hover:underline-offset-4"
+                    >
+                      {item.title}
+                    </Link>
+                    <span className="font-mono text-[10px] text-ink-soft">
+                      {item.beforeDate.toISOString().slice(0, 10)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {backlinks.length > 0 && (
+            <section className="no-print mt-10 border-t border-hairline pt-5">
+              <h2 className="font-mono text-[9px] tracking-[0.18em] text-ink-soft">
+                被引用
+              </h2>
+              <ul className="mt-2">
+                {backlinks.map((item) => (
                   <li
                     key={item.id}
                     className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-hairline py-2.5"

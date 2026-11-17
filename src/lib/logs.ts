@@ -54,6 +54,8 @@
  * - 2026-11-16: 评审 A2（排序部分）：getAdminLogList 新增 sort（updated / oldest / title），
  *               排序全部带 id 作次键——同一时间戳的行在翻页时不因顺序不定而错位
  * - 2026-11-16: V3.1 G2：新增 getSeriesLogs / hasPublishedSeries / listSeriesNames（系列页、Proxy 404、编辑器联想）
+ * - 2026-11-16: G1 第二刀：新增 getLogBacklinks——同作者已发布正文里出现 `[[slug]]` 的反向引用；
+ *               由 `content contains` 一次查询承担，详情页 Prisma 调用 2→3（裁定见评审第十九节）
  */
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -734,6 +736,47 @@ export async function hasPublishedSeries(series: string, handle: string) {
   });
 
   return hit !== null;
+}
+
+export type BacklinkItem = {
+  id: string;
+  slug: string;
+  title: string;
+  beforeDate: Date;
+};
+
+/**
+ * 反向引用（G1 第二刀）：同作者已发布日志里，正文出现 `[[slug]]` 的那些。
+ * 用 contains 而不是全文索引：当前量级（数十条）一个 ILIKE 足够，建索引/预计算表反而是新复杂度。
+ * marker 里的方括号是字面量，slug 不含 LIKE 通配符，无需转义。
+ */
+export async function getLogBacklinks(opts: {
+  userId: string | null;
+  slug: string;
+  take?: number;
+}): Promise<BacklinkItem[]> {
+  if (!opts.userId) {
+    return [];
+  }
+
+  const marker = `[[${opts.slug}]]`;
+  const take = Math.min(Math.max(opts.take ?? 10, 1), 20);
+
+  return db.log.findMany({
+    where: {
+      userId: opts.userId,
+      isPublished: true,
+      slug: { not: opts.slug },
+      OR: [
+        { beforeContent: { contains: marker } },
+        { afterContent: { contains: marker } },
+        { lessonLearned: { contains: marker } },
+      ],
+    },
+    orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
+    take,
+    select: { id: true, slug: true, title: true, beforeDate: true },
+  });
 }
 
 export async function getAdminLogById(id: string, userId: string) {
