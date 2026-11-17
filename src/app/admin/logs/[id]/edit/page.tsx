@@ -25,6 +25,7 @@
  * - 2026-11-13: 发布检查改实时（PublishCheck 监听表单 input/change）；服务端仍会在保存/发布时再校验
  * - 2026-11-16: 评审 A5：状态行加「预览」——跳到登录态可见的草稿预览页（同详情页排版，不出登录态）
  * - 2026-11-16: V3.1 G2 补：系列输入接 <datalist>（已有系列名来自 listSeriesNames）
+ * - 2026-11-16: G7：新增公开预览链接生成/撤销（24h、库内存哈希，明文只在回跳 URL 出现一次）
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -37,11 +38,18 @@ import {
 } from "@/app/admin/log-actions";
 import { requireAdminSession } from "@/auth";
 import { Editor } from "@/components/Editor";
+import { CopyButton } from "@/components/CopyButton";
 import { PublishCheck } from "@/components/PublishCheck";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { computeContentHash } from "@/lib/content-hash";
 import { parsePublishedSnapshot } from "@/lib/published-snapshot";
+import { countActivePreviewTokens } from "@/lib/preview";
+import { siteUrl } from "@/lib/site";
+import {
+  createPreviewLinkAction,
+  revokePreviewLinksAction,
+} from "@/app/admin/preview-actions";
 import { ID_PATTERN, LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
 import { getAdminLogById, listSeriesNames } from "@/lib/logs";
 import { listProjects } from "@/lib/projects";
@@ -60,6 +68,9 @@ type EditLogPageProps = {
     saved?: string | string[];
     published?: string | string[];
     unpublished?: string | string[];
+    preview?: string | string[];
+    previewExpires?: string | string[];
+    previewRevoked?: string | string[];
   }>;
 };
 
@@ -126,6 +137,10 @@ export default async function EditLogPage({
   const saved = pickParam(query.saved);
   const published = pickParam(query.published);
   const unpublished = pickParam(query.unpublished);
+  const preview = pickParam(query.preview);
+  const previewExpires = pickParam(query.previewExpires);
+  const previewRevoked = pickParam(query.previewRevoked);
+  const previewCount = await countActivePreviewTokens(log.id, session.userId);
 
   // 出错字段只用于把浏览器焦点标在那一个控件上；具体文案由 errorTextOf 按同一 field 取
   const bad = (field: string) => errorCode === "VAL_001" && errorField === field;
@@ -197,6 +212,55 @@ export default async function EditLogPage({
           </Link>
         </p>
       )}
+
+      {previewRevoked && (
+        <p
+          role="alert"
+          className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink"
+        >
+          已撤销该日志的全部预览链接，旧链接下一次请求即失效。
+        </p>
+      )}
+
+      {preview && (
+        <div className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink">
+          <p>预览链接（24 小时有效，仅持链接者可看）：</p>
+          <p className="mt-2 break-all font-mono text-[11px]">
+            {siteUrl()}/preview/{preview}
+          </p>
+          <p className="mt-2 flex flex-wrap items-baseline gap-4 text-ink-soft">
+            <span>
+              有效期至{" "}
+              <span className="font-mono">
+                {previewExpires?.slice(0, 16).replace("T", " ") ?? "?"} UTC
+              </span>
+            </span>
+            <CopyButton
+              text={`/preview/${preview}`}
+              label="复制预览链接"
+              withOrigin
+            />
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6 flex flex-wrap items-baseline gap-4 border-t border-hairline pt-4 font-sans text-[11px]">
+        <form action={createPreviewLinkAction}>
+          <input type="hidden" name="id" value={log.id} />
+          <button type="submit" className="border-b border-ink text-ink">
+            生成 24 小时预览链接
+          </button>
+        </form>
+        {previewCount > 0 && (
+          <form action={revokePreviewLinksAction}>
+            <input type="hidden" name="id" value={log.id} />
+            <button type="submit" className="border-b border-ink text-ink">
+              撤销全部（{previewCount}）
+            </button>
+          </form>
+        )}
+        <span className="text-ink-soft">不索引；过期或撤销后自动 404</span>
+      </div>
 
       {errorText && (
         <p

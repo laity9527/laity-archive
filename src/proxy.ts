@@ -32,12 +32,14 @@
  * - 2026-11-16: V3.1 G2：matcher 增 /u/:handle/series/:name，双层判定 handle + 该系列是否已有
  *               已发布日志；空系列回与日志/项目/标签同一张 404（不泄露缺的是哪一层）
  * - 2026-11-16: V3.1 G2 补：matcher 增 /u/:handle/series（系列索引），至少一个已发布系列才放行
+ * - 2026-11-16: G7：matcher 增 /preview/:token；哈希命中且未过期才放行，无效/过期/撤销回预览专用 404
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { decodeTagParam, normalizeTag } from "@/lib/forms";
 import { hasAnyPublishedSeries, hasPublishedSeries, hasPublishedTag, isPublishedLogSlug } from "@/lib/logs";
+import { isActivePreviewToken } from "@/lib/preview";
 import { isProjectSlug } from "@/lib/projects";
 import { SORT_COOKIE, parseSort } from "@/lib/sort-preference";
 
@@ -49,6 +51,7 @@ export const config = {
     "/u/:handle/series",
     "/tags/:tag",
     "/logs",
+    "/preview/:token",
     "/admin/:path*",
   ],
 };
@@ -82,6 +85,13 @@ const NOT_FOUND_COPY = {
     hint: "它可能还没有已发布的日志，或者链接已经失效。",
     backHref: "/logs",
     backText: "← 返回日志列表",
+  },
+  preview: {
+    title: "404 · 预览链接无效",
+    heading: "这个预览链接不存在或已过期",
+    hint: "预览链接 24 小时后自动失效，也可能已被作者撤销。",
+    backHref: "/logs",
+    backText: "← 返回已发布日志",
   },
 };
 
@@ -295,6 +305,15 @@ export async function proxy(request: NextRequest) {
     return (await hasAnyPublishedSeries(seriesIndexHandle))
       ? NextResponse.next()
       : notFoundResponse("series");
+  }
+
+  // 公开预览（V3.1 G7）：token 哈希命中且未过期才放行；无效/过期/撤销同回 404
+  if (pathname.startsWith("/preview/")) {
+    const token = pathname.slice("/preview/".length).replace(/\/+$/, "");
+
+    return token && (await isActivePreviewToken(token))
+      ? NextResponse.next()
+      : notFoundResponse("preview");
   }
 
   // matcher 只放行上面两类租户动态路由与 /admin；走到这里说明 matcher 被改宽了，放行比误拦安全

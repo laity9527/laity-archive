@@ -46,6 +46,7 @@ model User {
   isAdmin   Boolean  @default(false)
   projects  Project[]
   logs      Log[]
+  previewTokens PreviewToken[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -91,6 +92,8 @@ model Log {
   // AI 辅助生成标记（V2.0 Step 6）：编辑器点过 [ AI 帮我写 ] 且正文来自模型输出时置 true；
   // 详情页据此在正文末尾打「[ AI 辅助生成 · 作者审校 ]」，提醒读者内容经过作者审校
   isAiAssisted Boolean @default(false)
+  // 公开预览链接（V3.1 G7）：一次性生成、24h 过期、存哈希；日志删除时级联清掉
+  previewTokens PreviewToken[]
   // 上次发布快照（V3.1 G8）：发布时写入当时的标题/正文/标签/系列/摘要与发布时间；
   // 之后编辑退回草稿时，拿它对比“上次对外长什么样”，不在库外存历史
   lastPublishedSnapshot Json?
@@ -110,4 +113,20 @@ model Log {
   // 标签数组：筛选（has/hasSome）、标签聚合页前置判定与搜索的 tags 分支都走它
   @@index([tags], type: Gin)
   @@index([projectId])
+}
+
+// 公开预览链接（V3.1 G7）：只存 token 的 SHA-256 哈希，不存明文；24h 过期；
+// 一条日志可有多个有效链接（每次生成一条，便于分别撤销/过期），日志删除级联清理
+model PreviewToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  logId     String
+  log       Log      @relation(fields: [logId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([logId])
+  @@index([expiresAt])
 }
