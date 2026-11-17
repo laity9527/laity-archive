@@ -164,6 +164,9 @@ const BANDS = [
       // package.json 从 ① 让位进折走段（2026-11-05 第七轮）：next.config.ts 加 CSP 与 poweredByHeader
       // 涨行，proxy.ts（1358–1509）被 1500 切口打断；package.json 是依赖清单与脚本表，无程序逻辑
       "package.json",
+      // prisma.config.ts（Prisma 7，2026-11-17）：CLI 的 schema/迁移/seed 与 datasource URL（dotenv），
+      // 运行时连接在 src/lib/db.ts；配置层无业务逻辑，登记 ③
+      "prisma.config.ts",
       // 对象键生成与断言是从 oss.ts 拆出的纯计算（I061），与嗅探函数同类，放折走段；
       // 它的调用方 oss.ts 与 upload-action.ts 都已在窗口内可见
       "src/lib/object-key.ts",

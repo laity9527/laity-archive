@@ -16,13 +16,13 @@
 | 四道门禁 | `npm run lint` / `npx tsc --noEmit` / `npm run build` / `npm test` 全 0；CI 同序代跑 |
 | 数据实况 | 生产环境已接入多账号 GitHub 登录，数据物理隔离；第一条真实数据为本项目自身 |
 | 数据库迁移 | 本地已应用最近三条：`add_log_series`、`add_published_snapshot`、`add_preview_token`；服务器随部署执行 `prisma migrate deploy` |
-| 依赖审计 | 2026-11-17 经批准升级 `next@16.4.6` + `eslint-config-next@16.4.6` + `typescript-eslint@8.73.0` 后复查：**3 个 high 只剩 Prisma 链**（修复需 Prisma 7 major，未获批）；moderate 已清零 |
+| 依赖审计 | 2026-11-17 经批准升级 `next@16.4.6`、eslint 链与 **Prisma 7.10.1（含 `@prisma/adapter-pg`）** 后复查：**0 漏洞**（moderate/high 均清零） |
 | 自动化交付 | 已接入 **GitHub Actions 自动部署**：push 到 `main` 且门禁通过后，自动 SSH 至服务器备份、构建、迁移与健康校验 |
 | 文档体系 | 现行事实为 `docs/现状说明书.md`；旧 SPEC / DESIGN / ISSUES 已封存到 `docs/archive/2026-11-16-旧编号体系/`（仅查历史，不作实现依据） |
 
 ## 技术栈
 
-Next.js 16.4.6（App Router + RSC + PPR）· TypeScript 5.9.3 · Tailwind CSS 4.3.3 · Prisma 6.19.3 · PostgreSQL 16（Docker）· next-auth 4.24.15（**GitHub OAuth 一键登录**）· 阿里云 OSS（图片外链）· 阿里通义千问 / DeepSeek（OpenAI 兼容协议）· typescript-eslint 8.73.0（开发期）
+Next.js 16.4.6（App Router + RSC + PPR）· TypeScript 5.9.3 · Tailwind CSS 4.3.3 · Prisma 7.10.1（`@prisma/adapter-pg` 驱动适配器）· PostgreSQL 16（Docker）· next-auth 4.24.15（**GitHub OAuth 一键登录**）· 阿里云 OSS（图片外链）· 阿里通义千问 / DeepSeek（OpenAI 兼容协议）· typescript-eslint 8.73.0（开发期）
 
 版本均为**实测值且属锁定项**，不建议升级、不可替换；写 Next.js 代码前必须先读 `node_modules/next/dist/docs/` 对应指南。
 

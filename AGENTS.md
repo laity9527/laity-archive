@@ -181,6 +181,13 @@ Proxy 每次请求的同一条多余往返，都已改成关系过滤（日志�
 各节里仍写“SPEC/DESIGN/ISSUES”的旧引用按封存处理，不再作为实现依据（代码注释里的 D##/F##/I### 编号不改写）。
 技术选型、视觉铁律、性能预算三条与环境变量总表均一字未动。
 
+修订留痕续二十七：2026-11-17 由我点名“授权我更新 AGENTS.md 的版本事实。批准 Prisma 7 升级”——
+**按点名授权修改本文件**，只改「版本事实（最高优先级）」：实测版本改为 Next.js **16.4.6**、
+Prisma **7.10.1**（`@prisma/client` + `@prisma/adapter-pg`），并新增一条 Prisma 7 事实——
+schema 不再写 datasource `url`（改由 `prisma.config.ts` + dotenv 读 `.env`），运行时必须向
+`PrismaClient` 注入 `PrismaPg` 驱动适配器（`src/lib/db.ts`），不得再按 Prisma 6 的无参构造写代码。
+技术栈锁定、视觉铁律、性能预算、环境变量总表与其余事实行均未改动；历史留痕块按规则不改写。
+
 ---
 
 ## 技术栈锁定（不可替换，不建议升级）
@@ -217,9 +224,12 @@ Proxy 每次请求的同一条多余往返，都已改成关系过滤（日志�
 - 本项目使用的 Next.js 版本与旧版（如 14）存在 breaking changes：API、约定、
   文件结构都可能不同。**写任何 Next.js 代码前，必须先读
   node_modules/next/dist/docs/ 下的对应指南，禁止凭训练记忆使用旧 API。**
-- 实测版本（2026-11-03 从 node_modules 读取，不是声明值）：Next.js 16.4.3、React 19.3.0、
-  next-auth 4.24.15、Prisma 6.19.3、Tailwind CSS 4.3.3（@tailwindcss/turbopack）、TypeScript 5.9.3、
-  ali-oss 6.23.0。本机 Node v24.13.0 + npm 11.6.2。
+- 实测版本（2026-11-17 从 node_modules 读取，不是声明值）：Next.js 16.4.6、React 19.3.0、
+  next-auth 4.24.15、Prisma 7.10.1（@prisma/client + @prisma/adapter-pg）、Tailwind CSS 4.3.3
+  （@tailwindcss/turbopack）、TypeScript 5.9.3、ali-oss 6.23.0。本机 Node v24.13.0 + npm 11.6.2。
+- Prisma 7 事实（2026-11-17 升级）：schema 的 datasource 不再写 `url`，CLI 连接串在 `prisma.config.ts`
+  （dotenv 读 `.env`）；运行时必须给 `PrismaClient` 注入 `@prisma/adapter-pg` 驱动适配器，
+  见 `src/lib/db.ts`。不要再按 Prisma 6 的“无参 new PrismaClient()”写法改代码。
 - Next 16 的两个既成事实，写页面时必须按它来：`cacheComponents: true` + `partialPrefetching`
   （页面默认按 PPR 出静态壳，请求期数据靠 `connection()`），路由段配置 `instant` 的语义是
   "退出即时导航校验"，不是把路由改成动态。
