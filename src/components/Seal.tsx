@@ -14,18 +14,22 @@
  * - 2026-11-13: B2 升级为「内容摘要」卡：左侧零圆角方章、右侧哈希与时间，新增复制链接 / 复制哈希 /
  *               如何核对三个动作；口径仍写「内容摘要」而不是「凭据」——哈希只是可核对的技术标记，
  *               不暗示法律效果；摘要算法同 src/lib/content-hash.ts 的 D5 口径
+ * - 2026-11-16: 评审 G13：动作行加「分享」（Web Share，不支持则复制链接）；需传入标题以给系统面板
  */
 import { CopyButton } from "@/components/CopyButton";
+import { ShareButton } from "@/components/ShareButton";
 import { formatUtc } from "@/lib/time";
 
 type SealProps = {
   contentHash: string;
   publishedAt: Date;
+  // 当前日志标题：分享面板需要，缺省（或没有 path）时不渲染分享
+  title?: string;
   // 当前日志的站内路径；缺省时不渲染「复制链接」
   path?: string;
 };
 
-export function Seal({ contentHash, publishedAt, path }: SealProps) {
+export function Seal({ contentHash, publishedAt, title, path }: SealProps) {
   return (
     <div className="mt-16 border border-ink p-5">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
@@ -53,6 +57,7 @@ export function Seal({ contentHash, publishedAt, path }: SealProps) {
             {path && (
               <CopyButton text={path} label="复制链接" withOrigin />
             )}
+            {path && title && <ShareButton title={title} path={path} />}
             <CopyButton text={contentHash} label="复制哈希" />
             <details className="basis-full">
               <summary className="w-fit cursor-pointer list-none border-b border-transparent text-ink-soft hover:border-ink hover:text-ink [&::-webkit-details-marker]:hidden">

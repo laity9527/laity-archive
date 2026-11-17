@@ -286,6 +286,7 @@ export default async function LogDetailPage({
             <Seal
               contentHash={log.contentHash}
               publishedAt={log.publishedAt}
+              title={log.title}
               path={logPath}
             />
           ) : (

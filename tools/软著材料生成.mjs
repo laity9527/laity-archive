@@ -331,6 +331,9 @@ const BANDS = [
       // CopyButton 是 B2 内容摘要卡的复制客户端组件（clipboard 写入 + 两秒回显 / 失败文案），
       // 与 Seal 成对；调用方 Seal 在本段，登记 ③
       "src/components/CopyButton.tsx",
+      // ShareButton 是 G13 的分享客户端组件（Web Share 优先，不支持/失败退回复制），
+      // 与 CopyButton/Seal 同属“动作行”小组件；登记 ③
+      "src/components/ShareButton.tsx",
       // 部署产物集中放这里：生产编排与多阶段构建文件都是配置而非程序逻辑，
       // 而 ② 段新增的 sensitive-scan 必须留在前窗口——它是这一轮的程序实质
       "docker-compose.prod.yml",
