@@ -6,6 +6,8 @@
 # 修改记录：
 # - 2026-10-30: 初始创建（Phase 6 环境准备）
 # - 2026-10-30: 补 apt install openssl——node:24-slim 只有 libssl3 没有 openssl 可执行文件，Prisma 探测版本时会退回 openssl-1.1.x 并告警
+# - 2026-11-17: Prisma 7：builder / migrator 均拷贝 prisma.config.ts（CLI 连接串从 schema 移到这里）；
+#               generate 不依赖 DATABASE_URL（config 里按环境变量条件注入），migrate deploy 由部署环境提供
 
 ARG BASE_IMAGE=node:24-slim
 
@@ -27,6 +29,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 COPY tsconfig.json next.config.ts package.json package-lock.json ./
 COPY src ./src
 COPY public ./public
@@ -58,6 +61,7 @@ CMD ["node", "server.js"]
 FROM deps AS migrator
 WORKDIR /app
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 COPY package.json package-lock.json ./
 ENTRYPOINT ["npx", "prisma"]
 CMD ["migrate", "deploy"]

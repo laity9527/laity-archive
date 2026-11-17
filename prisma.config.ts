@@ -11,10 +11,15 @@
  * 为什么 URL 放在这里：Prisma 7 把“CLI 迁移连接”与“应用运行时连接”拆成两条路径；
  * schema 只描述模型，凭据不落 schema 文件；运行时用驱动适配器，便于连接池与测试替换。
  * 本文件只被 prisma CLI 加载（generate / migrate / studio），不进 Next 构建产物。
+ * 连接串缺失时只允许 generate；migrate deploy 由部署环境提供 DATABASE_URL。
  * 软著材料把本文件放折走段：它是配置壳，真正的数据模型在 schema.prisma、运行时连接在 db.ts。
  */
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
+
+// generate 不需要连接串（Docker builder 阶段没有数据库凭据）；migrate/introspect 才需要。
+// 因此 datasource 按环境变量存在与否条件注入，避免构建期因缺 DATABASE_URL 而失败。
+const datasourceUrl = process.env.DATABASE_URL;
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -22,7 +27,5 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "node prisma/seed.ts",
   },
-  datasource: {
-    url: env("DATABASE_URL"),
-  },
+  ...(datasourceUrl ? { datasource: { url: datasourceUrl } } : {}),
 });
