@@ -14,6 +14,7 @@
  *               渲染、分组与排序逻辑均未变，材料生成器复跑通过后仍以边界签名为准
  *               本行仅用于行数平移，不承载新事实
  * - 2026-11-17: P2 标签两列与主题出口；同轮为后窗口切口避开空行，补 1 行注释
+ * - 2026-11-17: P2 触控目标：密集标签/筛选 32px、主导航移动端 40px；为避开自动折行续行再补 1 行注释
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -86,7 +87,7 @@ export default async function TagsPage() {
                 <li key={tag}>
                   <Link
                     href={`/tags/${encodeURIComponent(tag)}`}
-                    className="border-b border-transparent text-[15px] hover:border-ink"
+                    className="inline-flex min-h-[32px] items-center border-b border-transparent text-[15px] hover:border-ink"
                   >
                     {tag}
                     <span className="ml-1.5 font-mono text-xs text-ink-soft">

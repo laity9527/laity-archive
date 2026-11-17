@@ -108,7 +108,7 @@ export function SiteNav() {
                 key={section.key}
                 href={section.href}
                 aria-current={activeKey === section.key ? "page" : undefined}
-                className={`border-b pb-1 font-sans text-xs ${
+                className={`border-b pb-1 font-sans text-xs max-lg:inline-flex max-lg:min-h-[40px] max-lg:items-center ${
                   activeKey === section.key
                     ? "border-brown text-brown"
                     : "border-transparent text-ink-soft hover:text-ink"

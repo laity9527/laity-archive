@@ -99,8 +99,8 @@ function parseCursor(value: string | undefined) {
 function filterClass(active: boolean) {
   // 未选中也留一条透明下边线，否则选中态与 hover 会让文字基线跳 1px
   return active
-    ? "border-b border-ink text-ink"
-    : "border-b border-transparent text-ink-soft hover:border-ink hover:text-ink";
+    ? "inline-flex min-h-[32px] items-center border-b border-ink text-ink"
+    : "inline-flex min-h-[32px] items-center border-b border-transparent text-ink-soft hover:border-ink hover:text-ink";
 }
 
 async function LogBoard({ searchParams }: LogsPageProps) {
@@ -258,7 +258,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 q: qFilter,
               })}
               aria-current={!projectFilter ? "true" : undefined}
-              className="flex items-baseline justify-between gap-3 text-xs"
+              className="flex min-h-[36px] items-center justify-between gap-3 py-1 text-xs max-lg:min-h-[40px]"
             >
               <span className={railLabel(!projectFilter)}>全部</span>
               <span className="font-mono text-xs text-ink-soft">
@@ -276,7 +276,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                   q: qFilter,
                 })}
                 aria-current={projectFilter === slug ? "true" : undefined}
-                className="flex items-baseline justify-between gap-3 text-xs"
+                className="flex min-h-[36px] items-center justify-between gap-3 py-1 text-xs max-lg:min-h-[40px]"
               >
                 <span className={railLabel(projectFilter === slug)}>
                   {name}
@@ -303,7 +303,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 q: qFilter,
               })}
               aria-current={!topicFilter ? "true" : undefined}
-              className="flex items-baseline justify-between gap-3 text-xs"
+              className="flex min-h-[36px] items-center justify-between gap-3 py-1 text-xs max-lg:min-h-[40px]"
             >
               <span className={railLabel(!topicFilter)}>全部主题</span>
               <span className="font-mono text-xs text-ink-soft">
@@ -321,7 +321,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                   q: qFilter,
                 })}
                 aria-current={topicFilter === item.key ? "true" : undefined}
-                className="flex items-baseline justify-between gap-3 text-xs"
+                className="flex min-h-[36px] items-center justify-between gap-3 py-1 text-xs max-lg:min-h-[40px]"
               >
                 <span className={railLabel(topicFilter === item.key)}>
                   {item.label}
@@ -470,7 +470,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 aria-current={sortFilter === "decided" ? "true" : undefined}
                 className={
                   sortFilter === "decided"
-                    ? "border-b border-ink text-ink"
+                    ? "inline-flex min-h-[32px] items-center border-b border-ink text-ink"
                     : "border-b border-transparent text-ink-soft hover:border-ink hover:text-ink"
                 }
               >
@@ -487,7 +487,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                 aria-current={sortFilter === "published" ? "true" : undefined}
                 className={
                   sortFilter === "published"
-                    ? "border-b border-ink text-ink"
+                    ? "inline-flex min-h-[32px] items-center border-b border-ink text-ink"
                     : "border-b border-transparent text-ink-soft hover:border-ink hover:text-ink"
                 }
               >

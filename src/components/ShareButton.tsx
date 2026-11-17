@@ -55,7 +55,7 @@ export function ShareButton({ title, path }: ShareButtonProps) {
       type="button"
       onClick={handleShare}
       aria-live="polite"
-      className="border-b border-ink text-ink hover:bg-ink hover:text-paper"
+      className="inline-flex min-h-[32px] items-center border-b border-ink text-ink hover:bg-ink hover:text-paper max-sm:min-h-[40px]"
     >
       {state === "done"
         ? "已复制链接"

@@ -33,20 +33,20 @@ export function SiteFooter({ icp, policeIcp, contactEmail }: SiteFooterProps) {
         <span className="font-mono text-[10px] tracking-[0.2em] text-ink">LAITY</span>
         <Link
           href="/privacy"
-          className="border-b border-transparent hover:border-ink hover:text-ink"
+          className="inline-flex min-h-[32px] items-center border-b border-transparent hover:border-ink hover:text-ink"
         >
           隐私与数据说明
         </Link>
         <Link
           href="/licenses"
-          className="border-b border-transparent hover:border-ink hover:text-ink"
+          className="inline-flex min-h-[32px] items-center border-b border-transparent hover:border-ink hover:text-ink"
         >
           开源许可
         </Link>
         {contactEmail && (
           <a
             href={`mailto:${contactEmail}?subject=${encodeURIComponent("侵权投诉/联系")}`}
-            className="border-b border-transparent hover:border-ink hover:text-ink"
+            className="inline-flex min-h-[32px] items-center border-b border-transparent hover:border-ink hover:text-ink"
           >
             侵权投诉与联系
           </a>
