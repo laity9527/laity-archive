@@ -679,6 +679,35 @@ export async function listSeriesNames(userId: string): Promise<string[]> {
 }
 
 /**
+ * 系列索引（V3.1 G2 补）：某租户下所有已发布系列 + 篇数，按名称升序。
+ * 只取 series 一列做 groupBy，不碰正文；空租户返回空数组，由页面/Proxy 判定不存在。
+ */
+export type SeriesIndexEntry = { name: string; count: number };
+
+export async function getSeriesIndex(handle: string): Promise<SeriesIndexEntry[]> {
+  const rows = await db.log.groupBy({
+    by: ["series"],
+    where: { isPublished: true, series: { not: null }, user: { handle } },
+    _count: { _all: true },
+    orderBy: { series: "asc" },
+  });
+
+  return rows.flatMap((row) =>
+    row.series ? [{ name: row.series, count: row._count._all }] : [],
+  );
+}
+
+// Proxy 前置判定：该 handle 下是否至少有一个已发布系列（系列索引页用）
+export async function hasAnyPublishedSeries(handle: string) {
+  const hit = await db.log.findFirst({
+    where: { isPublished: true, series: { not: null }, user: { handle } },
+    select: { id: true },
+  });
+
+  return hit !== null;
+}
+
+/**
  * 系列页取数（V3.1 / G2）：同一作者、同一个系列名的已发布日志，按决策时间升序。
  * 不建系列表——同名即同系列；空结果由页面/Proxy 判定为不存在。
  */

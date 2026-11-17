@@ -94,6 +94,12 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
           ← 该租户的日志
         </Link>
         <Link
+          href={`/u/${handle}/series`}
+          className="border-b border-ink font-sans text-xs text-ink"
+        >
+          全部系列
+        </Link>
+        <Link
           href="/logs"
           className="border-b border-ink font-sans text-xs text-ink"
         >

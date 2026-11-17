@@ -31,12 +31,13 @@
  *               页面层读 cookies() 在 PPR 边界里拿不到值（实测），proxy 每请求都能可靠读写
  * - 2026-11-16: V3.1 G2：matcher 增 /u/:handle/series/:name，双层判定 handle + 该系列是否已有
  *               已发布日志；空系列回与日志/项目/标签同一张 404（不泄露缺的是哪一层）
+ * - 2026-11-16: V3.1 G2 补：matcher 增 /u/:handle/series（系列索引），至少一个已发布系列才放行
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { decodeTagParam, normalizeTag } from "@/lib/forms";
-import { hasPublishedSeries, hasPublishedTag, isPublishedLogSlug } from "@/lib/logs";
+import { hasAnyPublishedSeries, hasPublishedSeries, hasPublishedTag, isPublishedLogSlug } from "@/lib/logs";
 import { isProjectSlug } from "@/lib/projects";
 import { SORT_COOKIE, parseSort } from "@/lib/sort-preference";
 
@@ -45,6 +46,7 @@ export const config = {
     "/u/:handle/logs/:slug",
     "/u/:handle/projects/:slug",
     "/u/:handle/series/:name",
+    "/u/:handle/series",
     "/tags/:tag",
     "/logs",
     "/admin/:path*",
@@ -157,6 +159,25 @@ function readTenantSegment(
   }
 }
 
+// 从 /u/<handle>/series 提取 handle（系列索引页；与 /u/<handle>/series/<name> 区分）
+function readSeriesIndex(pathname: string) {
+  if (!pathname.startsWith("/u/")) {
+    return null;
+  }
+
+  const parts = pathname.slice(3).replace(/\/+$/, "").split("/");
+
+  if (parts.length !== 2 || parts[1] !== "series" || !parts[0]) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(parts[0]);
+  } catch {
+    return null;
+  }
+}
+
 // 从 /tags/<tag> 提取标签段；段可能带 URL 编码，decode 失败一律 null（与 readTenantSegment 同构）
 function readTagSegment(pathname: string) {
   if (!pathname.startsWith("/tags/")) {
@@ -263,6 +284,15 @@ export async function proxy(request: NextRequest) {
 
   if (seriesHit) {
     return (await hasPublishedSeries(seriesHit.slug, seriesHit.handle))
+      ? NextResponse.next()
+      : notFoundResponse("series");
+  }
+
+  // 系列索引（/u/<handle>/series）：该 handle 至少要有一个已发布系列
+  const seriesIndexHandle = readSeriesIndex(pathname);
+
+  if (seriesIndexHandle) {
+    return (await hasAnyPublishedSeries(seriesIndexHandle))
       ? NextResponse.next()
       : notFoundResponse("series");
   }
