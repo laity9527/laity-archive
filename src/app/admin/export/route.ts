@@ -11,6 +11,7 @@
  * - 2026-11-13: 导出失败补服务端日志（O3），只记错误消息，错误码与前端文案不变
  */
 import { requireAdminSession } from "@/auth";
+import { recordAudit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { buildExportPayload } from "@/lib/export";
 
@@ -41,6 +42,14 @@ export async function GET() {
       logs,
       handle: user?.handle ?? "",
       exportedAt: new Date(),
+    });
+
+    await recordAudit({
+      actorId: userId,
+      action: "export.run",
+      targetType: "site",
+      targetId: "site",
+      meta: { projects: projects.length, logs: logs.length },
     });
 
     return new Response(JSON.stringify(payload, null, 2), {

@@ -11,6 +11,7 @@
 
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
+import { recordAudit } from "@/lib/audit";
 import { ID_PATTERN } from "@/lib/forms";
 import {
   createPreviewToken,
@@ -44,6 +45,14 @@ export async function createPreviewLinkAction(formData: FormData) {
     previewExpires: created.expiresAt.toISOString(),
   });
 
+  await recordAudit({
+    actorId: session.userId,
+    action: "preview.create",
+    targetType: "log",
+    targetId: id,
+    meta: { expiresAt: created.expiresAt.toISOString() },
+  });
+
   redirect(`${backTo(id)}?${params.toString()}`);
 }
 
@@ -60,5 +69,11 @@ export async function revokePreviewLinksAction(formData: FormData) {
   }
 
   await revokePreviewTokens(id, session.userId);
+  await recordAudit({
+    actorId: session.userId,
+    action: "preview.revoke",
+    targetType: "log",
+    targetId: id,
+  });
   redirect(`${backTo(id)}?previewRevoked=1`);
 }

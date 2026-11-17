@@ -32,6 +32,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
+import { recordAudit } from "@/lib/audit";
 import type { LogField } from "@/lib/error-text";
 import { ID_PATTERN, LIMITS, SLUG_PATTERN, parseTagList, readField } from "@/lib/forms";
 import { listProjectIds } from "@/lib/projects";
@@ -256,6 +257,13 @@ export async function publishLogAction(formData: FormData) {
   }
 
   refreshLogViews();
+  await recordAudit({
+    actorId: session.userId,
+    action: "log.publish",
+    targetType: "log",
+    targetId: id,
+    meta: { scanHits: result.scanHits, hash: result.contentHash.slice(0, 8) },
+  });
   const receipt = new URLSearchParams({
     published: "1",
     receiptHash: result.contentHash.slice(0, 8),
@@ -286,6 +294,12 @@ export async function unpublishLogAction(formData: FormData) {
   }
 
   refreshLogViews();
+  await recordAudit({
+    actorId: session.userId,
+    action: "log.unpublish",
+    targetType: "log",
+    targetId: id,
+  });
   redirect(`${backTo}?unpublished=1`);
 }
 
@@ -311,6 +325,12 @@ export async function deleteLogAction(formData: FormData) {
   }
 
   refreshLogViews();
+  await recordAudit({
+    actorId: session.userId,
+    action: "log.delete",
+    targetType: "log",
+    targetId: id,
+  });
   redirect(`/admin?deleted=1`);
 }
 
@@ -339,6 +359,13 @@ export async function quickPublishAction(formData: FormData) {
   }
 
   refreshLogViews();
+  await recordAudit({
+    actorId: session.userId,
+    action: "log.publish",
+    targetType: "log",
+    targetId: id,
+    meta: { scanHits: result.scanHits, hash: result.contentHash.slice(0, 8), quick: true },
+  });
   redirect("/admin/logs?published=1");
 }
 
@@ -362,6 +389,13 @@ export async function quickUnpublishAction(formData: FormData) {
   }
 
   refreshLogViews();
+  await recordAudit({
+    actorId: session.userId,
+    action: "log.unpublish",
+    targetType: "log",
+    targetId: id,
+    meta: { quick: true },
+  });
   redirect("/admin/logs?unpublished=1");
 }
 
@@ -390,7 +424,16 @@ export async function bulkUnpublishAction(formData: FormData) {
   for (const id of ids) {
     const result = await unpublishLog(id, session.userId);
 
-    if (result.ok) done += 1;
+    if (result.ok) {
+      done += 1;
+      await recordAudit({
+        actorId: session.userId,
+        action: "log.unpublish",
+        targetType: "log",
+        targetId: id,
+        meta: { bulk: true },
+      });
+    }
   }
 
   refreshLogViews();

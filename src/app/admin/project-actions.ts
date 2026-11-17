@@ -17,6 +17,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
+import { recordAudit } from "@/lib/audit";
 import type { ProjectField } from "@/lib/error-text";
 import { ID_PATTERN, LIMITS, REPO_URL_PATTERN, SLUG_PATTERN, readField } from "@/lib/forms";
 import {
@@ -108,6 +109,13 @@ export async function saveProjectAction(formData: FormData) {
     backToProjects(result.code);
   }
 
+  await recordAudit({
+    actorId: session.userId,
+    action: parsed.input.id ? "project.update" : "project.create",
+    targetType: "project",
+    targetId: result.id,
+  });
+
   refreshProjectViews();
   redirect(`${BASE}?saved=1`);
 }
@@ -136,6 +144,13 @@ export async function deleteProjectAction(formData: FormData) {
   if (!result.ok) {
     backToProjects(result.code);
   }
+
+  await recordAudit({
+    actorId: session.userId,
+    action: "project.delete",
+    targetType: "project",
+    targetId: id,
+  });
 
   refreshProjectViews();
   redirect(`${BASE}?deleted=1`);

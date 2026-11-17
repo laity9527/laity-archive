@@ -19,6 +19,7 @@ const ITEMS = [
   { href: "/admin/logs", label: "日志", exact: false },
   { href: "/admin/projects", label: "项目", exact: false },
   { href: "/admin/settings", label: "设置", exact: false },
+  { href: "/admin/audit", label: "审计", exact: false },
 ] as const;
 
 function isActive(pathname: string, href: string, exact: boolean) {
