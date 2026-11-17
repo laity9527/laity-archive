@@ -67,11 +67,26 @@ async function TenantOverview({
 
   // 精选规则与首页同口径：从 pickFeatured 单源取（原先是 filter + slice，实际按最近更新取）
   const featured = pickFeatured(board);
+  const publishedCount = board.reduce((sum, project) => sum + project.count, 0);
+  const latest = latestLogs[0]?.publishedAt ?? latestLogs[0]?.beforeDate ?? null;
 
   return (
-    <div className="md:flex md:items-start md:justify-between">
+    <>
+      <div className="mb-8 flex flex-wrap items-baseline gap-x-8 gap-y-3 border-b border-hairline pb-4 text-xs text-ink-soft">
+        <span>
+          <span className="font-mono text-lg text-ink">{board.length}</span> 个项目
+        </span>
+        <span>
+          <span className="font-mono text-lg text-ink">{publishedCount}</span> 条已发布
+        </span>
+        <span>
+          最近更新 <span className="font-mono text-ink">{latest ? latest.toISOString().slice(0, 10) : "尚未发布"}</span>
+        </span>
+      </div>
+
+      <div className="lg:flex lg:items-start lg:justify-between">
       {featured.length > 0 && (
-        <section className="md:w-2/3 md:border-r md:border-hairline md:pr-12">
+        <section className="lg:w-1/2 lg:border-r lg:border-hairline lg:pr-12">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="font-sans text-xs text-ink-soft">精选项目</h2>
             <Link
@@ -107,7 +122,7 @@ async function TenantOverview({
         </section>
       )}
 
-      <div className={`@container ${featured.length > 0 ? "mt-20 md:mt-0 md:w-1/3 md:pl-12" : "md:w-full"}`}>
+      <div className={`@container ${featured.length > 0 ? "mt-12 lg:mt-0 lg:w-1/2 lg:pl-12" : "lg:w-full"}`}>
         <section>
           <h2 className="mb-4 font-sans text-xs text-ink-soft">档案状态</h2>
           <StatusBoard entries={board} />
@@ -160,7 +175,8 @@ async function TenantOverview({
           )}
         </section>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -26,6 +26,12 @@ export const instant = false;
 export default async function ArchivePage() {
   const years = await getArchive();
   const total = years.reduce((sum, year) => sum + year.count, 0);
+  const projectNames = new Set(
+    years.flatMap((year) =>
+      year.months.flatMap((month) => month.items.map((item) => item.projectName)),
+    ),
+  );
+  const singleProject = projectNames.size === 1;
 
   return (
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-16 max-md:py-10">
@@ -89,9 +95,11 @@ export default async function ArchivePage() {
                         >
                           {item.title}
                         </Link>
-                        <span className="ml-auto font-sans text-xs text-ink-soft">
-                          {item.projectName}
-                        </span>
+                        {!singleProject && (
+                          <span className="ml-auto font-sans text-xs text-ink-soft">
+                            {item.projectName}
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>

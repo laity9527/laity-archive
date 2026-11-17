@@ -65,12 +65,22 @@ export default async function TagsPage() {
               index={String(index + 1).padStart(2, "0")}
               title={group.label}
               action={
-                <span className="font-mono text-xs text-ink-soft">
-                  {group.items.length} 个
+                <span className="flex items-baseline gap-4">
+                  <span className="font-mono text-xs text-ink-soft">
+                    {group.items.length} 个
+                  </span>
+                  {group.key !== "other" && (
+                    <Link
+                      href={`/logs?topic=${group.key}`}
+                      className="border-b border-transparent text-xs text-ink-soft hover:border-ink hover:text-ink"
+                    >
+                      查看主题 →
+                    </Link>
+                  )}
                 </span>
               }
             />
-            <ul className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-3">
+            <ul className="mt-4 grid gap-x-10 gap-y-2 sm:grid-cols-2">
               {group.items.map(({ tag, count }) => (
                 <li key={tag}>
                   <Link

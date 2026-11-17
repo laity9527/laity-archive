@@ -68,9 +68,6 @@ export default async function ProjectsPage() {
 
               <div className="min-w-0">
                 <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                  <span aria-hidden className="font-mono text-[10px] text-ink">
-                    {project.status === "LIVE" ? "●" : "○"}
-                  </span>
                   <h2 className="text-xl font-medium">
                     <Link
                       href={`/u/${project.user.handle}/projects/${project.slug}`}

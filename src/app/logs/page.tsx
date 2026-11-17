@@ -594,6 +594,11 @@ async function LogBoard({ searchParams }: LogsPageProps) {
                           : log.title}
                       </Link>
                     </h2>
+                    {log.lessonLearned && (
+                      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-soft">
+                        {log.lessonLearned}
+                      </p>
+                    )}
                     {log.tags.length > 0 && (
                       <p className="mt-3 font-mono text-xs text-ink-soft">
                         {log.tags.map((item, i) => (

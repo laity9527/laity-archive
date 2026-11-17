@@ -201,6 +201,7 @@ const logListSelect = {
   title: true,
   slug: true,
   tags: true,
+  lessonLearned: true,
   beforeDate: true,
   afterDate: true,
   publishedAt: true,

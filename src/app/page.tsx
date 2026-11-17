@@ -90,12 +90,12 @@ async function ArchiveOverview() {
       <section
         className={
           featured.length >= 2
-            ? "mt-16 md:flex md:items-start md:justify-between md:gap-12"
+            ? "mt-16 lg:flex lg:items-start lg:justify-between lg:gap-12"
             : "mt-16"
         }
       >
         {featured.length > 0 && (
-          <div className={featured.length >= 2 ? "md:w-2/3" : ""}>
+          <div className={featured.length >= 2 ? "lg:w-1/2" : ""}>
             <SectionHead
               index="01"
               title="精选项目"
@@ -145,8 +145,8 @@ async function ArchiveOverview() {
         <div
           className={`@container ${
             featured.length >= 2
-              ? "mt-16 md:mt-0 md:w-1/3 md:border-l md:border-hairline md:pl-12"
-              : "mt-16 md:grid md:grid-cols-2 md:gap-12"
+              ? "mt-16 lg:mt-0 lg:w-1/2 lg:border-l lg:border-hairline lg:pl-12"
+              : "mt-16 lg:grid lg:grid-cols-2 lg:gap-12"
           }`}
         >
           <section>
@@ -156,7 +156,7 @@ async function ArchiveOverview() {
             </div>
           </section>
 
-          <section className={featured.length >= 2 ? "mt-16" : "mt-16 md:mt-0"}>
+          <section className={featured.length >= 2 ? "mt-16" : "mt-16 lg:mt-0"}>
             <SectionHead
               index="03"
               title="最新日志"
