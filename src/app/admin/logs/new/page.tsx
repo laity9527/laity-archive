@@ -14,6 +14,7 @@
  *               表单标签 LESSON LEARNED 改「经验总结」并走 font-sans；BEFORE/AFTER 术语与 name="lessonLearned" 字段名未动
  * - 2026-11-09: V2.0 Step 4-B：项目下拉只列本租户的项目（listProjects 带 session.userId），
  *               自查会话后再查库（布局检查不阻塞页面并行渲染）
+ * - 2026-11-16: V3.1 G2 补：系列输入接 <datalist>（已有系列名来自 listSeriesNames），防手打裂缝
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -24,6 +25,7 @@ import { Editor } from "@/components/Editor";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
 import { LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
+import { listSeriesNames } from "@/lib/logs";
 import { listProjects } from "@/lib/projects";
 import { toDateTimeLocal } from "@/lib/publish";
 
@@ -50,7 +52,10 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
     redirect("/login?callbackUrl=%2Fadmin%2Flogs%2Fnew");
   }
 
-  const projects = await listProjects(session.userId);
+  const [projects, seriesNames] = await Promise.all([
+    listProjects(session.userId),
+    listSeriesNames(session.userId),
+  ]);
   const bad = (field: string) => errorCode === "VAL_001" && errorField === field;
 
   return (
@@ -142,11 +147,17 @@ export default async function NewLogPage({ searchParams }: NewLogPageProps) {
             <input
               name="series"
               maxLength={LIMITS.series}
+              list="series-options"
               placeholder="如：D30 令牌迁移"
               aria-invalid={bad("series") || undefined}
               aria-describedby={bad("series") ? "form-error" : undefined}
               className="border border-hairline bg-transparent px-3 py-2 text-sm text-ink"
             />
+            <datalist id="series-options">
+              {seriesNames.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
           </label>
 
           <label className="flex flex-col gap-2">

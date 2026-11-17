@@ -24,6 +24,7 @@
  *               新增「发布检查」摘要（标题 / BEFORE / 敏感扫描 / 摘要），口径仍以服务端保存时为准
  * - 2026-11-13: 发布检查改实时（PublishCheck 监听表单 input/change）；服务端仍会在保存/发布时再校验
  * - 2026-11-16: 评审 A5：状态行加「预览」——跳到登录态可见的草稿预览页（同详情页排版，不出登录态）
+ * - 2026-11-16: V3.1 G2 补：系列输入接 <datalist>（已有系列名来自 listSeriesNames）
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -40,7 +41,7 @@ import { PublishCheck } from "@/components/PublishCheck";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { ID_PATTERN, LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
-import { getAdminLogById } from "@/lib/logs";
+import { getAdminLogById, listSeriesNames } from "@/lib/logs";
 import { listProjects } from "@/lib/projects";
 import { toDateTimeLocal } from "@/lib/publish";
 import { scanSensitive } from "@/lib/sensitive-scan";
@@ -113,7 +114,10 @@ export default async function EditLogPage({
     );
   }
 
-  const projects = await listProjects(session.userId);
+  const [projects, seriesNames] = await Promise.all([
+    listProjects(session.userId),
+    listSeriesNames(session.userId),
+  ]);
   const errorCode = pickParam(query.error);
   const errorField = pickParam(query.field);
   const errorText = errorCode ? errorTextOf(errorCode, "log", errorField) : null;
@@ -326,10 +330,16 @@ export default async function EditLogPage({
             name="series"
             defaultValue={log.series ?? ""}
             maxLength={LIMITS.series}
+            list="series-options"
             aria-invalid={bad("series") || undefined}
             aria-describedby={bad("series") ? "form-error" : undefined}
             className="border border-hairline bg-transparent px-3 py-2 text-sm text-ink"
           />
+          <datalist id="series-options">
+            {seriesNames.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
         </label>
 
         <label className="flex flex-col gap-2">

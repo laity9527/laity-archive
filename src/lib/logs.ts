@@ -53,6 +53,7 @@
  *               内链目标解析复用这次已有查询，详情页 Prisma 调用仍为 2，不因内链抬高预算
  * - 2026-11-16: 评审 A2（排序部分）：getAdminLogList 新增 sort（updated / oldest / title），
  *               排序全部带 id 作次键——同一时间戳的行在翻页时不因顺序不定而错位
+ * - 2026-11-16: V3.1 G2：新增 getSeriesLogs / hasPublishedSeries / listSeriesNames（系列页、Proxy 404、编辑器联想）
  */
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -660,6 +661,21 @@ export async function hasPublishedTag(tag: string): Promise<boolean> {
   });
 
   return hit !== null;
+}
+
+/**
+ * 系列名清单（V3.1 G2 补）：编辑器用 <datalist> 提示已有系列，避免手打错一个字符就裂成两个系列。
+ * 只取本租户的 series 列（去重、按名称排序），不取日志正文。
+ */
+export async function listSeriesNames(userId: string): Promise<string[]> {
+  const rows = await db.log.findMany({
+    where: { userId, series: { not: null } },
+    select: { series: true },
+    distinct: ["series"],
+    orderBy: { series: "asc" },
+  });
+
+  return rows.flatMap((row) => (row.series ? [row.series] : []));
 }
 
 /**
