@@ -7,6 +7,8 @@
  * - 2026-11-16: 初始创建（重构方案 V3 / B0）。日志里的代码块原先只是 <pre>，
  *               读者看不出语言、也没法一键复制；这里把 react-markdown 的 pre 接管过来，
  *               语言取自 code 的 language-* class（sanitize 默认 schema 已放行该模式）
+ * - 2026-11-16: 评审 G4：加「行号」开关（默认关，保原观感）。行号列只用于阅读，
+ *               aria-hidden 且不可选中；复制仍只复制代码本体，不带行号
  */
 "use client";
 
@@ -21,6 +23,8 @@ type CopyState = "idle" | "done" | "fail";
 
 export function CodeBlock({ lang, code }: CodeBlockProps) {
   const [state, setState] = useState<CopyState>("idle");
+  const [showLines, setShowLines] = useState(false);
+  const lines = code.split("\n");
 
   async function handleCopy() {
     try {
@@ -36,18 +40,41 @@ export function CodeBlock({ lang, code }: CodeBlockProps) {
     <div className="code-block" data-lang={lang || undefined}>
       <div className="code-block__bar">
         <span className="code-block__lang">{lang || "text"}</span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          aria-live="polite"
-          className="code-block__copy"
-        >
-          {state === "done" ? "已复制" : state === "fail" ? "复制失败" : "复制"}
-        </button>
+        <span className="code-block__actions">
+          <button
+            type="button"
+            onClick={() => setShowLines((value) => !value)}
+            aria-pressed={showLines}
+            className="code-block__copy"
+          >
+            {showLines ? "隐藏行号" : "行号"}
+          </button>
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-live="polite"
+            className="code-block__copy"
+          >
+            {state === "done" ? "已复制" : state === "fail" ? "复制失败" : "复制"}
+          </button>
+        </span>
       </div>
-      <pre>
-        <code>{code}</code>
-      </pre>
+
+      {showLines ? (
+        <div className="code-block__lined">
+          {/* 行号只是阅读辅助：不进选中、不进复制、不被读屏重复播报 */}
+          <pre aria-hidden="true" className="code-block__lines">
+            {lines.map((_, index) => index + 1).join("\n")}
+          </pre>
+          <pre>
+            <code>{code}</code>
+          </pre>
+        </div>
+      ) : (
+        <pre>
+          <code>{code}</code>
+        </pre>
+      )}
     </div>
   );
 }

@@ -415,6 +415,41 @@ mark {
   border-bottom-color: var(--foreground);
 }
 
+/* G4：行号开关。行号列是阅读辅助，不参与选中；横向滚动时固定在左侧 */
+.code-block__actions {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.code-block__lined {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+}
+
+.code-block__lined pre {
+  margin: 0;
+  padding: 16px 0;
+}
+
+.code-block__lined pre:last-child {
+  flex: 1 0 auto;
+  padding: 16px;
+}
+
+.code-block__lined pre.code-block__lines {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding: 16px 10px 16px 16px;
+  border-right: 1px solid var(--color-hairline);
+  background: var(--background);
+  color: var(--color-ink-soft);
+  text-align: right;
+  user-select: none;
+}
+
 /* 块内 pre 不再叠加 .log-body pre 的边框与内边距（同优先级，靠后覆盖） */
 .code-block pre {
   margin: 0;

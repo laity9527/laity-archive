@@ -7,6 +7,8 @@
  * - 2026-11-16: 初始创建（评审 P5-1）。裁定“站点标识不改由后台”：SITE_NAME / SITE_DESCRIPTION / SITE_URL
  *               参与 generateMetadata 与预渲染，改成 DB 驱动会让页面变动态且与 .env 两套真值；
  *               本页把每个值的来源键名写出来，可改的只有 User.name（后台侧栏与看板共用的显示名）
+ * - 2026-11-16: 评审 A6：只读区补一句“改法”（编辑服务器 .env 后重启，后台不保存），
+ *               避免读者把只读当成功能失效
  */
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -85,6 +87,9 @@ export default async function AdminSettingsPage() {
         <p className="mt-3 max-w-[640px] font-sans text-xs leading-relaxed text-ink-soft">
           <strong className="font-medium text-ink">不在后台改</strong>：这几项来自服务器环境变量，
           参与页面元信息与预渲染；一旦后台也能写，就会和 <code className="font-mono">.env</code> 形成两套真值。
+          <span className="mt-2 block text-ink">
+            改法：编辑服务器上的 <code className="font-mono">.env</code> 后重启应用；后台不保存这些值。
+          </span>
         </p>
         <dl className="mt-5 border-t border-hairline">
           {siteRows.map((row) => (
