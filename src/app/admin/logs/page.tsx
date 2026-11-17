@@ -12,6 +12,8 @@
  * - 2026-11-16: 评审 G9/A3：加项目筛选（下拉复用 listProjectOptions 的 slug+名称），
  *               与状态 tab、标题搜索、分页互相保留；项目用关系过滤，不存在的 slug 得空集而非报错
  * - 2026-11-16: 评审 A2/A5：加排序（URL 参数，不写 cookie）与每行「预览」入口（登录态草稿预览）
+ * - 2026-11-16: 评审 A2 收口：卡片行改表格（标题/更新时间/操作三列 + 选择与状态），
+ *               窄屏横向滚动；批量勾选仍通过 form="bulk-form" 关联，不动批量下架语义
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -317,85 +319,115 @@ export default async function AdminLogsPage({
           )}
         </div>
       ) : (
-        <ul className="mt-8 border-t border-ink">
-          {items.map((log) => (
-            <li
-              key={log.id}
-              className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-hairline py-4"
-            >
-              <input
-                type="checkbox"
-                form="bulk-form"
-                name="id"
-                value={log.id}
-                aria-label={`选择「${log.title}」用于批量操作`}
-                className="h-3.5 w-3.5 shrink-0 accent-ink"
-              />
-              <span aria-hidden className="font-mono text-[10px] text-ink">
-                {log.isPublished ? "●" : "○"}
-              </span>
-
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={`/admin/logs/${log.id}/edit`}
-                  className="text-base hover:underline hover:decoration-1 hover:underline-offset-4"
-                >
-                  {log.title}
-                </Link>
-                <p className="mt-1 font-mono text-[10px] text-ink-soft">
-                  {log.project.name}
-                  {log.user
-                    ? ` · /u/${log.user.handle}/logs/${log.slug}`
-                    : ""}
-                </p>
-              </div>
-
-              <span className="text-[11px] text-ink-soft">
-                <span className="font-sans">
-                  {log.isPublished ? "已发布" : "草稿"} ·{" "}
-                </span>
-                <span className="font-mono">
-                  {log.updatedAt.toISOString().slice(0, 10)}
-                </span>
-              </span>
-
-              <span className="ml-auto flex items-baseline gap-4 font-sans text-[11px]">
-                <form
-                  action={
-                    log.isPublished
-                      ? quickUnpublishAction
-                      : quickPublishAction
-                  }
-                >
-                  <input type="hidden" name="id" value={log.id} />
-                  <button type="submit" className="border-b border-ink text-ink">
-                    {log.isPublished ? "下架" : "发布"}
-                  </button>
-                </form>
-                <Link
-                  href={`/admin/logs/${log.id}/edit`}
-                  className="border-b border-ink text-ink"
-                >
-                  编辑
-                </Link>
-                <Link
-                  href={`/admin/logs/${log.id}/preview`}
-                  className="border-b border-ink text-ink"
-                >
-                  预览
-                </Link>
-                {log.isPublished && log.user && (
-                  <Link
-                    href={`/u/${log.user.handle}/logs/${log.slug}`}
-                    className="border-b border-ink text-ink"
+        <div className="mt-8 overflow-x-auto">
+          <table className="w-full min-w-[720px] border-collapse text-left">
+            <thead>
+              <tr className="border-y border-hairline font-sans text-[10px] text-ink-soft">
+                <th scope="col" className="w-8 py-2">
+                  <span className="sr-only">选择</span>
+                </th>
+                <th scope="col" className="w-6 py-2">
+                  <span className="sr-only">状态</span>
+                </th>
+                <th scope="col" className="py-2 font-normal">
+                  标题
+                </th>
+                <th scope="col" className="py-2 font-normal">
+                  更新时间
+                </th>
+                <th scope="col" className="py-2 text-right font-normal">
+                  操作
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((log) => (
+                <tr key={log.id} className="border-b border-hairline align-top">
+                  <td className="py-3 pr-2">
+                    <input
+                      type="checkbox"
+                      form="bulk-form"
+                      name="id"
+                      value={log.id}
+                      aria-label={`选择「${log.title}」用于批量操作`}
+                      className="h-3.5 w-3.5 accent-ink"
+                    />
+                  </td>
+                  <td
+                    aria-hidden
+                    className="py-3 pr-2 font-mono text-[10px] text-ink"
                   >
-                    看前台
-                  </Link>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
+                    {log.isPublished ? "●" : "○"}
+                  </td>
+
+                  <td className="py-3 pr-6">
+                    <Link
+                      href={`/admin/logs/${log.id}/edit`}
+                      className="text-base hover:underline hover:decoration-1 hover:underline-offset-4"
+                    >
+                      {log.title}
+                    </Link>
+                    <p className="mt-1 font-mono text-[10px] text-ink-soft">
+                      {log.project.name}
+                      {log.user
+                        ? ` · /u/${log.user.handle}/logs/${log.slug}`
+                        : ""}
+                    </p>
+                  </td>
+
+                  <td className="whitespace-nowrap py-3 pr-6 text-[11px] text-ink-soft">
+                    <span className="font-sans">
+                      {log.isPublished ? "已发布" : "草稿"} ·{" "}
+                    </span>
+                    <span className="font-mono">
+                      {log.updatedAt.toISOString().slice(0, 10)}
+                    </span>
+                  </td>
+
+                  <td className="py-3 text-right">
+                    <span className="flex flex-wrap items-baseline justify-end gap-4 font-sans text-[11px]">
+                      <form
+                        action={
+                          log.isPublished
+                            ? quickUnpublishAction
+                            : quickPublishAction
+                        }
+                      >
+                        <input type="hidden" name="id" value={log.id} />
+                        <button
+                          type="submit"
+                          className="border-b border-ink text-ink"
+                        >
+                          {log.isPublished ? "下架" : "发布"}
+                        </button>
+                      </form>
+                      <Link
+                        href={`/admin/logs/${log.id}/edit`}
+                        className="border-b border-ink text-ink"
+                      >
+                        编辑
+                      </Link>
+                      <Link
+                        href={`/admin/logs/${log.id}/preview`}
+                        className="border-b border-ink text-ink"
+                      >
+                        预览
+                      </Link>
+                      {log.isPublished && log.user && (
+                        <Link
+                          href={`/u/${log.user.handle}/logs/${log.slug}`}
+                          className="border-b border-ink text-ink"
+                        >
+                          看前台
+                        </Link>
+                      )}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {items.length > 0 && (
