@@ -93,6 +93,8 @@ model Log {
   isAiAssisted Boolean @default(false)
   // 公开预览链接（V3.1 G7）：一次性生成、24h 过期、存哈希；日志删除时级联清掉
   previewTokens PreviewToken[]
+  // 修订历史（V4 P3）：每次发布前把旧版本追加一条，最多保留 20 条
+  revisions     Revision[]
   // 上次发布快照（V3.1 G8）：发布时写入当时的标题/正文/标签/系列/摘要与发布时间；
   // 之后编辑退回草稿时，拿它对比“上次对外长什么样”，不在库外存历史
   lastPublishedSnapshot Json?
@@ -128,4 +130,21 @@ model PreviewToken {
 
   @@index([logId])
   @@index([expiresAt])
+}
+
+// 修订历史（V4 P3）：发布时把“上一版”追加进来，当前版本始终在 Log 行上。
+// 只存发布过的版本（isPublished=true 且有 contentHash/publishedAt）；每篇最多 20 条，超出同事务删最旧。
+model Revision {
+  id            String   @id @default(cuid())
+  logId         String
+  log           Log      @relation(fields: [logId], references: [id], onDelete: Cascade)
+  title         String
+  beforeContent String
+  afterContent  String?
+  tags          String[]
+  contentHash   String
+  publishedAt   DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([logId, createdAt])
 }

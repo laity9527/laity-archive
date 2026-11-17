@@ -20,6 +20,7 @@ import { Prisma } from "@prisma/client";
 import { computeContentHash } from "@/lib/content-hash";
 import { db } from "@/lib/db";
 import { normalizeTagList } from "@/lib/forms";
+import { parsePublishedSnapshot } from "@/lib/published-snapshot";
 import { hasBlockingHit, scanSensitive } from "@/lib/sensitive-scan";
 
 export type LogInput = {
@@ -150,6 +151,7 @@ export async function publishLog(
       afterContent: true,
       lessonLearned: true,
       slug: true,
+      lastPublishedSnapshot: true,
     },
   });
 
@@ -191,14 +193,49 @@ export async function publishLog(
     publishedAt: publishedAt.toISOString(),
   };
 
-  const published = await db.log.updateMany({
-    where: { id, userId },
-    data: {
-      contentHash,
-      publishedAt,
-      isPublished: true,
-      lastPublishedSnapshot,
-    },
+  const published = await db.$transaction(async (tx) => {
+    // V4 P3：本次发布前如果已经对外发布过，把“上一版”追加为修订。
+    // 不能用当前 Log 行：saveLog 已经把新正文写进去了；lastPublishedSnapshot 才是发布当时的旧版本。
+    const previous = parsePublishedSnapshot(log.lastPublishedSnapshot);
+    const previousPublishedAt = previous ? new Date(previous.publishedAt) : null;
+
+    if (previous && previousPublishedAt && !Number.isNaN(previousPublishedAt.getTime())) {
+      await tx.revision.create({
+        data: {
+          logId: id,
+          title: previous.title,
+          beforeContent: previous.beforeContent,
+          afterContent: previous.afterContent,
+          tags: previous.tags,
+          contentHash: previous.contentHash,
+          publishedAt: previousPublishedAt,
+        },
+      });
+
+      // 每篇最多 20 条：按创建时间倒序，跳过前 20，其余（最旧）同事务删除
+      const stale = await tx.revision.findMany({
+        where: { logId: id },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        skip: 20,
+        select: { id: true },
+      });
+
+      if (stale.length > 0) {
+        await tx.revision.deleteMany({
+          where: { id: { in: stale.map((row) => row.id) } },
+        });
+      }
+    }
+
+    return tx.log.updateMany({
+      where: { id, userId },
+      data: {
+        contentHash,
+        publishedAt,
+        isPublished: true,
+        lastPublishedSnapshot,
+      },
+    });
   });
 
   if (published.count === 0) {

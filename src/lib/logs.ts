@@ -790,6 +790,40 @@ export async function getAdminLogById(id: string, userId: string) {
   });
 }
 
+/**
+ * 修订历史页取数：一条日志 + 最近 20 条 Revision。
+ * 与 getAdminLogById 同一租户条件；不存在与跨租户同返回 null。
+ */
+export async function getLogRevisions(id: string, userId: string) {
+  return db.log.findFirst({
+    where: { id, userId },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      isPublished: true,
+      beforeContent: true,
+      afterContent: true,
+      tags: true,
+      contentHash: true,
+      publishedAt: true,
+      revisions: {
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: {
+          id: true,
+          title: true,
+          beforeContent: true,
+          afterContent: true,
+          tags: true,
+          contentHash: true,
+          publishedAt: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+}
+
 export type AdminLogStatus = "all" | "draft" | "published";
 
 export type AdminLogListParams = {

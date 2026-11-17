@@ -202,6 +202,9 @@ const BANDS = [
       // 发布写入在 publish.ts，读取方编辑页与快照页均在 ③（V3.1 G8）
       "src/lib/published-snapshot.ts",
       "src/app/admin/logs/[id]/snapshot/page.tsx",
+      // 修订历史页（2026-11-17 V4 P3）：列 20 版 + 选中版本只读 diff；
+      // 取数在 logs.ts 的 getLogRevisions，diff 在 text-diff.ts，页面只组装
+      "src/app/admin/logs/[id]/history/page.tsx",
       // 公开预览（V3.1 G7，负责人批准）：token 生成/哈希、DAL、动作与公开只读页；登记 ③
       "src/lib/preview-token.ts",
       "src/lib/preview.ts",
@@ -244,6 +247,9 @@ const BANDS = [
       // reading-time 是 B2 的阅读时长纯函数（剥离 Markdown → 中文字数 + 英文词数 → 400 字/分钟），
       // 与 highlight/log-search 同族；调用方详情页在 ④，登记 ③ 不动 ①+② 防线
       "src/lib/reading-time.ts",
+      // text-diff（2026-11-17 V4 P3）：修订历史的行级 LCS diff，纯函数；
+      // 调用方历史页在 ③，登记 ③ 不动 ①+② 防线
+      "src/lib/text-diff.ts",
       // related 是 B2 的前后篇与相关阅读纯函数（同标签优先 → 同项目兜底，排除已展示的前后篇），
       // 与 toc/log-search 同族；调用方 logs.ts 与详情页已在可见载体，登记 ③
       "src/lib/related.ts",

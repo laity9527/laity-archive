@@ -190,6 +190,12 @@ export default async function EditLogPage({
             >
               预览
             </Link>
+            <Link
+              href={`/admin/logs/${log.id}/history`}
+              className="border-b border-ink text-ink"
+            >
+              修订历史
+            </Link>
             {log.isPublished && (
               <Link
                 href={`/u/${log.user.handle}/logs/${log.slug}`}
