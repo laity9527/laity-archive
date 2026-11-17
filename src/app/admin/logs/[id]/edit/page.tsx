@@ -40,6 +40,8 @@ import { Editor } from "@/components/Editor";
 import { PublishCheck } from "@/components/PublishCheck";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
+import { computeContentHash } from "@/lib/content-hash";
+import { parsePublishedSnapshot } from "@/lib/published-snapshot";
 import { ID_PATTERN, LIMITS, SLUG_SOURCE, pickParam } from "@/lib/forms";
 import { getAdminLogById, listSeriesNames } from "@/lib/logs";
 import { listProjects } from "@/lib/projects";
@@ -135,6 +137,13 @@ export default async function EditLogPage({
       .join("\n"),
   );
   const blocking = hits.filter((hit) => !hit.advisory);
+  // G8：上次发布快照。当前草稿的摘要按同一口径现算，和快照里的摘要比；
+  // 摘要覆盖 title + before + after，比逐字段深比较更能覆盖任何一处改动
+  const snapshot = parsePublishedSnapshot(log.lastPublishedSnapshot);
+  const snapshotDiffers = snapshot
+    ? snapshot.contentHash !==
+      computeContentHash(log.title, log.beforeContent, log.afterContent)
+    : false;
 
   return (
     <>
@@ -170,6 +179,24 @@ export default async function EditLogPage({
           </>
         )}
       </p>
+
+      {snapshot && (
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-sans text-[11px] text-ink-soft">
+          <span>
+            上次发布{" "}
+            <span className="font-mono">{snapshot.publishedAt.slice(0, 10)}</span>
+          </span>
+          <span className="text-ink">
+            {snapshotDiffers ? "当前草稿与上次发布不同" : "与上次发布一致"}
+          </span>
+          <Link
+            href={`/admin/logs/${log.id}/snapshot`}
+            className="border-b border-ink text-ink"
+          >
+            查看上次发布版本
+          </Link>
+        </p>
+      )}
 
       {errorText && (
         <p

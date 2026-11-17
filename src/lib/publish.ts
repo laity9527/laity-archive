@@ -138,6 +138,8 @@ export async function publishLog(
     where: { id, userId },
     select: {
       title: true,
+      tags: true,
+      series: true,
       beforeContent: true,
       afterContent: true,
       lessonLearned: true,
@@ -169,9 +171,27 @@ export async function publishLog(
     log.afterContent,
   );
 
+  const publishedAt = new Date();
+  // G8：发布时把“对外长什么样”整份存下来；之后编辑退回草稿，编辑页/快照页拿它对比
+  const lastPublishedSnapshot = {
+    title: log.title,
+    beforeContent: log.beforeContent,
+    afterContent: log.afterContent,
+    lessonLearned: log.lessonLearned,
+    tags: log.tags,
+    series: log.series,
+    contentHash,
+    publishedAt: publishedAt.toISOString(),
+  };
+
   const published = await db.log.updateMany({
     where: { id, userId },
-    data: { contentHash, publishedAt: new Date(), isPublished: true },
+    data: {
+      contentHash,
+      publishedAt,
+      isPublished: true,
+      lastPublishedSnapshot,
+    },
   });
 
   if (published.count === 0) {
