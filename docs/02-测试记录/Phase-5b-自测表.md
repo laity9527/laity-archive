@@ -32,7 +32,7 @@ AI 侧没有我的 GitHub 会话（I010/I017），由我本人在浏览器点一
 
 执行与 npm 自己的口径：
 
-```
+```bash
 $ npm install ali-oss@6.23.0 --no-audit --no-fund
 added 68 packages, and removed 2 packages in 8s
 
@@ -51,7 +51,7 @@ added 1 package in 1s
 
 **被删的 4 条**（就是这轮把 linux 打回红的原因，必须一起报）：
 
-```
+```text
 - node_modules/@emnapi/core                                       1.11.3
 - node_modules/@emnapi/runtime                                    1.11.3
 - node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/core    1.11.1
@@ -80,7 +80,7 @@ added 1 package in 1s
 DESIGN 5b 的批准记录写"直接依赖含 lodash、urllib@2、xml2js、ws、socks 等"，实际锁文件新增的 68 条里
 **没有 `ws`、也没有 `socks`/`socks-proxy-agent`**。逐个探过目录：
 
-```
+```text
 ABSENT  ws
 ABSENT  socks
 ABSENT  socks-proxy-agent
@@ -97,7 +97,7 @@ ABSENT  proxy-agent        ← 第三节的 build 报错就缺这个
 
 真实报错（`npm run build`，Next.js 16.4.3 Turbopack，退出码 1）：
 
-```
+```text
 ./node_modules/urllib/lib/detect_proxy_agent.js:24:44
 Error: Module not found: Can't resolve 'proxy-agent'
 > 24 |   proxyAgent = proxyAgents[proxy] = new (require('proxy-agent'))(proxy);

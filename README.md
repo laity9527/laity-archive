@@ -5,7 +5,7 @@
 
 数字档案，记录每一次工程决策。收集项目作品与开发复盘，构建一份可信的数字履历。
 
-当前形态：**V2.2 多租户 + V3/V3.1 阅读与写作升级**（GitHub OAuth 一键登录，各账号读写独立隔离；无自建注册、无 UGC；含 GitHub 提交自动同步、AI 辅助生成、系列/快照/反向引用、Markdown 导入与 RSS 订阅）。现行事实见 [docs/现状说明书.md](file:///D:/ZHANGLEI/laity-archive/docs/%E7%8E%B0%E7%8A%B6%E8%AF%B4%E6%98%8E%E4%B9%A6.md)。
+当前形态：**V2.2 多租户 + V3/V3.1 阅读与写作升级**（GitHub OAuth 一键登录，各账号读写独立隔离；无自建注册、无 UGC；含 GitHub 提交自动同步、AI 辅助生成、系列/快照/反向引用、Markdown 导入与 RSS 订阅）。现行事实见 [docs/现状说明书.md](docs/现状说明书.md)，文档地图见 [docs/README.md](docs/README.md)。
 
 ## 当前状态快照（2026-11-17）
 
@@ -46,7 +46,7 @@ npm run dev                   # http://localhost:3000
 
 后台入口 `http://localhost:3000/admin`，未登录会跳自建登录页 `/login`，点 **「使用 GitHub 登录」** 完成 OAuth 授权。
 
-> Windows + Git Bash 三个已踩过的坑见 [AGENTS.md](file:///D:/ZHANGLEI/laity-archive/AGENTS.md)「已知坑速查」：
+> Windows + Git Bash 三个已踩过的坑见 [AGENTS.md](AGENTS.md)「已知坑速查」：
 > MSYS 会改写容器内路径、Node 眼里的 `/tmp` 不是 Git Bash 的那个、管道尾接 `| head` 会让退出码变假红。
 
 ## 自动化流水线与发版门禁
@@ -67,22 +67,24 @@ GitHub Actions 包含两条工作流：
 | 顺序 | 文件 | 角色 | 读它解决什么问题 |
 |---|---|---|---|
 | 0 | **本文件 README.md** | 项目入口 | 这是什么、做到哪了、怎么跑起来 |
-| 1 | [AGENTS.md](file:///D:/ZHANGLEI/laity-archive/AGENTS.md) | **事实基座（每次开工必读）** | 技术栈锁定、视觉铁律、环境变量总表、常见变更操作手册、已知坑速查 |
-| 2 | [docs/现状说明书.md](file:///D:/ZHANGLEI/laity-archive/docs/%E7%8E%B0%E7%8A%B6%E8%AF%B4%E6%98%8E%E4%B9%A6.md) | **现行事实** | 系统是什么、数据与口径、页面与路由、工程与运维；除 AGENTS 外只看这一份 |
-| 3 | [docs/05-重构方案/重构方案V3-总览.md](file:///D:/ZHANGLEI/laity-archive/docs/05-%E9%87%8D%E6%9E%84%E6%96%B9%E6%A1%88/%E9%87%8D%E6%9E%84%E6%96%B9%E6%A1%88V3-%E6%80%BB%E8%A7%88.md) | 方向与批次 | 为什么这样改、B0–B5 进度、裁定的取舍（含附录 A/B/C） |
-| 4 | [docs/archive/2026-11-16-旧编号体系/](file:///D:/ZHANGLEI/laity-archive/docs/archive/2026-11-16-%E6%97%A7%E7%BC%96%E5%8F%B7%E4%BD%93%E7%B3%BB/) | 封存的历史文档 | 旧 SPEC / DESIGN / ISSUES，仅用于查历史决策过程，不作实现依据 |
+| 1 | [AGENTS.md](AGENTS.md) | **事实基座（每次开工必读）** | 技术栈锁定、视觉铁律、环境变量总表、常见变更操作手册、已知坑速查 |
+| 2 | [docs/README.md](docs/README.md) | **文档地图** | 哪份文档该看、哪份已作废、新文档怎么写 |
+| 3 | [docs/现状说明书.md](docs/现状说明书.md) | **现行事实** | 系统是什么、数据与口径、页面与路由、工程与运维；除 AGENTS 外只看这一份 |
+| 4 | [docs/05-重构方案/重构方案V4-完整版-2026-11-17.md](docs/05-重构方案/重构方案V4-完整版-2026-11-17.md) | **唯一执行稿** | 下一轮做什么、怎么验收、哪些不做 |
+| 5 | [docs/05-重构方案/重构方案V3-总览.md](docs/05-重构方案/重构方案V3-总览.md) | 已交付底稿 | 为什么这样改、B0–B5 进度、裁定的取舍（含附录 A/B/C） |
+| 6 | [docs/archive/README.md](docs/archive/README.md) | 封存边界 | 旧 SPEC / DESIGN / ISSUES、历史原型与未采纳探索稿，仅用于查历史，不作实现依据 |
 
-冲突判定顺序：**代码与运行时实测 > AGENTS.md > docs/现状说明书.md > 重构方案 V3 > 封存文档**；README 只作入口，发现冲突一律回报。
+冲突判定顺序：**代码与运行时实测 > AGENTS.md > docs/现状说明书.md > 重构方案 V4 > 重构方案 V3 > 封存文档**；README 只作入口，发现冲突一律回报。
 
 ## 项目结构
 
-```
+```text
 laity-archive/
 ├── AGENTS.md              # 事实基座
 ├── README.md              # 项目入口
 ├── .github/workflows/     # ci.yml (门禁) + deploy.yml (自动部署)
 ├── deploy/                # nginx 配置与证书挂载位
-├── docs/                  # 现状说明书、重构方案、产品评审、研发日志、测试记录、软著材料、归档
+├── docs/                  # 文档地图、现状说明书、重构方案、产品评审、研发日志、测试记录、软著材料、归档
 ├── prisma/                # schema.prisma、migrations/、seed.ts
 ├── src/
 │   ├── app/               # 页面路由 (App Router) + api

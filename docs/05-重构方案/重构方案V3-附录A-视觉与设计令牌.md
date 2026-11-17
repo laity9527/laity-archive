@@ -173,7 +173,7 @@ html[data-theme="dark"] {
 ## 八、组件规格（B0 落地 4 个，B1 补齐其余）
 
 ### 8.1 SectionHead（B0）
-```
+```text
 [01]  精选项目 —————————————————————— 全部作品 →
 ```
 - 编号：mono 10px，`--fg-muted`；标题：sans 12px，字距 0.16em，`--fg-muted`；

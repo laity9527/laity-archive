@@ -6,7 +6,7 @@
 
 ## 一、目录与分层（目标态）
 
-```
+```text
 src/
   styles/                  ← B1 拆出（B0 先留在 globals.css）
     tokens.css             ← 语义层 + 暗色覆盖
@@ -76,6 +76,10 @@ model AuditEvent {     // 新增：后台操作审计
   createdAt  DateTime @default(now())
 }
 ```
+
+> **执行注记（2026-11-16）**：上块是当时的字段提案。实际落地只有 `series String?`、`PreviewToken` 与对应索引；
+> `tagsKey`、`featured`、`pinnedAt`、`AuditEvent` **未采纳**（审计待 V4 §7.7，其余现状见 `docs/现状说明书.md` 2.1 / 2.4）。
+> V4 §6.2 对 `series` 另有修订，以后者为准。
 
 迁移原则：
 - 一次迁移只加可空字段或带默认值的字段；`tagsKey` 允许为空，读取时 `tagsKey.length ? tagsKey : tags.map(lower)`。

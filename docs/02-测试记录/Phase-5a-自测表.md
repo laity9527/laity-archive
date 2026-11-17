@@ -21,7 +21,7 @@
 
 build 路由表（新增部分）：
 
-```
+```text
 ├ ƒ /projects
 └   /projects/[slug]
   └ ◐ /projects/[slug]

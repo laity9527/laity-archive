@@ -213,7 +213,7 @@ model Log {
 
 ### 3.2 状态机（草稿 / 发布 / 下架 / 彻底删除）
 
-```
+```text
 草稿（isPublished=false）
    │ 发布：saveLog 先写库 → publishLog 按库中正文算 SHA-256 写 contentHash + 记 publishedAt（D25）
    ▼

@@ -80,7 +80,7 @@
 修完再跑第 9 步"材料与成品逐字节一致"又红了一次——**这次是它该红**：我改了 `site.ts` 却没重出材料。
 重出（5358 行 / 108 页 / 收录 62）后完整复跑，退出码 0：
 
-```
+```text
 == 1. npm ci ==        通过（锁文件在 linux 上原样生效，I018 的常驻防线成立）
 == 2. prisma generate ==
 == 2b. next typegen == 通过
@@ -106,7 +106,7 @@ ALL CI STEPS PASSED
 
 **I026 的真因是标签错配，不是"compose 构建不刷新"。** 证据链：
 
-```
+```text
 compose 默认名镜像 laity-archive-migrate:latest（43 小时前）  → 含 /usr/bin/openssl，prisma 可用
 手工标签镜像     laity-archive-migrate:prod（4 天前）        → NO_OPENSSL
 核对命令看的正是 :prod —— 而 compose 不写它（migrate 服务原先没写 image）
@@ -114,7 +114,7 @@ compose 默认名镜像 laity-archive-migrate:latest（43 小时前）  → 含 
 
 给 `migrate` 钉上 `image: laity-archive-migrate:prod` 后复跑：
 
-```
+```text
 构建前 :prod = 4b925be03f65
 docker compose -f docker-compose.prod.yml --env-file tmp/prod-dummy.env build migrate → exit 0
 构建后 :prod = d161c2e131b8，新镜像内 command -v openssl → /usr/bin/openssl
@@ -125,7 +125,7 @@ docker compose -f docker-compose.prod.yml --env-file tmp/prod-dummy.env build mi
 
 **I025 的原诊断（migrator 镜像里客户端是桩）不成立，真因是镜像里没有 `src/`。** 容器内实测：
 
-```
+```bash
 node -e "require('@prisma/client')" → PrismaClient= function      ← 客户端是生成过的
 ls -d prisma/seed.ts                → 存在
 node prisma/seed.ts                 → ERR_MODULE_NOT_FOUND: Cannot find module /app/src/lib/content-hash.ts
@@ -145,7 +145,7 @@ seed 定位为本地 `prisma migrate dev` 的伴生动作，生产数据由后�
 
 推送后 GitHub 上真跑了一轮，用匿名 REST API 取回结果（`gh` 未安装，装它属新增系统依赖，未自行下手）：
 
-```
+```text
 workflow : 发版门禁（push 触发，attempt 1）
 提交     : main @ d8ced9c
 状态     : completed / success      耗时 2m07s
@@ -195,7 +195,7 @@ CI 至此从"写了但没跑过"变成常驻防线（I037 结案）。仍未验�
 
 ### 端到端（curl，逐条判据）
 
-```
+```text
 GET  /api/health                     → {"status":"ok","db":true}
 GET  /api/auth/csrf                  → {"csrfToken":"…"}
 POST /api/auth/callback/admin        → http=200  body={"url":"http://localhost:3000/admin"}

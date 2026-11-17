@@ -20,7 +20,7 @@
 
 build 实际输出的路由表（结尾）：
 
-```
+```text
 Route (app)
 ┌ ◐ /
 ├ ○ /_not-found
@@ -67,7 +67,7 @@ Route (app)
 
 第一次 `npm run lint` 报：
 
-```
+```text
 D:\ZHANGLEI\laity-archive\src\app\admin\layout.tsx
   59:11  error  Do not use an `<a>` element to navigate to `/api/auth/signout/`. Use `<Link />` from `next/link` instead.
 ```

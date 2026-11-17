@@ -1,8 +1,10 @@
 # GitHub Actions 自动部署方案大纲
 
+> 状态：**已实施**（`.github/workflows/deploy.yml` 已上线；本文保留当时的大纲与报批清单）
+> 日期：2026-11-11
+> 说明：当时的“待批准、未写 YAML”已失效；现行流水线见根 `README.md`「自动化流水线与发版门禁」与 `docs/现状说明书.md` 4.4。
+
 作者：张磊
-日期：2026-11-11
-状态：**待批准（只出方案，未写任何 YAML）**
 上游：AGENTS.md 通用红线、`.github/workflows/ci.yml`、`docker-compose.prod.yml`、`Dockerfile`
 
 > 目标：本地代码 push 到 `main` → 门禁通过 → GitHub Actions 自动 SSH 到阿里云服务器 → 拉代码 → 重建 Docker 镜像 → 跑 Prisma 迁移 → 重启服务 → 健康校验。

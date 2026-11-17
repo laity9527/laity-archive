@@ -155,7 +155,7 @@
 
 第 3、4 项的核实方式：不读取也不复述 `.env` 内容，只让脚本输出派生判定——
 
-```
+```text
 OSS_REGION 存在: true | 值长度: 14 | 是否以 oss- 开头: true | 是否等于模板里的 oss-cn-beijing: true
 两个多余键是否已删: OSS_ENDPOINT: false | OSS_PUBLIC_BASE_URL: false
 ```

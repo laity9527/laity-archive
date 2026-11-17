@@ -20,7 +20,7 @@
 
 build 实际输出（结尾路由表）：
 
-```
+```text
 Route (app)
 ┌ ◐ /
 ├ ○ /_not-found
@@ -34,7 +34,7 @@ Route (app)
 用 `react-dom/server` 渲染 `<ReactMarkdown rehypePlugins={[rehypeSanitize]}>`，输入含
 `<script>alert(1)</script>`、`<img src=x onerror=alert(1)>`、`[危险链接](javascript:alert(1))`：
 
-```
+```text
 <div><h1>标题</h1>
 <p>正文 alert(1) 结束</p>
 <p><a>危险链接</a></p>

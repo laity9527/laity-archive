@@ -112,7 +112,7 @@
 
 ### 2.3 页面结构（视觉铁律合规）
 
-```
+```text
 main#main（mx-auto max-w-[1080px] px-6 py-24）
   h1「标签：{tag}」（中文标签走 font-sans；tag 值是用户数据，原样展示不翻译）
   p  {n} 条已发布日志 · Link「← 返回日志大厅」（/logs，详情页回跳同款样式）

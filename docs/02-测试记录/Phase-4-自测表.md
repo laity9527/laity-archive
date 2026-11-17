@@ -20,7 +20,7 @@
 
 build 路由表（新增部分）：
 
-```
+```text
 ├ ƒ /admin/logs/[id]/edit
 ├ ƒ /admin/logs/new
 ```
