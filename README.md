@@ -5,18 +5,19 @@
 
 数字档案，记录每一次工程决策。收集项目作品与开发复盘，构建一份可信的数字履历。
 
-当前形态：**V2.2 多租户**（GitHub OAuth 一键登录，各账号读写独立隔离；无自建注册、无 UGC；含 GitHub 提交自动同步引擎与 AI 辅助生成；支持 RSS 订阅）。决策见 [DESIGN.md](file:///D:/ZHANGLEI/laity-archive/DESIGN.md) 的 D33。
+当前形态：**V2.2 多租户 + V3/V3.1 阅读与写作升级**（GitHub OAuth 一键登录，各账号读写独立隔离；无自建注册、无 UGC；含 GitHub 提交自动同步、AI 辅助生成、系列/快照/反向引用、Markdown 导入与 RSS 订阅）。现行事实见 [docs/现状说明书.md](file:///D:/ZHANGLEI/laity-archive/docs/%E7%8E%B0%E7%8A%B6%E8%AF%B4%E6%98%8E%E4%B9%A6.md)。
 
-## 当前状态快照（2026-11-13）
+## 当前状态快照（2026-11-16）
 
 | 维度 | 状态 |
 |---|---|
-| 阶段进度 | **V2.2（F19–F27 已实施）+ V3 界面/后台升级（A–C）**：多租户、GitHub 同步、AI 辅助生成、搜索/导出/标签/RSS 已上线；2026-11-13 完成首页馆藏与主题入口、大厅左栏筛选、详情阅读路径、作品/关于/登录、后台侧栏与日志列表、概览与编辑器；同日第 12 轮补查询去重、读路径索引、精选口径单源与 SEO 结构化数据（D39） |
-| 回归测试 | `npm test` **211 条断言全绿**（Node 自带 test runner，零测试依赖；只测纯逻辑） |
+| 阶段进度 | **V2.2 多租户 + V3 界面/后台升级 + V3.1 写作闭环**：多租户、GitHub 同步、AI 辅助、搜索/导出/标签/RSS 已上线；V3 完成令牌、首页/详情、后台与发现路径；V3.1 完成系列（字段/系列页/索引/联想）、上次发布快照、正文内链与“被引用”，以及 Markdown 导入 |
+| 回归测试 | `npm test` **245 条全绿**（Node 自带 test runner，零测试依赖；只测纯逻辑） |
 | 四道门禁 | `npm run lint` / `npx tsc --noEmit` / `npm run build` / `npm test` 全 0；CI 同序代跑 |
 | 数据实况 | 生产环境已接入多账号 GitHub 登录，数据物理隔离；第一条真实数据为本项目自身 |
+| 数据库迁移 | 本地已应用最近两条：`add_log_series`、`add_published_snapshot`；服务器随部署执行 `prisma migrate deploy` |
 | 自动化交付 | 已接入 **GitHub Actions 自动部署**：push 到 `main` 且门禁通过后，自动 SSH 至服务器备份、构建、迁移与健康校验 |
-| 文档体系 | SPEC.md 覆盖 F19–F27（含 F26 标签聚合、F27 RSS 订阅）；DESIGN.md 补至 D39；AGENTS/README/ISSUES 同步本轮 |
+| 文档体系 | 现行事实为 `docs/现状说明书.md`；旧 SPEC / DESIGN / ISSUES 已封存到 `docs/archive/2026-11-16-旧编号体系/`（仅查历史，不作实现依据） |
 
 ## 技术栈
 
@@ -58,7 +59,7 @@ GitHub Actions 包含两条工作流：
 1. **`ci.yml`（发版门禁）**：每次 push 与 PR 时运行，含软著材料两步自检。
 2. **`deploy.yml`（生产部署）**：当 `ci.yml` 在 `main` 分支通过后自动触发。通过 SSH 连接服务器，执行 `pg_dump` 备份 → 构建镜像 → `migrate deploy` → 重启服务 → 轮询 `/api/health`。健康失败自动回滚上一版镜像。
 
-`npm test` 覆盖纯逻辑：摘要口径、对象名断言、敏感信息扫描、开源许可、Token 加密、Prompt 解析、同步过滤等。
+`npm test` 覆盖纯逻辑：摘要口径、对象名断言、敏感信息扫描、开源许可、Token 加密、Prompt 解析、同步过滤、系列进度、快照解析、内链切分与归档分组等。
 
 ## 文档导读（新开发者按这个顺序读）
 
@@ -77,15 +78,15 @@ GitHub Actions 包含两条工作流：
 ```
 laity-archive/
 ├── AGENTS.md              # 事实基座
-├── SPEC.md / DESIGN.md / ISSUES.md / README.md
+├── README.md              # 项目入口
 ├── .github/workflows/     # ci.yml (门禁) + deploy.yml (自动部署)
 ├── deploy/                # nginx 配置与证书挂载位
-├── docs/                  # 开发方法论、研发日志、测试记录、软著材料、归档
-├── prisma/                # schema.prisma、migrations/
+├── docs/                  # 现状说明书、重构方案、产品评审、研发日志、测试记录、软著材料、归档
+├── prisma/                # schema.prisma、migrations/、seed.ts
 ├── src/
-│   ├── app/               # 页面路由 (App Router)
-│   ├── components/        # 核心组件（导航、时间轴、编辑器等）
-│   └── lib/               # 数据访问层与工具（哈希、上传、鉴权、AI 客户端）
+│   ├── app/               # 页面路由 (App Router) + api
+│   ├── components/        # 核心组件（导航、时间轴、编辑器、分享等）
+│   └── lib/               # 数据访问层与纯函数（哈希、鉴权、系列、快照、内链）
 ├── tests/                 # node --test 用例
 └── tools/                 # 软著材料生成器
 ```
@@ -93,7 +94,9 @@ laity-archive/
 ## 常见任务
 
 - **改数据模型**：只改 `prisma/schema.prisma` → `npx prisma migrate dev --name <意图>` → 同步查询层。
-- **发布日志**：后台写 BEFORE / AFTER → 点击「保存并发布」，系统按 D5 口径盖 SHA-256 印章。
+- **发布日志**：后台写 BEFORE / AFTER → 点击「保存并发布」，系统按 D5 口径盖 SHA-256 印章；发布时会保存一份“上次发布快照”，编辑页可回看与对比。
+- **系列与内链**：编辑页填“系列”（可空，带已有系列联想）；正文写 `[[slug]]` 即生成内链，目标页显示“被引用”；系列页为 `/u/<handle>/series`。
+- **导入 Markdown**：后台 `/admin/logs/import` 读本地 `.md`，只建草稿，slug 冲突不覆盖。
 - **GitHub 同步与 AI**：后台点击 `[ 从 GitHub 同步 ]` 拉取提交；在编辑页点 `[ AI 帮我写 ]` 调用通义千问自动生成复盘。
 - **重出软著材料**：`node tools/软著材料生成.mjs`（窗口容量按整页折算，不要绕过 `assertWindowFit()`）。
 - **生产部署**：本地 `git push origin main` 即可，GitHub Actions 会自动接管后续流程（需在仓库 Secrets 配置好服务器 SSH 凭据）。
@@ -101,4 +104,4 @@ laity-archive/
 ## 工作方式
 
 所有开发遵循五层防线：**事实基座 → 规格锁定 → 阶段闭环 → 验收门禁 → 过程存证**。
-一次只做一个 Phase，验收通过才进下一个；范围外问题记 ISSUES.md 不动手；没执行的测试一律标"未验证"。
+一次只做一个 Phase，验收通过才进下一个；范围外问题记入 `docs/06-产品评审/` 或 `docs/现状说明书.md` 的变更记录，先不动手；没执行的测试一律标"未验证"。
