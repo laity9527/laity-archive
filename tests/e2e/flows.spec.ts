@@ -134,6 +134,25 @@ test("新建日志最小路径：保存草稿后进入编辑页", async ({ page 
   await expect(page.getByText("已保存，当前为草稿", { exact: true })).toBeVisible();
 });
 
+test("新建日志：先填 BEFORE、切 AFTER 再填，保存成功", async ({ page }) => {
+  await page.goto("/login");
+  await page.locator('input[name="username"]').fill("admin");
+  await page.locator('input[name="password"]').fill("e2e-pass-2026");
+  await page.getByRole("button", { name: "本地登录" }).click();
+  await expect(page).toHaveURL(/\/admin/);
+
+  await page.goto("/admin/logs/new");
+  await page.locator('input[name="title"]').fill("E2E 切页签保存");
+  await page.locator('input[name="slug"]').fill(`e2e-tab-${Date.now()}`);
+  await page.locator('textarea[name="beforeContent"]').fill("切页签前的 BEFORE 正文。");
+  await page.getByRole("button", { name: "AFTER" }).click();
+  await page.locator('textarea[name="afterContent"]').fill("切页签后填的 AFTER 正文。");
+  await page.getByRole("button", { name: "保存草稿" }).click();
+
+  await expect(page).toHaveURL(/\/admin\/logs\/[^/]+\/edit\?saved=1/);
+  await expect(page.getByText("已保存，当前为草稿", { exact: true })).toBeVisible();
+});
+
 test("审计页显示有数据行与动作标签", async ({ page }) => {
   const targetId = `e2e-audit-${Date.now()}`;
   await seedAudit(targetId, "feedface");
