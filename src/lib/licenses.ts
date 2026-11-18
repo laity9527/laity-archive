@@ -44,6 +44,7 @@ export const DEPENDENCY_LICENSES: DependencyLicense[] = [
   { name: "@types/react", license: "MIT", purpose: "React 类型定义（开发期）" },
   { name: "@types/react-dom", license: "MIT", purpose: "React DOM 类型定义（开发期）" },
   { name: "@types/ali-oss", license: "MIT", purpose: "ali-oss 类型定义（开发期）" },
+  { name: "@playwright/test", license: "Apache-2.0", purpose: "本地 E2E（本机 Edge，不进 CI）" },
 ];
 
 // 字体不随仓库分发，由 next/font 在构建期从 Google Fonts 拉取并自托管产物
