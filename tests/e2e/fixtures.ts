@@ -85,7 +85,24 @@ export async function createPreviewToken(logId: string, userId: string) {
   return token;
 }
 
+export async function seedAudit(targetId: string, hash = "deadbeef") {
+  const base = await loadBaseIds();
+  return prisma.auditEvent.create({
+    data: {
+      actorId: base.userId,
+      action: "log.publish",
+      targetType: "log",
+      targetId,
+      meta: { scanHits: 0, hash },
+    },
+    select: { id: true, targetId: true },
+  });
+}
+
 export async function cleanupE2E() {
+  await prisma.auditEvent.deleteMany({
+    where: { targetId: { startsWith: "e2e-audit-" } },
+  });
   await prisma.previewToken.deleteMany({
     where: { log: { slug: { startsWith: "e2e-" } } },
   });
