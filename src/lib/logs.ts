@@ -671,14 +671,19 @@ export async function hasPublishedTag(tag: string): Promise<boolean> {
  * 只取本租户的 series 列（去重、按名称排序），不取日志正文。
  */
 export async function listSeriesNames(userId: string): Promise<string[]> {
-  const rows = await db.log.findMany({
-    where: { userId, series: { not: null } },
-    select: { series: true },
-    distinct: ["series"],
-    orderBy: { series: "asc" },
-  });
+  const [entities, legacy] = await Promise.all([
+    db.series.findMany({ where: { userId }, select: { name: true } }),
+    db.log.findMany({
+      where: { userId, series: { not: null }, seriesId: null },
+      select: { series: true },
+      distinct: ["series"],
+    }),
+  ]);
 
-  return rows.flatMap((row) => (row.series ? [row.series] : []));
+  return [...new Set([
+    ...entities.map((row) => row.name),
+    ...legacy.flatMap((row) => (row.series ? [row.series] : [])),
+  ])].sort((a, b) => a.localeCompare(b));
 }
 
 /**
@@ -688,26 +693,54 @@ export async function listSeriesNames(userId: string): Promise<string[]> {
 export type SeriesIndexEntry = { name: string; count: number };
 
 export async function getSeriesIndex(handle: string): Promise<SeriesIndexEntry[]> {
-  const rows = await db.log.groupBy({
-    by: ["series"],
-    where: { isPublished: true, series: { not: null }, user: { handle } },
-    _count: { _all: true },
-    orderBy: { series: "asc" },
-  });
+  const [entities, legacy] = await Promise.all([
+    db.series.findMany({
+      where: { user: { handle }, logs: { some: { isPublished: true } } },
+      select: {
+        name: true,
+        logs: { where: { isPublished: true }, select: { id: true } },
+      },
+    }),
+    db.log.groupBy({
+      by: ["series"],
+      where: {
+        isPublished: true,
+        series: { not: null },
+        seriesId: null,
+        user: { handle },
+      },
+      _count: { _all: true },
+    }),
+  ]);
 
-  return rows.flatMap((row) =>
-    row.series ? [{ name: row.series, count: row._count._all }] : [],
-  );
+  const counts = new Map<string, number>();
+  for (const entity of entities) {
+    counts.set(entity.name, entity.logs.length);
+  }
+  for (const row of legacy) {
+    if (!row.series) continue;
+    counts.set(row.series, (counts.get(row.series) ?? 0) + row._count._all);
+  }
+
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Proxy 前置判定：该 handle 下是否至少有一个已发布系列（系列索引页用）
 export async function hasAnyPublishedSeries(handle: string) {
-  const hit = await db.log.findFirst({
-    where: { isPublished: true, series: { not: null }, user: { handle } },
-    select: { id: true },
-  });
+  const [entity, legacy] = await Promise.all([
+    db.series.findFirst({
+      where: { user: { handle }, logs: { some: { isPublished: true } } },
+      select: { id: true },
+    }),
+    db.log.findFirst({
+      where: { isPublished: true, series: { not: null }, seriesId: null, user: { handle } },
+      select: { id: true },
+    }),
+  ]);
 
-  return hit !== null;
+  return entity !== null || legacy !== null;
 }
 
 /**
@@ -716,7 +749,14 @@ export async function hasAnyPublishedSeries(handle: string) {
  */
 export async function getSeriesLogs(series: string, handle: string) {
   return db.log.findMany({
-    where: { isPublished: true, series, user: { handle } },
+    where: {
+      isPublished: true,
+      user: { handle },
+      OR: [
+        { seriesRef: { is: { name: series } } },
+        { series, seriesId: null },
+      ],
+    },
     orderBy: [{ beforeDate: "asc" }, { id: "asc" }],
     select: {
       id: true,
@@ -732,7 +772,14 @@ export async function getSeriesLogs(series: string, handle: string) {
 // （层一 handle 不存在也回 false；与日志/项目/标签同一口径，不泄露缺的是哪一层）
 export async function hasPublishedSeries(series: string, handle: string) {
   const hit = await db.log.findFirst({
-    where: { isPublished: true, series, user: { handle } },
+    where: {
+      isPublished: true,
+      user: { handle },
+      OR: [
+        { seriesRef: { is: { name: series } } },
+        { series, seriesId: null },
+      ],
+    },
     select: { id: true },
   });
 
