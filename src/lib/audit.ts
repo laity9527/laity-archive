@@ -59,4 +59,5 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "preview.revoke": "撤销预览链接",
   "export.run": "导出数据",
   "ai.generate": "AI 生成草稿",
+  "series.create": "新建系列",
 };

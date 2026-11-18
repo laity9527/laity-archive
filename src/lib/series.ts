@@ -7,7 +7,14 @@
  * - 2026-11-16: 初始创建（V3.1 / G2）。不建系列表：同名即同系列，排序按决策时间升序；
  *               同一天的两篇用 slug 作稳定次键，避免序号随查询顺序漂移。
  *               行集由详情页已有的 getLogContext 提供，本函数不发查询
+ * - 2026-11-18: 新增 seriesSlug()：把展示名映射为稳定内部键，供 Series 实体使用；
+ *               SHA-256 前 16 位，中文名也可用，避免以名称为唯一键。
  */
+import { createHash } from "node:crypto";
+
+export function seriesSlug(name: string): string {
+  return `series-${createHash("sha256").update(name.trim()).digest("hex").slice(0, 16)}`;
+}
 
 export type SeriesRow = {
   slug: string;

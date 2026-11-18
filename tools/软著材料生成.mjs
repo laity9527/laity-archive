@@ -198,6 +198,9 @@ const BANDS = [
       // series.ts：系列进度纯函数（同名即同系列、beforeDate 升序、slug 作同日次键），
       // 调用方详情页与 logs.ts 的 getLogContext（均已在可见载体）；登记 ③（V3.1 G2）
       "src/lib/series.ts",
+      // series-store（2026-11-18 V4 P2）：Series 实体写入、slug 与创建审计；
+      // 调用方 publish.ts 在 ③，登记 ③
+      "src/lib/series-store.ts",
       // published-snapshot.ts：上次发布快照的形状与解析（JSON 列无 schema，读取端先验类型）；
       // 发布写入在 publish.ts，读取方编辑页与快照页均在 ③（V3.1 G8）
       "src/lib/published-snapshot.ts",

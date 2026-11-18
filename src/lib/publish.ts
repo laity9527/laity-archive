@@ -22,6 +22,7 @@ import { db } from "@/lib/db";
 import { normalizeTagList } from "@/lib/forms";
 import { parsePublishedSnapshot } from "@/lib/published-snapshot";
 import { hasBlockingHit, scanSensitive } from "@/lib/sensitive-scan";
+import { ensureSeries } from "@/lib/series-store";
 
 export type LogInput = {
   id?: string;
@@ -82,12 +83,16 @@ export async function saveLog(
   // 否则一条已同步草稿被编辑后就失去去重锚点，重跑会重复产草稿
   const sourceShaData =
     input.sourceCommitSha !== undefined ? { sourceCommitSha: input.sourceCommitSha } : {};
+  const seriesName = input.series?.trim() || null;
+  // 兼容迁移：字符串继续写（旧 URL/展示），同时落 Series 实体 id；无系列则两列都为空
+  const seriesId = seriesName ? await ensureSeries(userId, seriesName) : null;
   const data = {
     projectId: input.projectId,
     slug: input.slug,
     title: input.title,
     tags: normalizeTagList(input.tags),
-    series: input.series?.trim() || null,
+    series: seriesName,
+    seriesId,
     beforeContent: input.beforeContent,
     afterContent: input.afterContent || null,
     beforeDate: input.beforeDate,

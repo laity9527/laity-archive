@@ -45,6 +45,7 @@ model User {
   isAdmin   Boolean  @default(false)
   projects  Project[]
   logs      Log[]
+  series    Series[]
   previewTokens PreviewToken[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -75,8 +76,13 @@ model Log {
   user          User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String?
   tags          String[]
-  // 系列名（2026-11-16 V3.1 G2）：自由文本、可空；同一作者同名即同系列，按 beforeDate 升序排“第 n/m 篇”
+  // 系列名（2026-11-16 V3.1 G2）：自由文本；V4 P2 起与 Series 实体双写，
+  // 保留字符串用于旧 URL/展示兼容，读取端优先用 seriesId
   series        String?
+  // 系列实体（V4 P2）：可空；删除系列时 SetNull，不级联删日志
+  seriesId      String?
+  seriesRef     Series?  @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  seriesOrder   Int      @default(0)
   beforeContent String
   afterContent  String?
   beforeDate    DateTime
@@ -114,6 +120,24 @@ model Log {
   // 标签数组：筛选（has/hasSome）、标签聚合页前置判定与搜索的 tags 分支都走它
   @@index([tags], type: Gin)
   @@index([projectId])
+  @@index([seriesId])
+}
+
+// 系列实体（V4 P2）：同一作者下 slug 唯一；name 为展示名，slug 为稳定内部键。
+// 兼容期 Log.series 字符串继续保留用于旧 URL/展示；新写入同时落 seriesId。
+model Series {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug      String
+  name      String
+  summary   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  logs      Log[]
+
+  @@unique([userId, slug])
+  @@index([userId])
 }
 
 // 公开预览链接（V3.1 G7）：只存 token 的 SHA-256 哈希，不存明文；24h 过期；
