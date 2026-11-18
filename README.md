@@ -5,17 +5,17 @@
 
 数字档案，记录每一次工程决策。收集项目作品与开发复盘，构建一份可信的数字履历。
 
-当前形态：**V2.2 多租户 + V3/V3.1 阅读与写作升级**（GitHub OAuth 一键登录，各账号读写独立隔离；无自建注册、无 UGC；含 GitHub 提交自动同步、AI 辅助生成、系列/快照/反向引用、Markdown 导入与 RSS 订阅）。现行事实见 [docs/现状说明书.md](docs/现状说明书.md)，文档地图见 [docs/README.md](docs/README.md)。
+当前形态：**V2.2 多租户 + V3/V3.1 阅读与写作升级 + V4 P1–P3**（GitHub OAuth 一键登录，各账号读写独立隔离；无自建注册、无 UGC；含 GitHub 提交自动同步、AI 辅助生成、系列/快照/反向引用、Markdown 导入与 RSS 订阅；V4 已落证据层、修订历史与审计）。现行事实见 [docs/现状说明书.md](docs/现状说明书.md)，文档地图见 [docs/README.md](docs/README.md)。
 
-## 当前状态快照（2026-11-17）
+## 当前状态快照（2026-11-18）
 
 | 维度 | 状态 |
 |---|---|
-| 阶段进度 | **V2.2 多租户 + V3 界面/后台升级 + V3.1 写作闭环**：多租户、GitHub 同步、AI 辅助、搜索/导出/标签/RSS 已上线；V3 完成令牌、首页/详情、后台与发现路径；V3.1 完成系列（字段/系列页/索引/联想）、上次发布快照、正文内链与“被引用”、Markdown 导入与公开预览链接（24h 哈希 token） |
-| 回归测试 | `npm test` **249 条全绿**（Node 自带 test runner，零测试依赖；只测纯逻辑） |
+| 阶段进度 | **V2.2 多租户 + V3 界面/后台升级 + V3.1 写作闭环 + V4 P1–P3**：多租户、GitHub 同步、AI 辅助、搜索/导出/标签/RSS 已上线；V3 完成令牌、首页/详情、后台与发现路径；V3.1 完成系列（字段/系列页/索引/联想）、上次发布快照、正文内链与“被引用”、Markdown 导入与公开预览链接；V4 已落证据层、发布回执、修订历史与审计 |
+| 回归测试 | `npm test` **257 条全绿**（Node 自带 test runner，只测纯逻辑）；另本地 `npm run test:e2e` **10 条 smoke**（Playwright + 本机 Edge，不进 CI） |
 | 四道门禁 | `npm run lint` / `npx tsc --noEmit` / `npm run build` / `npm test` 全 0；CI 同序代跑 |
 | 数据实况 | 生产环境已接入多账号 GitHub 登录，数据物理隔离；第一条真实数据为本项目自身 |
-| 数据库迁移 | 本地已应用最近三条：`add_log_series`、`add_published_snapshot`、`add_preview_token`；服务器随部署执行 `prisma migrate deploy` |
+| 数据库迁移 | 本地已应用 **11 条迁移**，最近四条：`add_revision`、`add_audit_event`、`add_series_entity`；服务器随部署执行 `prisma migrate deploy` |
 | 依赖审计 | 2026-11-17 经批准升级 `next@16.4.6`、eslint 链与 **Prisma 7.10.1（含 `@prisma/adapter-pg`）** 后复查：**0 漏洞**（moderate/high 均清零） |
 | 自动化交付 | 已接入 **GitHub Actions 自动部署**：push 到 `main` 且门禁通过后，自动 SSH 至服务器备份、构建、迁移与健康校验 |
 | 文档体系 | 现行事实为 `docs/现状说明书.md`；旧 SPEC / DESIGN / ISSUES 已封存到 `docs/archive/2026-11-16-旧编号体系/`（仅查历史，不作实现依据） |
