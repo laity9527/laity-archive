@@ -12,7 +12,7 @@
 | 维度 | 状态 |
 |---|---|
 | 阶段进度 | **V2.2 多租户 + V3 界面/后台升级 + V3.1 写作闭环 + V4 P1–P3**：多租户、GitHub 同步、AI 辅助、搜索/导出/标签/RSS 已上线；V3 完成令牌、首页/详情、后台与发现路径；V3.1 完成系列（字段/系列页/索引/联想）、上次发布快照、正文内链与“被引用”、Markdown 导入与公开预览链接；V4 已落证据层、发布回执、修订历史与审计 |
-| 回归测试 | `npm test` **257 条全绿**（Node 自带 test runner，只测纯逻辑）；另本地 `npm run test:e2e` **10 条 smoke**（Playwright + 本机 Edge，不进 CI） |
+| 回归测试 | `npm test` **257 条全绿**（Node 自带 test runner，只测纯逻辑）；另本地 `npm run test:e2e` **11 条 smoke**（Playwright + 本机 Edge，不进 CI） |
 | 四道门禁 | `npm run lint` / `npx tsc --noEmit` / `npm run build` / `npm test` 全 0；CI 同序代跑 |
 | 数据实况 | 生产环境已接入多账号 GitHub 登录，数据物理隔离；第一条真实数据为本项目自身 |
 | 数据库迁移 | 本地已应用 **12 条迁移**，最近四条：`add_revision`、`add_audit_event`、`add_series_entity`；服务器随部署执行 `prisma migrate deploy` |
