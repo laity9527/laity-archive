@@ -114,3 +114,21 @@ test("反链：目标详情页出现被引用与来源标题", async ({ page }) 
   await expect(page.getByText("被引用", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: source.title, exact: true })).toBeVisible();
 });
+
+test("新建日志最小路径：保存草稿后进入编辑页", async ({ page }) => {
+  await page.goto("/login");
+  await page.locator('input[name="username"]').fill("admin");
+  await page.locator('input[name="password"]').fill("e2e-pass-2026");
+  await page.getByRole("button", { name: "本地登录" }).click();
+  await expect(page).toHaveURL(/\/admin/);
+
+  await page.goto("/admin/logs/new");
+  await page.locator('input[name="title"]').fill("E2E 新建最小路径");
+  await page.locator('input[name="slug"]').fill(`e2e-new-${Date.now()}`);
+  await page.locator('input[name="tags"]').fill("E2E");
+  await page.locator('textarea[name="beforeContent"]').fill("新建最小路径正文。");
+  await page.getByRole("button", { name: "保存草稿" }).click();
+
+  await expect(page).toHaveURL(/\/admin\/logs\/[^/]+\/edit\?saved=1/);
+  await expect(page.getByText("已保存，当前为草稿", { exact: true })).toBeVisible();
+});
