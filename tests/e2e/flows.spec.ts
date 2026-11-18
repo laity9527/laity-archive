@@ -168,3 +168,26 @@ test("审计页显示有数据行与动作标签", async ({ page }) => {
   await expect(row).toHaveCount(1);
   await expect(row).toContainText("发布日志");
 });
+
+test("后台系列 CRUD：新建后删除", async ({ page }) => {
+  const name = `E2E 管理系列 ${Date.now()}`;
+
+  await page.goto("/login");
+  await page.locator('input[name="username"]').fill("admin");
+  await page.locator('input[name="password"]').fill("e2e-pass-2026");
+  await page.getByRole("button", { name: "本地登录" }).click();
+  await expect(page).toHaveURL(/\/admin/);
+
+  await page.goto("/admin/series");
+  await page.locator('input[name="name"]').fill(name);
+  await page.locator('input[name="summary"]').fill("E2E 系列摘要");
+  await page.getByRole("button", { name: "新建系列" }).click();
+  await expect(page.getByText("已保存", { exact: false })).toBeVisible();
+
+  const row = page.locator("li").filter({ hasText: name });
+  await expect(row).toHaveCount(1);
+  await row.getByRole("checkbox").check();
+  await row.getByRole("button", { name: "删除" }).click();
+  await expect(page.getByText("已删除。", { exact: true })).toBeVisible();
+  await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+});

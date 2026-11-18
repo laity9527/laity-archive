@@ -117,6 +117,12 @@ export async function cleanupE2E() {
   await prisma.auditEvent.deleteMany({
     where: { targetId: { startsWith: "e2e-audit-" } },
   });
+  await prisma.auditEvent.deleteMany({
+    where: {
+      action: { in: ["series.create", "series.update", "series.delete"] },
+      meta: { path: ["name"], string_starts_with: "E2E 管理系列" },
+    },
+  });
   await prisma.previewToken.deleteMany({
     where: { log: { slug: { startsWith: "e2e-" } } },
   });
