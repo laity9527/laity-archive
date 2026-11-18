@@ -201,6 +201,10 @@ const BANDS = [
       // series-store（2026-11-18 V4 P2）：Series 实体写入、slug 与创建审计；
       // 调用方 publish.ts 在 ③，登记 ③
       "src/lib/series-store.ts",
+      // series-admin（2026-11-18）：后台系列 CRUD；删除前查日志数，slug 创建后不变
+      "src/lib/series-admin.ts",
+      "src/app/admin/series-actions.ts",
+      "src/app/admin/series/page.tsx",
       // published-snapshot.ts：上次发布快照的形状与解析（JSON 列无 schema，读取端先验类型）；
       // 发布写入在 publish.ts，读取方编辑页与快照页均在 ③（V3.1 G8）
       "src/lib/published-snapshot.ts",

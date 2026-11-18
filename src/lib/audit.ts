@@ -60,4 +60,6 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "export.run": "导出数据",
   "ai.generate": "AI 生成草稿",
   "series.create": "新建系列",
+  "series.update": "更新系列",
+  "series.delete": "删除系列",
 };
