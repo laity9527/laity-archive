@@ -1,20 +1,25 @@
 /**
  * 文件：src/app/admin/logs/[id]/history/page.tsx
- * 描述：修订历史：列出最近 20 个发布版本，选中一版与当前草稿做行级 diff
+ * 描述：修订历史：列出全部发布版本（V5 Phase 1 起版本行永不删除），选中一版与当前草稿做行级 diff；
+ *       展示版本号、哈希口径与 Git 锚定状态，待锚定版本可重试锚定
  * 作者：张磊
  * 创建日期：2026-11-17
  * 修改记录：
- * - 2026-11-17: 初始创建（V4 P3 §7.6）。发布时把旧版本追加进 Revision；当前版本始终在 Log 行上，
+ * - 2026-11-17: 初始创建（V4 P3 §7.6）。发布时把旧版本追加进 TraceRevision；当前版本始终在 Trace 行上，
  *               本页只读，不写库、不发布。列表按创建时间倒序，默认选最新一条；缺 rev 参数不报错。
  *               单侧超过 2000 行由 text-diff 截断并显示提示，不在页面里做大数组计算。
+ * - 2026-11-18: V5 Phase 1：版本行永不删除（取消 20 条上限，按版本号倒序）；列表展示 version/hashVersion/
+ *               git 锚定状态；待锚定版本提供重试锚定按钮（retryGitAnchorAction，写审计）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { requireAdminSession } from "@/auth";
+import { SubmitButton } from "@/components/SubmitButton";
 import { getLogRevisions } from "@/lib/logs";
 import { diffLines, type DiffResult } from "@/lib/text-diff";
+import { retryGitAnchorAction } from "@/app/admin/log-actions";
 
 export const metadata: Metadata = {
   title: "修订历史",
@@ -25,7 +30,7 @@ export const instant = false;
 
 type HistoryPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ rev?: string | string[] }>;
+  searchParams: Promise<{ rev?: string | string[]; anchored?: string | string[] }>;
 };
 
 function pick(value: string | string[] | undefined) {
@@ -35,6 +40,12 @@ function pick(value: string | string[] | undefined) {
 function formatTime(value: Date) {
   return value.toISOString().slice(0, 16).replace("T", " ");
 }
+
+const VERDICT_LABELS: Record<string, string> = {
+  PENDING: "待验证",
+  VERIFIED: "已验证",
+  OVERTURNED: "被推翻",
+};
 
 function DiffBlock({ title, result }: { title: string; result: DiffResult }) {
   const changed = result.lines.some((line) => line.kind !== "same");
@@ -107,6 +118,11 @@ export default async function HistoryPage({ params, searchParams }: HistoryPageP
           <p className="font-sans text-xs text-ink-soft">修订历史 · 共 {revisions.length} 版</p>
           <h1 className="mt-2 text-3xl font-medium tracking-tight">{log.title}</h1>
         </div>
+        {pick(query.anchored) === "1" && (
+          <span className="border border-ink px-3 py-1 font-sans text-[11px] text-ink">
+            Git 锚定已完成
+          </span>
+        )}
         <span className="flex flex-wrap items-baseline gap-5 font-sans text-xs">
           <Link href={`/admin/logs/${log.id}/edit`} className="border-b border-ink text-ink">
             返回编辑
@@ -119,7 +135,7 @@ export default async function HistoryPage({ params, searchParams }: HistoryPageP
 
       {!selected ? (
         <p className="mt-8 border-t border-ink py-6 font-sans text-xs text-ink-soft">
-          还没有历史版本。发布第二次起，旧版本会出现在这里；每篇最多保留 20 条。
+          还没有历史版本。首次发布即产版本行，之后每次发布都会追加一版；版本行永不删除。
         </p>
       ) : (
         <>
@@ -131,21 +147,40 @@ export default async function HistoryPage({ params, searchParams }: HistoryPageP
                   const active = revision.id === selected.id;
                   return (
                     <li key={revision.id} className="border-b border-hairline">
-                      <Link
-                        href={`?rev=${revision.id}`}
-                        aria-current={active ? "true" : undefined}
-                        className={`block py-3 font-mono text-xs ${
-                          active
-                            ? "border-l-2 border-brown pl-3 text-ink"
-                            : "border-l-2 border-transparent pl-3 text-ink-soft hover:border-ink hover:text-ink"
-                        }`}
-                      >
-                        <span className="block">{formatTime(revision.createdAt)} UTC</span>
-                        <span className="mt-1 block text-ink-soft">
-                          {revision.contentHash.slice(0, 8)}… ·{" "}
-                          {revision.title.length + revision.beforeContent.length + (revision.afterContent?.length ?? 0)} 字符
-                        </span>
-                      </Link>
+                      <div className="flex items-start justify-between gap-3">
+                        <Link
+                          href={`?rev=${revision.id}`}
+                          aria-current={active ? "true" : undefined}
+                          className={`block py-3 font-mono text-xs ${
+                            active
+                              ? "border-l-2 border-brown pl-3 text-ink"
+                              : "border-l-2 border-transparent pl-3 text-ink-soft hover:border-ink hover:text-ink"
+                          }`}
+                        >
+                          <span className="block">
+                            v{revision.version} · {formatTime(revision.createdAt)} UTC
+                          </span>
+                          <span className="mt-1 block text-ink-soft">
+                            {revision.contentHash.slice(0, 8)}… · hashVersion {revision.hashVersion}
+                            {revision.gitSha ? (
+                              <> · {revision.gitSha.slice(0, 7)}</>
+                            ) : (
+                              <> · 待锚定</>
+                            )}
+                          </span>
+                        </Link>
+                        {!revision.gitSha && (
+                          <form action={retryGitAnchorAction}>
+                            <input type="hidden" name="id" value={log.id} />
+                            <input type="hidden" name="rev" value={revision.id} />
+                            <SubmitButton
+                              label="重试锚定"
+                              pendingLabel="锚定中…"
+                              className="border border-ink px-3 py-1 font-sans text-[11px] text-ink"
+                            />
+                          </form>
+                        )}
+                      </div>
                     </li>
                   );
                 })}
@@ -156,8 +191,16 @@ export default async function HistoryPage({ params, searchParams }: HistoryPageP
               <div className="border border-ink px-4 py-3 font-sans text-xs leading-relaxed text-ink">
                 <p>
                   选中版本 ·{" "}
+                  <span className="font-mono">v{selected.version}</span> ·{" "}
                   <span className="font-mono">{formatTime(selected.publishedAt)} UTC</span> ·{" "}
-                  <span className="font-mono">{selected.contentHash.slice(0, 8)}…</span>
+                  <span className="font-mono">{selected.contentHash.slice(0, 8)}…</span> ·{" "}
+                  hashVersion {selected.hashVersion} · 裁决快照{" "}
+                  {VERDICT_LABELS[selected.verdictAtPublish] ?? selected.verdictAtPublish}
+                  {selected.gitSha ? (
+                    <> · {selected.gitSha.slice(0, 7)}</>
+                  ) : (
+                    <> · 待锚定</>
+                  )}
                 </p>
                 <p className="mt-1 text-ink-soft">
                   标题：{selected.title}

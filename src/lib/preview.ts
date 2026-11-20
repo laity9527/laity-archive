@@ -21,7 +21,7 @@ export async function createPreviewToken(
   logId: string,
   userId: string,
 ): Promise<CreatedPreviewToken | null> {
-  const log = await db.log.findFirst({
+  const log = await db.trace.findFirst({
     where: { id: logId, userId },
     select: { id: true },
   });

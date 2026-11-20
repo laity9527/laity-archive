@@ -1,3 +1,12 @@
+/**
+ * 文件：tests/e2e/fixtures.ts
+ * 描述：Playwright E2E 夹具：连接库、种子数据与清理，供 flows.spec.ts 串行用例共用
+ * 作者：张磊
+ * 创建日期：2026-11-18
+ * 修改记录：
+ * - 2026-11-16: 初始创建
+ * - 2026-11-18: V5 Phase 1 模型改名：prisma.log→prisma.trace（Schema Log→Trace @@map，表名不变）
+ */
 import "dotenv/config";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
@@ -61,7 +70,7 @@ export async function seedLog(input: SeedLogInput) {
     seriesId = series.id;
   }
 
-  const log = await prisma.log.create({
+  const log = await prisma.trace.create({
     data: {
       userId: base.userId,
       projectId: base.projectId,
@@ -126,7 +135,7 @@ export async function cleanupE2E() {
   await prisma.previewToken.deleteMany({
     where: { log: { slug: { startsWith: "e2e-" } } },
   });
-  await prisma.log.deleteMany({ where: { slug: { startsWith: "e2e-" } } });
+  await prisma.trace.deleteMany({ where: { slug: { startsWith: "e2e-" } } });
   await prisma.series.deleteMany({ where: { name: { startsWith: "E2E " } } });
   await prisma.$disconnect();
 }

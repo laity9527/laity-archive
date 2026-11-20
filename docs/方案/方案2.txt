@@ -1,0 +1,545 @@
+# laity｜判断轨迹证据站 · 最终完整版落地方案
+> 核心定位收敛：**不是外包官网、不是技术博客、不是作品集展示站，是一套对外可核验的「决策轨迹交付系统」**。
+> 品牌锚点：laity；核心叙事：把软件/数字产品的每一次取舍、约束、试错、复盘，变成可追溯、可核验的交付证据；一人独立工作室，单人全栈维护，优先追求低运维、低心智负担、强自洽闭环。
+> 架构定案（不再提供多路线二选一）：**Next.js App Router 单体单仓库全栈**，前台RSC预渲染+CDN缓存、同源`/admin`后台、同源API；PostgreSQL+Prisma；对象存储托管媒体；证据链采用「站内版本快照SHA256 + Git提交双轨存证」；摒弃独立Nest、独立11ty管线、独立SPA后台，规避单人维护多工程带来的同步、部署、版本管理负担。
+> 对标竞品参考：
+> - 技术向独立开发者主页：Barelyhuman、TylerBerry、Swyx；特点：克制排版、重视工程笔记、极少营销话术；
+> - 证据/审计向站点：公开审计报告站点、开源项目CHANGELOG存证页；
+> - 独立顾问站：区别于普通设计师/开发者作品集，弱化作品美图，强化「思考过程、约束、风险、复盘」；
+> 差异化结论：绝大多数独立开发者站只展示**结果**；laity 同时交付**结果 + 形成结果的完整判断轨迹+可核验存证**，这是全站唯一护城河。
+
+## 目录
+1. 产品定位、价值主张、用户与受众
+2. 信息架构｜前台路由与页面定义
+3. 后台流水线架构、模块优先级、权限模型
+4. 数据模型（Prisma完整版，带索引、约束、版本化证据链）
+5. 核心业务流程（发布存证、线索流转、重建缓存、备份恢复）
+6. API 契约规范（OpenAPI基线）
+7. UI/视觉设计规范、主题体系、交互规范
+8. 技术实现细则、渲染策略、安全策略
+9. 合规、隐私、运维、监控
+10. 里程碑排期 + 阶段验收标准
+11. 风险矩阵、备选降级方案、长期演进路线
+12. 上线检查清单
+
+---
+
+## 1. 产品定位、价值主张、用户与受众
+### 一句话价值主张
+laity 为独立品牌、小创业团队做数字产品交付；交付物除了系统/站点本身，附带一套完整、可自助核验的**判断轨迹档案**：记录约束、备选方案、取舍理由、上线偏差复盘。
+
+### 受众分层
+1. **核心客户**：单人创业者、微型团队、独立品牌负责人；痛点：外包只给成品，说不清为什么这么做，后续改一动牵全身，没有决策上下文；
+2. **同行访客**：独立开发者、架构师；来观摩这套「证据化交付」范式；
+3. **搜索引擎/审计访问**：抓取结构化内容、存证元信息，建立可信内容索引；
+4. **自己（第一用户）**：站点本身自举，laity自身项目、本站迭代日志，全部用这套系统录入、发布、存证，本身就是交付样例。
+
+### 叙事边界（严格禁止的话术）
+- 不使用：赋能、极致、一站式、顶级、专业解决方案这类空泛营销词；
+- 不承诺：法律存证、公证、不可篡改；对外表述口径：**自助核验轨迹，Git提交作为第三方时间锚点，仅用于交付过程留痕，不具备司法存证效力**；
+- 不虚构客户评价、虚构合作品牌；评价模块后台保留，前台默认关闭，只有真实反馈再开启。
+
+### 四条工程门禁（前台公开展示，同时作为团队开发铁律）
+1. 技术栈锁定不漂移：新增框架/ORM/核心组件必须写判断轨迹，记录取舍理由；
+2. 门禁全0才发版：构建错误、高危漏洞、必填存证字段缺失、表单校验失败，禁止发布；
+3. 范围外问题记账不顺手改：需求之外的临时改动，先记入待办轨迹，评估后纳入迭代，不直接临时打补丁；
+4. 凭据隔离：密钥、签名、通知凭据不入Git仓库、不存入业务数据库，环境变量隔离托管。
+
+---
+
+## 2. 信息架构｜前台路由与页面定义
+路由规范：全部slug小写、短横线分隔；静态页面优先预渲染，动态内容走RSC；页面支持CDN边缘缓存，后台发布触发缓存重建。
+
+| 路由 | 页面名称 | 核心内容 | 差异化要点 |
+|---|---|---|---|
+| `/` | 首页 | Hero、工作门禁、关于、三项服务、交付流程、项目案例、精选判断摘录、FAQ、联系表单、页脚 | 精选摘录自动从`featured=true`的判断轨迹抓取，无需二次录入 |
+| `/projects` | 项目档案列表 | 卡片列表，筛选：自研项目 / 客户项目、年份、标签 | 区分自用项目与客户交付项目；无授权客户项目隐藏客户名称 |
+| `/projects/[slug]` | 项目详情 | 背景、约束、实施方案、交付结果、关联判断轨迹、封面素材、标签、发布元信息 | 反向关联多条判断轨迹，一个项目绑定多条决策记录 |
+| `/traces` | 判断轨迹列表（原DecisionLog） | 时间倒序列表；筛选：所属项目、主题标签、年月归档 | 全站核心资产，相当于带存证的工程复盘 |
+| `/traces/[slug]` | 判断轨迹详情 + 核验面板 | BEFORE（约束、备选、风险）、AFTER（结果、偏差复盘）、版本切换器、哈希值、Git Commit SHA、核验按钮 | 双轨存证展示；可切换历史版本，旧版本永久可访问 |
+| `/about` | 关于 | 个人简介、固定技术栈清单、四条门禁约定、交付模式 | 公开约束，强化可信感知 |
+| `/contact` | 独立联系页 | 和首页表单同源同逻辑，适合外部链接直接跳转咨询 | |
+| `/privacy` | 隐私说明页 | 数据收集范围、表单数据留存周期、统计工具说明、Cookie策略 | 国内备案强制配套 |
+| `/licenses` | 开源许可页 | 项目依赖清单、对应开源协议、版权声明 | 自举项目合规配套 |
+| `/sitemap.xml` | 站点地图 | 动态生成，只包含已发布页面 | SEO |
+| `/robots.txt` | 爬虫规则 | 禁止后台、草稿页面被索引 | SEO |
+| `/404` | 404 | 友好导航跳转，回到首页/轨迹列表 | |
+
+> 区块管理：首页所有固定文案区块（hero、principle、about、service等）由`PageBlock`表托管，后台二期可视化编辑，不需要修改代码。
+> 判断摘录：**不单独建表、不单独录入**，前台查询`featured: true`的已发布判断轨迹，截取摘要渲染，自动带上原文链接，降低维护成本。
+
+### 首页区块清单（固定顺序）
+1. Hero：标题、副标题、状态卡片（档期状态、交付附带物、技术栈标签）、数字滚动动画
+2. 工作门禁：四条约定，hover提亮
+3. 关于：工作室简介，署名
+4. 服务卡片：产品构建、工程诊断、持续维护；报价区间、交付周期、交付物清单
+5. 交付流程：四步流程，每一步写明交付物+双方确认节点
+6. 项目案例：筛选卡片列表
+7. 精选判断摘录：自动精选轨迹摘要卡片，标注来源
+8. FAQ：手风琴面板，核心问题：为什么每一笔交付附带判断轨迹
+9. 联系表单：姓名、邮箱、需求类型、**希望留存哪些交付证据**、留言；蜜罐防垃圾
+10. 页脚：导航、隐私/许可链接、版权、回到顶部、滚动进度条
+
+---
+
+## 3. 后台流水线架构、模块优先级、权限模型
+后台统一前缀 `/admin`；中间件全局鉴权，未登录自动跳转GitHub OAuth；全局组件统一：Toast提示、二次确认弹窗、全局搜索、通知中心、移动端侧边抽屉。
+> 权限模型：**单管理员模型，无RBAC、无多账号**，仅白名单内指定GitHub账号允许登录后台，完全匹配一人工作室现状，简化鉴权复杂度。
+
+### 一期MVP（上线即可用，优先级最高，2周交付）
+目标：数据持久化、存证链路跑通、线索闭环、素材管理、基础SEO，不需要主题/区块编辑器。
+1. 仪表盘 Dashboard
+    - 统计指标：待回复线索数、已发布项目数、已发布轨迹数；近期访问指标（对接Plausible）
+    - 快捷操作：新建轨迹、新建项目、上传素材
+    - 最近线索预览、最新判断轨迹预览、内部待办清单
+2. 判断轨迹 Traces（核心模块）
+    - 列表：草稿/已发布筛选、标签、关联项目筛选
+    - 编辑表单：所属项目、主题标签、BEFORE、AFTER、是否精选featured
+    - 发布动作：自动生成版本快照、计算SHA256、可选同步Git打tag提交、写入`LogRevision`、触发前台缓存重建
+    - 版本面板：查看历史版本、切换旧版预览
+3. 项目档案 Projects
+    - 列表：状态筛选、分类（自研/客户）、排序
+    - 编辑：标题、slug、年份、分类、描述、方案、结果、标签、封面素材、关联轨迹
+4. 服务管理 Services
+    - 维护三项固定服务，名称、描述、价格、币种、交付周期、排序
+5. FAQ管理
+    - 问题、答案、排序、发布状态
+6. 线索管理 Leads
+    - 列表：新线索/已回复/已归档；未读标记；只存储IP哈希，不存明文IP
+    - 状态流转、回复备注、标记垃圾
+7. 媒体库 Media
+    - 签名直传对象存储、预览、复制CDN链接、删除；图片多尺寸变体、alt文本管理
+8. 站点基础设置 + SEO
+    - 站点名称、标语、联系邮箱、社交链接；页面meta、OG图配置
+9. 数据导出/导入契约
+    - 全库JSON导出（作为接口契约+备份）；导入支持dry-run预校验、事务写入、版本schema校验
+
+### 二期迭代（MVP稳定后，1~2周）
+1. PageBlock首页区块可视化编辑，实时预览
+2. 导航菜单管理：拖拽排序、开关显隐
+3. 外观主题面板：CSS令牌配置、明暗主题预览
+4. 审计日志 AuditLog：记录登录、发布、删除、导入导出、媒体删除等敏感操作
+5. 表单验证码（hCaptcha），替代一期蜜罐方案（流量上涨后启用）
+
+### 三期（长期按需开启，前台有内容后）
+1. 客户评价 Testimonial 管理开关
+2. 合作品牌 Brand 管理开关
+3. 2FA二次验证
+4. RSS订阅输出（判断轨迹RSS）
+
+---
+
+## 4. 数据模型（Prisma完整版，带索引、约束、版本化证据链）
+> 设计要点：轨迹版本独立表，**永不覆盖历史正文**；slug唯一索引；查询条件建立复合索引；软删除核心业务记录；UTC时间存储；
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  DRAFT
+  PUBLISHED
+}
+enum ProjectKind {
+  SELF
+  CLIENT
+}
+enum LeadStatus {
+  NEW
+  REPLIED
+  ARCHIVED
+  SPAM
+}
+
+model User {
+  id        String   @id @default(cuid())
+  githubId  String   @unique
+  email     String
+  name      String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  kind        ProjectKind
+  year        Int
+  description String
+  solution    String
+  result      String
+  tags        String[]
+  featured    Boolean       @default(false)
+  sortOrder   Int           @default(0)
+  status      Status        @default(DRAFT)
+  publishedAt DateTime?
+  coverId     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  cover Media? @relation(fields: [coverId], references: [id])
+  traces Trace[]
+
+  @@index([status, publishedAt])
+}
+
+model Trace {
+  id              String         @id @default(cuid())
+  slug            String         @unique
+  title           String
+  projectId       String?
+  topicTags       String[]
+  beforeMd        String
+  afterMd         String
+  featured        Boolean        @default(false)
+  status          Status         @default(DRAFT)
+  publishedAt     DateTime?
+  currentRevId    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  project   Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  revisions TraceRevision[]
+  currentRev TraceRevision? @relation("CurrentRevision", fields: [currentRevId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
+  @@index([projectId])
+}
+
+model TraceRevision {
+  id        String   @id @default(cuid())
+  traceId   String
+  version   Int
+  bodyMd    String   // BEFORE + AFTER合并规范化正文
+  bodyHash  String   // SHA256
+  gitSha    String?
+  createdAt DateTime @default(now())
+
+  trace Trace @relation(fields: [traceId], references: [id], onDelete: Cascade)
+  @@unique([traceId, version])
+}
+
+model Service {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  desc       String
+  price      String
+  currency   String   @default("CNY")
+  deliveryDays String
+  sortOrder  Int      @default(0)
+  status     Status   @default(DRAFT)
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  status    Status   @default(DRAFT)
+}
+
+model Lead {
+  id           String     @id @default(cuid())
+  name         String
+  email        String
+  reqType      String
+  evidenceReq  String
+  message      String
+  ipHash       String?
+  ua           String?
+  status       LeadStatus @default(NEW)
+  repliedAt    DateTime?
+  spamFlag     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  @@index([status, createdAt])
+}
+
+model Media {
+  id         String   @id @default(cuid())
+  fileName   String
+  ossKey     String
+  url        String
+  mimeType   String
+  size       Int
+  width      Int?
+  height     Int?
+  alt        String?
+  variants   Json?    // 多尺寸变体地址
+  createdAt  DateTime @default(now())
+}
+
+model PageBlock {
+  id        String   @id @default(cuid())
+  blockKey  String   @unique
+  title     String?
+  content   String
+  updatedAt DateTime @updatedAt
+}
+
+model NavItem {
+  id        String   @id @default(cuid())
+  label     String
+  href      String
+  sortOrder Int      @default(0)
+  visible   Boolean  @default(true)
+}
+
+model SeoMeta {
+  id          String   @id @default(cuid())
+  pagePath    String   @unique
+  title       String
+  description String
+  ogImageId   String?
+  ogImage     Media?   @relation(fields: [ogImageId], references: [id])
+}
+
+model SiteSetting {
+  id            String   @id @default(cuid())
+  siteName      String
+  tagline       String
+  contactMail   String
+  githubLink    String?
+  plausibleId   String?
+  footerText    String
+  schemaVersion String   // 用于导入JSON时校验版本兼容
+  updatedAt     DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  target    String
+  detail    String?
+  createdAt DateTime @default(now())
+}
+
+// 预留，二期前台开关控制是否渲染
+model Testimonial {
+  id        String   @id @default(cuid())
+  quote     String
+  author    String
+  role      String
+  status    Status   @default(DRAFT)
+}
+model Brand {
+  id     String @id @default(cuid())
+  name   String
+  logoId String?
+  status Status @default(DRAFT)
+  logo   Media? @relation(fields: [logoId], references: [id])
+}
+```
+
+---
+
+## 5. 核心业务流程（发布存证、线索流转、缓存重建、备份恢复）
+### 流程1：判断轨迹发布（证据链核心流程，含失败回滚）
+1. 管理员编辑轨迹，保存草稿；草稿不生成版本、不计算哈希、前台不可见；
+2. 点击【发布】；服务端执行：
+   - 校验BEFORE、AFTER非空；
+   - 规范化合并正文（统一换行、去除不可见空白字符，保证哈希复现一致性）；
+   - 计算SHA256，新建一条`TraceRevision`版本记录，版本号自增；
+   - 可选分支：调用Git脚本，提交本次版本，打tag，回填gitSha；
+   - 更新Trace的`currentRevId`、status=PUBLISHED、publishedAt；
+   - 触发Next.js revalidate缓存重建，前台页面刷新；
+3. 任意一步异常：事务回滚，保留草稿状态，后台展示错误日志；
+4. 对外核验：访问`/traces/[slug]?v=版本号`，页面展示原文、规范化规则、哈希值，用户可复制原文自行计算比对。
+
+> 重要口径：Git仅作为时间锚辅助，哈希是正文指纹；不对外宣称不可篡改。
+
+### 流程2：前台线索表单提交流程
+1. 用户填写表单，客户端基础校验；蜜罐字段、提交间隔校验防爬虫；
+2. POST到公开API，限流（单IP 5次/分钟）；
+3. 服务端二次校验；原文入库，**IP只存SHA256哈希，不存储明文IP**；
+4. 异步调用邮件通知服务发送提醒；**发信失败不阻断主流程，访客依旧收到成功提示**；失败日志写入audit；
+5. 后台管理员查看，标记已回复/归档/垃圾。
+
+### 流程3：备份与导入（事务+Dry-run）
+1. 导出：导出JSON契约包（不含媒体二进制，仅存媒体引用key与url）；同时配套pg_dump数据库备份；
+2. 导入：第一步dry-run，校验schemaVersion、外键、slug唯一性；不写入数据；
+3. 确认校验通过后，开启数据库事务批量写入；失败则整体回滚，不会半残数据。
+
+---
+
+## 6. API 契约规范（OpenAPI基线）
+> 全部接口同源 `/api`；后台管理接口鉴权（HttpOnly Cookie+CSRF）；线索提交接口公开限流；返回结构统一：`{ok: boolean, data?, error?}`
+
+### 认证
+- `GET /api/auth/me` 获取当前登录用户
+- `GET /api/auth/signin` GitHub OAuth 跳转
+- `GET /api/auth/signout` 登出
+
+### 内容资源（CRUD统一范式）
+- `GET /api/traces` 轨迹列表（分页、筛选）
+- `POST /api/traces` 新建草稿
+- `PATCH /api/traces/:id` 更新草稿
+- `POST /api/traces/:id/publish` 发布，生成版本、存证、重建缓存
+- `GET /api/traces/:id/revisions` 获取版本列表
+- `GET /api/projects` / `POST` / `PATCH` / `DELETE`
+- `GET /api/services` / `POST` / `PATCH` / `DELETE`
+- `GET /api/faqs` / `POST` / `PATCH` / `DELETE`
+
+### 线索
+- `POST /api/leads` 【公开】访客提交表单
+- `GET /api/admin/leads` 管理员线索列表
+- `PATCH /api/admin/leads/:id` 修改状态、备注
+
+### 媒体
+- `POST /api/media/sign` 获取OSS直传签名（前端直传，密钥不暴露）
+- `DELETE /api/media/:id` 删除素材
+
+### 设置与SEO
+- `GET /api/settings` / `PATCH /api/settings`
+- `GET /api/seo` / `PATCH /api/seo`
+- `GET /api/nav` / `PATCH /api/nav`
+- `GET /api/blocks` / `PATCH /api/blocks`
+
+### 系统运维
+- `GET /api/export` 导出全量JSON契约
+- `POST /api/import` 导入备份（dry-run参数控制预校验/正式写入）
+- `POST /api/revalidate` 主动触发站点缓存重建
+- `GET /api/health` 探活接口，监控用
+
+---
+
+## 7. UI/视觉设计规范、主题体系、交互规范
+延续laity原有暖白+砖红克制体系，前后台共用一套CSS自定义属性令牌，明暗双主题一等公民。
+```css
+:root {
+  --bg: #f8f7f3;
+  --bg-alt: #efece5;
+  --ink: #161410;
+  --accent: #b84a2e;
+  --line: #e0dbd0;
+  --card: #fffef9;
+  --radius-card: 14px;
+  --radius-control: 9px;
+}
+/* dark 主题单独覆盖一套令牌 */
+```
+字体固定：
+- Inter：正文、UI控件
+- Noto Serif SC：标题点缀
+- JetBrains Mono：哈希、Git SHA、代码、数字
+
+### 交互规范
+1. 动画统一遵循 `prefers-reduced-motion`，用户开启减少动效时，全部入场动画、数字滚动关闭；
+2. 表单双重校验：前端即时提示，服务端强校验；
+3. 危险操作（删除、导入覆盖）二次确认弹窗；
+4. 全局Toast：成功/警告/错误三色，自动消失；
+5. 键盘全链路可达，焦点指示器清晰，满足WCAG基础可访问性；
+6. 图片懒加载、渐进加载，多尺寸CDN变体，优先加载适配尺寸。
+
+> 后台复用现有静态HTML/CSS原型，仅把内存JS读写替换为fetch对接API，不重构组件体系，节省大量工作量。
+
+---
+
+## 8. 技术实现细则、渲染策略、安全策略
+### 渲染策略（Next.js App Router）
+- 前台页面：RSC服务端渲染 + `revalidateTag` 按需增量重验证；CDN缓存静态页面；发布轨迹/项目时触发标签重建，不需要全站打包；
+- 交互组件（筛选、手风琴、主题切换、数字动画）标记`'use client'`；
+- 后台页面：混合RSC + Client Component；数据提交优先使用Server Action，也兼容fetch调用API；
+
+### 存储方案
+- 结构化数据：PostgreSQL，Docker容器托管；Prisma migrate管理版本；
+- 媒体：阿里云OSS / Cloudflare R2；前端签名直传，服务端校验文件类型、大小；禁止SVG直接上传外链（XSS风险）；图片自动生成多尺寸变体；
+- 静态资源：Next.js静态资源 + CDN；
+
+### 安全策略
+1. 鉴权：NextAuth GitHub OAuth；HttpOnly Secure Cookie；CSRF校验；白名单账号；
+2. 上传：MIME白名单、大小上限；服务端二次校验，重绘图片消除EXIF恶意脚本；
+3. API：速率限制、登录接口限流、公开表单接口限流；
+4. 输入：Markdown内容使用安全解析器，禁止原始HTML注入；
+5. 凭据：全部密钥环境变量注入，绝不写代码/数据库；
+6. 审计：敏感操作写入AuditLog，永久留存。
+
+### 邮件通知
+放弃25端口SMTP（国内服务器封禁普遍），采用API式邮件服务商（SendCloud、阿里云邮件推送）异步调用。
+
+### 统计
+Plausible自托管/官方SaaS，无Cookie、不追踪个人标识，契合站点「可核验、低追踪」理念；仪表盘直接读取Plausible API指标。
+
+---
+
+## 9. 合规、隐私、运维、监控
+### 合规清单（国内上线强制）
+1. ICP备案 + 公安备案；服务器选择国内轻量云；
+2. `/privacy`隐私说明：写明表单收集字段、用途、数据保留周期、统计工具、不追踪个人身份；
+3. `/licenses`开源许可页面，列出全部依赖包协议；
+4. 版权声明，禁止未经授权复制判断轨迹存证内容；
+
+### 运维方案（Docker单容器编排：Next应用 + PG + Nginx反向代理）
+- 健康检查：`/api/health`，外部监控定时探测；
+- 日志轮转：容器日志限制大小，避免磁盘打满；
+- 备份策略：每周自动pg_dump + JSON导出，异地归档；
+- 告警：健康检查失败、表单大量垃圾提交、发布失败触发邮件告警；
+
+---
+
+## 10. 里程碑排期 + 阶段验收标准
+> 单人开发，保守周期，不压缩自测时间
+| 阶段 | 周期 | 交付物 | 验收标准 |
+|---|---|---|---|
+| Phase0 冻结基线 | 3~5天 | Prisma Schema定稿、OpenAPI契约、设计令牌、存量历史轨迹整理入库脚本 | 数据模型、接口、视觉令牌全部评审冻结；存量14条历史轨迹可导入 |
+| Phase1 MVP开发 | 2周 | OAuth登录、后台核心CRUD、轨迹版本+哈希存证、媒体直传、线索表单、JSON导入导出 | 后台刷新数据不丢失；发布轨迹自动生成版本哈希；表单提交正常收线索；备份导入可恢复 |
+| Phase2 前台对接+缓存闭环 | 2周 | 全部前台RSC页面、轨迹核验面板、项目详情、精选摘录、SEO、sitemap | 修改内容发布后前台自动更新缓存；存证核验页面可以复算比对；LCP<1.5s |
+| Phase3 二期功能与收口 | 1~2周 | 区块编辑器、导航管理、审计日志、主题面板、隐私/许可页面、无障碍校验 | 后台可以可视化修改首页文案；审计日志完整记录操作；可访问性达标 |
+| Phase4 上线与长期迭代 | 持续 | 正式域名上线；按月新增判断轨迹；按需开启评价/品牌模块 | 稳定运行，每月至少产出一条判断轨迹 |
+
+---
+
+## 11. 风险矩阵、备选降级方案、长期演进路线
+### 风险矩阵
+| 风险 | 影响 | 应对方案 |
+|---|---|---|
+| 判断轨迹断更，差异化卖点衰减 | 高 | 把写轨迹纳入交付流程：每完成一单强制产出一条/多条轨迹，作为交付物 |
+| OSS迁移、媒体链接失效 | 中 | 媒体库统一记录ossKey，写批量替换脚本；备份JSON记录key而非硬绑定CDN域名 |
+| PostgreSQL故障、数据丢失 | 高 | 定时异地备份，保留pg_dump+JSON双备份 |
+| 单人运维精力不足 | 中 | 功能收敛，拒绝花哨需求；新增需求先写判断轨迹评估成本 |
+| 爬虫刷表单 | 中 | 一期蜜罐+频率限制；二期接入hCaptcha |
+
+### 降级备选方案（生产故障时切换）
+1. 数据库降级：仅本地演示可用SQLite，生产不使用；
+2. 存证降级：Git提交链路故障时，保留站内SHA256版本记录，仅关闭Git同步；
+3. 邮件服务降级：通知失败只落审计日志，不阻断主业务；
+
+### 长期演进路线（1年以上）
+1. 轨迹评论（受控，人工审核）；
+2. 客户独立只读访客账号：交付后给客户账号，仅查看本项目全套判断轨迹；
+3. 轨迹导出PDF交付包，作为正式交付文档；
+4. 多语言扩展（次要优先级）。
+
+---
+
+## 12. 上线检查清单（上线前逐项勾选）
+- [ ] 域名确认（laity.work / laity.cn 二选一锁定）
+- [ ] ICP、公安备案完成
+- [ ] 备案服务器就绪
+- [ ] GitHub白名单登录账号配置完成
+- [ ] 真实联系邮箱替换占位邮箱
+- [ ] 服务报价、档期全部更新为真实值，无虚标数字
+- [ ] 客户项目授权确认，未授权项目隐藏客户名称
+- [ ] 存量历史14条轨迹导入、版本哈希校验通过
+- [ ] 隐私页、开源许可文案定稿
+- [ ] 图片资源ALT补全、图片变体CDN链路正常
+- [ ] Plausible统计接入、测试访问可采集
+- [ ] 备份脚本、健康探测、告警链路跑通
+- [ ] 移动端、暗色主题全页面测试
+- [ ] 核验面板手动测试：复制正文，本地工具可以算出一致SHA256
+- [ ] 404、sitemap、robots、JSON-LD结构化数据校验
+
+---
+
+如果你下一步，我可以按这份终版方案，优先输出：
+1. 可直接运行的 Prisma Schema + 初始迁移脚本；
+2. 或者 OpenAPI 完整YAML接口文档；
+3. 或者 Next.js 工程目录骨架。

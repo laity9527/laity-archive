@@ -39,7 +39,7 @@
  *               generateMetadata 与页面组件都会调它，未包时一个 URL 查两遍库；cache 只在单次请求内生效
  * - 2026-11-13: 性能预算实测后的修正：handle 不再先 resolveUserId 查一次 User，直接在 where 里用关系过滤
  *               （user: { handle }）——实测详情页页面侧 4 条 SQL，其中 1 条是这条多余的租户解析；
- *               改用关系过滤后为 3 条（Log / Project / 上下文字表），对齐 AGENTS 的 ≤3 预算
+ *               改用关系过滤后为 3 条（Trace / Project / 上下文字表），对齐 AGENTS 的 ≤3 预算
  * - 2026-11-16: B4：新增 getTagIndex（/tags 索引页的唯一取数口）——只取 tags 一列，
  *               按显示名聚合计数，排序固定「频次降序 → 名称升序」；不做 tagsKey 双轨迁移
  * - 2026-11-16: B4：新增 getArchive（/archive 归档页）——只取列表列，按 beforeDate 分年/月，
@@ -132,12 +132,12 @@ async function resolveLogFilter(filter: SafeLogFilter): Promise<ResolvedLogFilte
 
 // 公开可见口径的唯一构造点（D10）：isPublished 恒定，其余条件按传入收窄。
 // 新增查询必须调这个函数，不得另写 where——漏一处就可能让草稿进前台。
-function buildLogWhere(params: ResolvedLogFilter): Prisma.LogWhereInput {
+function buildLogWhere(params: ResolvedLogFilter): Prisma.TraceWhereInput {
   const topic = params.topic && isTopicKey(params.topic) ? params.topic : null;
 
   // StringNullableListFilter 一次只接受一个参数（has / hasSome 二选一），
   // 同时按单标签与主题筛选时必须拆成两个条件再用 AND 合并
-  const tagConditions: Prisma.LogWhereInput[] = [];
+  const tagConditions: Prisma.TraceWhereInput[] = [];
 
   if (params.tag) {
     tagConditions.push({ tags: { has: params.tag } });
@@ -164,7 +164,7 @@ export async function getSafeLogs(filter: SafeLogFilter = {}) {
     return [];
   }
 
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: buildLogWhere(resolved),
     orderBy: { beforeDate: "desc" },
     // 大厅行要拼 /u/[handle]/logs/[slug] 的跳转链接，owner 的 handle 属于公开标识，随 select 白名单带出
@@ -209,7 +209,7 @@ const logListSelect = {
   user: { select: { handle: true } },
 } as const;
 
-export type LogListItem = Prisma.LogGetPayload<{ select: typeof logListSelect }> & {
+export type LogListItem = Prisma.TraceGetPayload<{ select: typeof logListSelect }> & {
   user: { handle: string };
 };
 
@@ -247,7 +247,7 @@ export async function getLogList(
   }
 
   const take = Math.min(Math.max(params.take ?? LOG_PAGE_SIZE, 1), LOG_PAGE_SIZE);
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: buildLogWhere({ ...resolved, requireOwner: true }),
     // beforeDate 可重复，故加 id 做二级游标，避免同刻日志跳条或重复；published 口径同理
     orderBy: logOrderBy(params.sort),
@@ -298,13 +298,13 @@ export async function searchLogsLimited(
   // LIKE 的 % _ \ 必须转义；pattern 作为参数传给原生 SQL，不拼字符串
   const pattern = `%${escapeLikePattern(q)}%`;
   const tagHits = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
-    SELECT "id" FROM "Log"
+    SELECT "id" FROM "Trace"
     WHERE "isPublished" = true
       AND array_to_string("tags", ' ') ILIKE ${pattern} ESCAPE '\\'
   `);
   const tagIds = tagHits.map((row) => row.id);
 
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: {
       AND: [
         buildLogWhere({ ...resolved, requireOwner: true }),
@@ -344,7 +344,7 @@ export type LogFacets = {
  * B1 起在同一次查询的返回行上派生计数：项目计数与主题计数不额外查库。
  */
 export async function getLogFacets(): Promise<LogFacets> {
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: buildLogWhere({ requireOwner: true }),
     select: { tags: true, project: { select: { slug: true, name: true } } },
   });
@@ -394,7 +394,7 @@ export type {
  * 与大厅的时间序一致；年份/月份按 UTC 切片，与全库存时口径一致，不在展示层做本地时区换算。
  */
 export async function getArchive(): Promise<ArchiveYear[]> {
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: buildLogWhere({ requireOwner: true }),
     orderBy: [{ beforeDate: "desc" }, { id: "desc" }],
     select: {
@@ -444,7 +444,7 @@ export async function getTagFeedItems(
   tag: string,
   take = 20,
 ): Promise<TagFeedItem[]> {
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: buildLogWhere({ tag, requireOwner: true }),
     orderBy: [
       { publishedAt: { sort: "desc", nulls: "last" } },
@@ -487,7 +487,7 @@ export type TagIndexEntry = { tag: string; count: number };/**
  * 口径与大厅一致（isPublished + 有主行），不做 tagsKey 双轨（标签归一化留给 B4 迁移批）。
  */
 export async function getTagIndex(): Promise<TagIndexEntry[]> {
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: buildLogWhere({ requireOwner: true }),
     select: { tags: true },
   });
@@ -548,7 +548,7 @@ export async function getLogContext(current: {
     };
   }
 
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: { isPublished: true, userId: current.userId },
     select: {
       id: true,
@@ -592,7 +592,7 @@ export type TopicCount = {
  * 一条日志在同一主题里只计一次，口径见 topics.ts 的 countTopics。
  */
 export async function getTopicCounts(): Promise<TopicCount[]> {
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: { isPublished: true, user: { isNot: null } },
     select: { tags: true },
   });
@@ -609,7 +609,7 @@ export async function getTopicCounts(): Promise<TopicCount[]> {
 // 首页「最新日志」口径：beforeDate 是"哪天做的决策"，publishedAt 才是"什么时候写出来的"，
 // 访客在这里要读最新动态，所以按发布时间排——BEFORE 填几天前都不影响它顶到最前（D13 修订）
 export async function getLatestLogs(take: number, userId?: string) {
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: {
       ...(userId ? { userId } : {}),
       isPublished: true,
@@ -636,8 +636,8 @@ export async function getLatestLogs(take: number, userId?: string) {
 export const getSafeLogBySlug = cache(async (slug: string, handle: string) => {
   // handle 直接用关系过滤写进 where：不再先查一次 User 拿 userId（实测那是一次多余的往返），
   // 未知 handle 与 slug 不存在同样返回 null，口径不变
-  return db.log.findFirst({
-    // user 关系过滤走 User.handle 唯一索引，Log 侧仍命中 @@unique([userId, slug]) 的前缀
+  return db.trace.findFirst({
+    // user 关系过滤走 User.handle 唯一索引，Trace 侧仍命中 @@unique([userId, slug]) 的前缀
     where: { slug, isPublished: true, user: { handle } },
     include: { project: projectSelect },
   });
@@ -647,7 +647,7 @@ export const getSafeLogBySlug = cache(async (slug: string, handle: string) => {
 // handle 直接用关系过滤（与 getSafeLogBySlug 同口径），不再先用一次 User 查询换 userId
 // ——Proxy 在每次详情请求上都跑，省下的是每请求一次来回
 export async function isPublishedLogSlug(slug: string, handle: string) {
-  const hit = await db.log.findFirst({
+  const hit = await db.trace.findFirst({
     where: { slug, isPublished: true, user: { handle } },
     select: { id: true },
   });
@@ -655,10 +655,86 @@ export async function isPublishedLogSlug(slug: string, handle: string) {
   return hit !== null;
 }
 
+// V5 Phase 1 版本核验查询（前台口径，isPublished 恒定 true；草稿与未发布内容永不返回）：
+// 详情页 ?v=N 版本切换器、/verify 按哈希反查都走这三条
+
+// 版本切换器用的版本清单：只取索引列，不取正文
+export async function listPublishedVersions(slug: string, handle: string) {
+  const log = await db.trace.findFirst({
+    where: { slug, isPublished: true, user: { handle } },
+    select: { id: true },
+  });
+
+  if (!log) return null;
+
+  return db.traceRevision.findMany({
+    where: { traceId: log.id },
+    orderBy: [{ version: "desc" }, { id: "desc" }],
+    select: { version: true, contentHash: true, publishedAt: true, gitSha: true },
+  });
+}
+
+// 按版本号取单个已发布版本（?v=N 渲染与核验信息用）
+export async function getPublishedRevisionByVersion(
+  slug: string,
+  handle: string,
+  version: number,
+) {
+  return db.trace.findFirst({
+    where: { slug, isPublished: true, user: { handle }, revisions: { some: { version } } },
+    select: {
+      slug: true,
+      title: true,
+      beforeContent: true,
+      afterContent: true,
+      tags: true,
+      contentHash: true,
+      hashVersion: true,
+      publishedAt: true,
+      revisions: {
+        where: { version },
+        select: {
+          version: true,
+          hashVersion: true,
+          gitSha: true,
+          gitTag: true,
+          verdictAtPublish: true,
+          title: true,
+          beforeContent: true,
+          afterContent: true,
+          tags: true,
+          contentHash: true,
+          publishedAt: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+}
+
+// /verify 按哈希反查：只命中已发布版本；草稿命中但不公开时同样返回 null，不泄露存在性
+export async function getPublishedRevisionByHash(hash: string) {
+  return db.traceRevision.findFirst({
+    where: { contentHash: hash, trace: { isPublished: true } },
+    select: {
+      version: true,
+      hashVersion: true,
+      gitSha: true,
+      gitTag: true,
+      title: true,
+      beforeContent: true,
+      afterContent: true,
+      contentHash: true,
+      publishedAt: true,
+      trace: { select: { slug: true, title: true } },
+    },
+  });
+}
+
 // 标签聚合页 proxy 前置判定（F26）：标签是否有已发布日志。
 // 入参约定为已过 normalizeTag 的合法值（调用方负责归一化）；select id 让查询停留在索引层，与 isPublishedLogSlug 同构
 export async function hasPublishedTag(tag: string): Promise<boolean> {
-  const hit = await db.log.findFirst({
+  const hit = await db.trace.findFirst({
     where: { isPublished: true, tags: { has: tag } },
     select: { id: true },
   });
@@ -673,7 +749,7 @@ export async function hasPublishedTag(tag: string): Promise<boolean> {
 export async function listSeriesNames(userId: string): Promise<string[]> {
   const [entities, legacy] = await Promise.all([
     db.series.findMany({ where: { userId }, select: { name: true } }),
-    db.log.findMany({
+    db.trace.findMany({
       where: { userId, series: { not: null }, seriesId: null },
       select: { series: true },
       distinct: ["series"],
@@ -695,13 +771,13 @@ export type SeriesIndexEntry = { name: string; count: number };
 export async function getSeriesIndex(handle: string): Promise<SeriesIndexEntry[]> {
   const [entities, legacy] = await Promise.all([
     db.series.findMany({
-      where: { user: { handle }, logs: { some: { isPublished: true } } },
+      where: { user: { handle }, traces: { some: { isPublished: true } } },
       select: {
         name: true,
-        logs: { where: { isPublished: true }, select: { id: true } },
+        traces: { where: { isPublished: true }, select: { id: true } },
       },
     }),
-    db.log.groupBy({
+    db.trace.groupBy({
       by: ["series"],
       where: {
         isPublished: true,
@@ -715,7 +791,7 @@ export async function getSeriesIndex(handle: string): Promise<SeriesIndexEntry[]
 
   const counts = new Map<string, number>();
   for (const entity of entities) {
-    counts.set(entity.name, entity.logs.length);
+    counts.set(entity.name, entity.traces.length);
   }
   for (const row of legacy) {
     if (!row.series) continue;
@@ -731,10 +807,10 @@ export async function getSeriesIndex(handle: string): Promise<SeriesIndexEntry[]
 export async function hasAnyPublishedSeries(handle: string) {
   const [entity, legacy] = await Promise.all([
     db.series.findFirst({
-      where: { user: { handle }, logs: { some: { isPublished: true } } },
+      where: { user: { handle }, traces: { some: { isPublished: true } } },
       select: { id: true },
     }),
-    db.log.findFirst({
+    db.trace.findFirst({
       where: { isPublished: true, series: { not: null }, seriesId: null, user: { handle } },
       select: { id: true },
     }),
@@ -748,7 +824,7 @@ export async function hasAnyPublishedSeries(handle: string) {
  * 不建系列表——同名即同系列；空结果由页面/Proxy 判定为不存在。
  */
 export async function getSeriesLogs(series: string, handle: string) {
-  return db.log.findMany({
+  return db.trace.findMany({
     where: {
       isPublished: true,
       user: { handle },
@@ -771,7 +847,7 @@ export async function getSeriesLogs(series: string, handle: string) {
 // Proxy 前置判定：该 handle 下是否存在名为 series 的已发布系列
 // （层一 handle 不存在也回 false；与日志/项目/标签同一口径，不泄露缺的是哪一层）
 export async function hasPublishedSeries(series: string, handle: string) {
-  const hit = await db.log.findFirst({
+  const hit = await db.trace.findFirst({
     where: {
       isPublished: true,
       user: { handle },
@@ -810,7 +886,7 @@ export async function getLogBacklinks(opts: {
   const marker = `[[${opts.slug}]]`;
   const take = Math.min(Math.max(opts.take ?? 10, 1), 20);
 
-  return db.log.findMany({
+  return db.trace.findMany({
     where: {
       userId: opts.userId,
       isPublished: true,
@@ -828,7 +904,7 @@ export async function getLogBacklinks(opts: {
 }
 
 export async function getAdminLogById(id: string, userId: string) {
-  return db.log.findFirst({
+  return db.trace.findFirst({
     where: { id, userId },
     include: {
       project: { select: { name: true } },
@@ -838,11 +914,12 @@ export async function getAdminLogById(id: string, userId: string) {
 }
 
 /**
- * 修订历史页取数：一条日志 + 最近 20 条 Revision。
+ * 修订历史页取数：一条轨迹 + 全部版本行（V5 Phase 1：版本行永不删除，不再限 20 条）。
  * 与 getAdminLogById 同一租户条件；不存在与跨租户同返回 null。
+ * 按版本号倒序，附带 version/hashVersion/git 锚定状态供历史页展示与重试。
  */
 export async function getLogRevisions(id: string, userId: string) {
-  return db.log.findFirst({
+  return db.trace.findFirst({
     where: { id, userId },
     select: {
       id: true,
@@ -855,9 +932,15 @@ export async function getLogRevisions(id: string, userId: string) {
       contentHash: true,
       publishedAt: true,
       revisions: {
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        orderBy: [{ version: "desc" }, { id: "desc" }],
         select: {
           id: true,
+          version: true,
+          hashVersion: true,
+          gitSha: true,
+          gitTag: true,
+          gitSyncedAt: true,
+          verdictAtPublish: true,
           title: true,
           beforeContent: true,
           afterContent: true,
@@ -897,7 +980,7 @@ export async function getAdminLogList(
   const page = Math.max(params.page ?? 1, 1);
   const q = params.q?.trim();
 
-  const where: Prisma.LogWhereInput = {
+  const where: Prisma.TraceWhereInput = {
     userId,
     ...(params.status === "draft"
       ? { isPublished: false }
@@ -910,7 +993,7 @@ export async function getAdminLogList(
   };
 
   const [items, total, all, published, draft] = await Promise.all([
-    db.log.findMany({
+    db.trace.findMany({
       where,
       orderBy:
         params.sort === "title"
@@ -930,10 +1013,10 @@ export async function getAdminLogList(
         user: { select: { handle: true } },
       },
     }),
-    db.log.count({ where }),
-    db.log.count({ where: { userId } }),
-    db.log.count({ where: { userId, isPublished: true } }),
-    db.log.count({ where: { userId, isPublished: false } }),
+    db.trace.count({ where }),
+    db.trace.count({ where: { userId } }),
+    db.trace.count({ where: { userId, isPublished: true } }),
+    db.trace.count({ where: { userId, isPublished: false } }),
   ]);
 
   return {

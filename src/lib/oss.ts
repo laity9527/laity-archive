@@ -17,6 +17,7 @@
  *               ali-oss 的模块里，node --test 覆盖不到，所以这条"生成器比断言更宽松"的矛盾活了很久
  * - 2026-11-09: V2.0 Step 4-B：uploadImage 加 userId 入参（来自会话），对象键落 logs/<userId>/，
  *               租户间图片在存储层分目录；RAM 策略 logs/* 无需变更
+ * - 2026-11-19: V5 Phase 2：抽出 createOssClient 单源，媒体签名直传路由复用同一凭据构造
  */
 import { randomBytes } from "node:crypto";
 import OSS from "ali-oss";
@@ -25,6 +26,16 @@ import { buildObjectKey as objectKeyOf, isObjectKeySafe } from "@/lib/object-key
 
 // SPEC IMG_001：仅 jpg/png/webp/gif，且不超过 5MB
 const MAX_BYTES = 5 * 1024 * 1024;
+
+export function createOssClient() {
+  return new OSS({
+    region: requireEnv("OSS_REGION"),
+    bucket: requireEnv("OSS_BUCKET"),
+    accessKeyId: requireEnv("OSS_ACCESS_KEY_ID"),
+    accessKeySecret: requireEnv("OSS_ACCESS_KEY_SECRET"),
+    secure: true,
+  });
+}
 
 export type UploadImageResult =
   | { ok: true; url: string; bytes: number }
@@ -61,14 +72,7 @@ export async function uploadImage(file: Blob, userId: string): Promise<UploadIma
 
   const region = requireEnv("OSS_REGION");
   const bucket = requireEnv("OSS_BUCKET");
-  const client = new OSS({
-    region,
-    bucket,
-    accessKeyId: requireEnv("OSS_ACCESS_KEY_ID"),
-    accessKeySecret: requireEnv("OSS_ACCESS_KEY_SECRET"),
-    secure: true,
-  });
-
+  const client = createOssClient();
   const key = buildObjectKey(userId, image.ext);
 
   if (!isObjectKeySafe(key)) {

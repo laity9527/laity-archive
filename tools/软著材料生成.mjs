@@ -51,6 +51,30 @@
  * 为什么每页要自己画页眉页码：Chrome 不支持 CSS @page 的 margin box（@top-center 等），
  * 官方文档明确相关属性"尚未被任何 user agent 支持"，所以分页与页眉必须由脚本定页生成，
  * 打印时选 A4、边距"无"、缩放 100%，并关掉浏览器的页眉页脚选项。
+ * - 2026-11-18: V5 Phase 1 第十八次登记与窗口配平：新文件 canonical-hash / git-anchor / git-evidence /
+ *               publish-gate / version-conflict / topic-admin / topic-actions / topics 页 / VerifyPanel /
+ *               /verify 两页与核验接口全部登记；①② 被 schema 与改名增长顶过 1500 切口，按「折排版不折逻辑」
+ *               配平三轮——publish-gate/version-conflict/sensitive-scan/git-anchor 与四个核验界面文件移入 ③，
+ *               首页（聚合排版页，与已在 ③ 的日志大厅/标签聚合页同类）自 ④ 移入 ③；canonical-hash（方案点名）、
+ *               git-anchor（锚定实现本体）与 globals.css（视觉令牌）留原位。放行实测：前窗口止于 1500，
+ *               后窗口余量 365 行（首个必须整份可见 globals.css 起于 21716）
+ * - 2026-11-18: V5 Phase 1 窗口配平续（第十九、二十轮）：deleteLog 的 Restrict 配套修复让 ①+② 再超 4 行，
+ *               content-hash（20 行单函数，v1 口径经 ② 的 canonical-hash 委托调用）移入 ③；前窗口切口落在
+ *               ③ 首个文件长注释续行（↳）上，按处置建议在 ③ 内把 labels.ts 换到首位让切口落完整源码行。
+ *               放行实测：前窗口止于 1500（labels.ts 第 19 排版行），后窗口余量 323 行，材料逐字节幂等
+ * - 2026-11-19: V5 Phase 2 第二十一轮登记与配平：线索/媒体/服务/FAQ 四模块 DAL/Action/后台页/API
+ *               与访客页/lead /services /faq、LeadForm/MediaUpload 登记；publish.ts 的 mediaHashes 增量
+ *               把 canonical-hash 顶过前窗口切口，auth.ts（NextAuth 配置层，与 db.ts 同类）移入 ③；
+ *               五个访客表单/列表壳自 ④ 移入 ③（逻辑在 ③ 整份可见）。放行实测：前窗口止于 1500
+ *               （error-text.ts 第 192 排版行），后窗口余量 359 行，材料逐字节幂等
+ * - 2026-11-19: V5 Phase 3 第二十二次登记：统计底座数据层（stats-core/stats-admin）、只读接口
+ *               /api/stats/overview 与后台统计占位页进 ③；首页 page.tsx 改版四区块（Hero/服务/FAQ/线索表单，
+ *               提交复用 /api/lead 全链路）行数变化未顶破窗口。放行实测：前窗口止于 1500，后窗口余量 332 行，
+ *               材料逐字节幂等（两轮 MD5 一致）
+ * - 2026-11-19: V5 Phase 4 第二十三次登记：统计看板（/admin/stats 四块+SVG 条形）与档案索引大厅
+ *               （/archive 迁入四块视图+按年月回看同页）均为既有登记文件的修改，无新增文件；
+ *               派生指标三字段并入 /api/stats/overview 契约（openapi 不在本材料收录范围）。
+ *               放行实测以后窗口余量为准，材料逐字节幂等
  * - 2026-11-06: 第十五次窗口配平（负责人裁断一批准）：prisma/seed.ts 内联 12 篇日志正文后从 ① 平移进折走段 ③ 末位；
  *               ①+② 保住整份可见，材料总页数 137 → 150（提交页数仍为前 30 + 后 30）。窗口判据实测：移动前生成器拒绝出件并报五个文件越界
  * - 2026-11-09: 第十六次登记（V2.0 Step 1，schema 改造伴随改动）：新增 prisma/backfill-zhanglei.ts 存量回填脚本，
@@ -136,15 +160,26 @@ const BANDS = [
     mark: "②",
     name: "核心逻辑：存证口径 → 数据访问 → 类型嗅探与上传 → 渲染消毒 → 鉴权与前置守卫",
     files: [
-      "src/lib/content-hash.ts",
       "src/lib/publish.ts",
+      // content-hash（2026-11-18 窗口配平自 ② 移入）：v1 口径的 20 行单函数实现，
+      // 经 ② 的 canonical-hash.ts 委托调用（computeContentHashV1 → computeContentHash，单源不复制），
+      // 与 token-crypto/object-key 同属纯辅助层
       // src/lib/projects.ts 于 2026-11-13（第十二轮 D39）自 ② 平移进折走段 ③：
       // 本轮给 cache()/pickFeatured 加的行把 ①+② 顶过前窗口，proxy.ts 被 1500 切口切开；
       // 它是数据访问层（DAL），与已在 ③ 的 logs.ts 同类，调用的页面全在 ④ 可见，逻辑不丢
-      "src/lib/sensitive-scan.ts",
-      "src/lib/oss.ts",
-      "src/auth.ts",
+      // src/lib/oss.ts 于 2026-11-18（V5 Phase 0）自 ② 平移进折走段 ③：
+      // schema 冻结基线涨约 150 行把 proxy.ts（1223–1572）顶过前窗口 1500 切口。
+      // 按"折排版不折逻辑"选让位者：SPEC 点名的上传校验形态（magic bytes / 对象键安全）
+      // 实现在 image-signature.ts 与 object-key.ts（均已在 ③），oss.ts 本体是 ali-oss
+      // 网络适配器一层壳，与已让位的 github-sync/ai-client 同类；调用方 upload-action 在 ③
       "src/proxy.ts",
+      // auth.ts（2026-11-19 Phase 2 窗口配平）自 ② 移入 ③：NextAuth 配置层（provider/callbacks 配置），
+      // 与已让位的 db.ts（客户端单例构造）同类；会话判定的调用方（动作/页面/前置守卫）均在窗口内可见
+
+      // V5 Phase 1（2026-11-18）：双轨哈希口径——V5 方案点名文件，进 ② 不折。
+      // sensitive-scan（正则规则表）与 git-anchor（点名模块 git-evidence 的网络层）随本轮窗口配平移入 ③，
+      // ①+② 回到前窗口容量内
+      "src/lib/canonical-hash.ts",
     ],
   },
   {
@@ -152,14 +187,17 @@ const BANDS = [
     name: "折走段：文案表与时刻格式化、出口层、后台表单/动作页、运维配置——形态重复度高，且它们调用的核心逻辑（存证、上传、鉴权）已整份出现在前窗口里",
     foldable: true,
     files: [
-      "src/lib/error-text.ts",
-      // 枚举中文映射同样是"一张常量表 + 一个查表函数"，与 error-text 同类，放折走段：
-      // 它不进 ② 是为了不动 ①+② 的行数（proxy.ts 被前窗口切开过三次），
-      // 而它的三个调用方（首页、看板、日志大厅）都在 ④，排版上读得通
+      // labels 提到 ③ 首位（2026-11-18 窗口配平）：前窗口切口落在 ③ 首个文件的长注释续行上，
+      // 换短头文件到首位让切口落在完整源码行；折走段内部顺序不影响可见性契约
       "src/lib/labels.ts",
+      "src/lib/error-text.ts",
       // topics 是 8 主题 × 56 标签的常量表 + 纯函数（topicOfTag / topicsOfTags / countTopics），
       // 与 labels 同类；调用方大厅页与首页都在窗口内，登记 ③ 不动 ①+② 零余量防线
       "src/lib/topics.ts",
+      // evidence-constants（2026-11-18 V5 Phase 0）：存证/摘要对外文案的常量单源，
+      // 与 error-text/labels 同类（一张文案表，无算法）；哈希真逻辑在 ② 的 content-hash.ts，
+      // 六个调用方（Seal/privacy/about/logs/tags/编辑页）都在 ③④ 可见载体，登记 ③ 不动 ①+② 防线
+      "src/lib/evidence-constants.ts",
       "src/lib/time.ts",
       // package.json 从 ① 让位进折走段（2026-11-05 第七轮）：next.config.ts 加 CSP 与 poweredByHeader
       // 涨行，proxy.ts（1358–1509）被 1500 切口打断；package.json 是依赖清单与脚本表，无程序逻辑
@@ -176,6 +214,37 @@ const BANDS = [
       // dev-login 是本地开发临时账号密码校验（纯函数：非 production 且 DEV_LOGIN_PASSWORD 存在才启用），
       // 与 token-crypto 同属鉴权辅助层；授权方仍是 auth.ts（②），登记 ③ 不动 ①+② 防线
       "src/lib/dev-login.ts",
+      // V5 Phase 1（2026-11-18）：git-evidence 是取数+解密后委托 git-anchor 的胶水壳（② 整份可见）；
+      // topic-admin 是后台主题 DAL、topic-actions 与 topics 页是后台管理层，与 series 同类
+      "src/lib/git-evidence.ts",
+      "src/lib/topic-admin.ts",
+      "src/app/admin/topic-actions.ts",
+      "src/app/admin/topics/page.tsx",
+      // publish-gate 是发布闸门纯函数（从 ② 配平移入，2026-11-18）：点名载体 publish.ts 在 ② 整份可见，
+      // 本文件是单测钉住的抽取层，与 token-crypto/object-key 同类
+      "src/lib/publish-gate.ts",
+      // version-conflict 是回填 (traceId,version) 冲突判据纯函数（从 ② 配平移入）：点名载体
+      // migrate-to-v5.ts 本就在 ③，判据单源不丢
+      "src/lib/version-conflict.ts",
+      // sensitive-scan（2026-11-18 窗口配平自 ② 移入）：正则规则表 + 纯扫描函数，与 error-text/labels
+      // 同属「常量表 + 纯函数」形态；SPEC 点名的是敏感扫描门的行为（LOG_003），实现载体 publish-gate/
+      // publish（②）整份可见，规则表本身不承载被点名的界面形态
+      // content-hash（2026-11-18 窗口配平自 ② 移入）：D5 v1 口径单函数，调用方 canonical-hash（②）整份可见
+      "src/lib/content-hash.ts",
+      "src/lib/sensitive-scan.ts",
+      // git-anchor（2026-11-18 窗口配平自 ② 移入）：V5 方案点名的模块是 git-evidence.ts（本就在 ③），
+      // 本文件是为单测抽出的网络层（Contents/Refs API），与 git-evidence 同段归位
+      "src/lib/git-anchor.ts",
+      // V5 Phase 1 核验界面（2026-11-18 窗口配平自 ④ 移入）：复算口径的真逻辑在 ② 的 canonical-hash.ts
+      // 整份可见，这四个文件是消费口径的界面与接口壳（面板展示、入口表单、结果页、只读反查），
+      // 与已让位的 privacy/about/login/404 外壳同类；证据展示面板 Seal.tsx 仍在 ④ 整份可见
+      "src/components/VerifyPanel.tsx",
+      "src/app/verify/page.tsx",
+      "src/app/verify/[hash]/page.tsx",
+      "src/app/api/verify/[hash]/route.ts",
+      // 首页（2026-11-18 窗口配平自 ④ 移入）：聚合排版页，与日志大厅/标签聚合页同类，
+      // 数据逻辑在 lib 整份可见，折走的是排版形态
+      "src/app/page.tsx",
       // github-sync-filter 是 Step 5 的纯函数过滤（merge/无意义/去重/同日合并 + slug 净化），
       // 调用方 sync-actions 与 github-sync 都在 ②③ 可见载体；2026-11-10 第十六次窗口配平：
       // 进 ② 把 ①+② 顶过 1500，oss/auth/proxy 越界，由它让位
@@ -183,6 +252,9 @@ const BANDS = [
       // github-sync 是 Step 5 的网络适配器（API 调用 + 并发限流），相对独立于鉴权/存证核心；
       // 2026-11-10 第十六次配平：进 ② 仍顶过 1500，auth/proxy 越界，由它让位
       "src/lib/github-sync.ts",
+      // oss.ts 2026-11-18（V5 Phase 0）自 ② 平移至此：ali-oss 上传适配器壳，
+      // 嗅探与对象键断言已拆在 image-signature/object-key（本段），与 github-sync 同族
+      "src/lib/oss.ts",
       // logs.ts 是数据访问层（DAL），取数逻辑的调用方（页面/动作）都在 ③④ 可见；
       // 2026-11-10 第十六次配平：与 github-sync 一同让位，确保 auth/proxy/publish/projects/content-hash 整份在前窗口
       "src/lib/logs.ts",
@@ -418,6 +490,10 @@ const BANDS = [
       // 一次性的迁移期回填工具，D5 摘要算法与数据模型仍整份在前窗口；assertComplete 先拒了它（未登记清单），
       // 故登记并重跑窗口判据，非窗口容量类拒件，不涉及平移
       "prisma/backfill-zhanglei.ts",
+      // V5 迁移脚本骨架（2026-11-18 Phase 0）：与 seed/backfill 同属 prisma 侧一次性脚本——
+      // --dry-run 只读体检（数量守恒/哈希复核/回填预检），写入路径 Phase 1 才实现；
+      // 哈希复核复用 ② 的 content-hash.ts，登记 ③ 不动 ①+② 防线
+      "prisma/migrate-to-v5.ts",
       // next.config.ts 自 ① 平移进折走段（2026-11-09 第十六次窗口配平，负责人裁断 A）：构建配置不承载业务逻辑，
       // 与 13 轮先例的 tsconfig/eslint 同类；本轮 V2.0 Step 2 的 projects.ts/logs.ts/schema.prisma 共涨约 108 行，
       // 把 proxy.ts（1338-1503）顶过前窗口 1500 切口。平移后 ①+② 回到 1430 行以内，proxy 整份可见
@@ -462,6 +538,45 @@ const BANDS = [
       // 标签索引页（2026-11-16 B4）：标签云排版 + getTagIndex 取数调用，逻辑都在 logs.ts 与 tags/[tag] 页
       "src/app/tags/page.tsx",
       "src/app/tags/[tag]/page.tsx",
+      // auth.ts（2026-11-19 Phase 2 窗口配平自 ② 移入）：NextAuth 配置层，与 db.ts 同类
+      "src/auth.ts",
+      // V5 Phase 2（2026-11-19）：访客表单/列表壳（/lead /services /faq 与 LeadForm/MediaUpload），
+      // 自 ④ 配平移入——数据与校验逻辑（限流/白名单/DAL）在 ③ 整份可见，折走的是表单与列表排版，
+      // 与已让位的登录页（SignInButton 外壳）同类；视觉令牌与详情页仍整份保留在后窗口
+      "src/app/lead/page.tsx",
+      "src/app/services/page.tsx",
+      "src/app/faq/page.tsx",
+      "src/components/LeadForm.tsx",
+      "src/components/MediaUpload.tsx",
+      // V5 Phase 2（2026-11-19）：线索/媒体/服务/FAQ 四模块的 DAL、Action、后台页与公开 API。
+      // 均为业务交互层，与 series/topics 后台层同类；存证核心逻辑（哈希/发布/锚定）已在 ② 整份可见
+      "src/lib/lead-admin.ts",
+      "src/lib/lead-actions.ts",
+      "src/lib/lead-rate-limit.ts",
+      "src/lib/lead-validate.ts",
+      "src/lib/media-admin.ts",
+      "src/lib/media-actions.ts",
+      "src/lib/media-whitelist.ts",
+      "src/lib/service-admin.ts",
+      "src/lib/service-actions.ts",
+      "src/lib/service-validate.ts",
+      "src/lib/faq-admin.ts",
+      "src/lib/faq-actions.ts",
+      "src/lib/faq-validate.ts",
+      "src/app/admin/leads/page.tsx",
+      "src/app/admin/leads/[id]/page.tsx",
+      "src/app/admin/media/page.tsx",
+      "src/app/admin/services/page.tsx",
+      "src/app/admin/faqs/page.tsx",
+      "src/app/api/lead/route.ts",
+      "src/app/api/media/sign/route.ts",
+      "src/app/api/media/complete/route.ts",
+      // V5 Phase 3（2026-11-19）：统计底座数据层与只读接口、后台统计占位页——
+      // 全部只读口径（count/groupBy + 内存计数），无业务写入；聚合形状纯函数在 stats-core
+      "src/lib/stats-core.ts",
+      "src/lib/stats-admin.ts",
+      "src/app/api/stats/overview/route.ts",
+      "src/app/admin/stats/page.tsx",
     ],
   },
   {
@@ -469,7 +584,9 @@ const BANDS = [
     name: "站点外壳（样式令牌 + 根布局 + 导航）与访客可见界面，末段为对外公示页（开源致谢 / 关于；隐私页、404 外壳与页脚自本轮起进折走段）",
     files: [
       "src/app/globals.css",
-      "src/app/page.tsx",
+      // 首页（2026-11-18 V5 Phase 1 窗口配平）自 ④ 移入折走段 ③：首页是聚合排版页，
+      // 与已在 ③ 的日志大厅、标签聚合页同类；它的数据逻辑（精选口径、主题计数、档案看板）
+      // 全在 lib 函数里整份可见，折走的是首页的排版形态；视觉令牌与详情页仍整份保留在后窗口
       // 日志大厅页已于 2026-11-13 平移进折走段 ③（B1–B4 收尾，见 ③ 段注释）：
       // 取数/主题/时间轴均在窗口内，折走的是列表排版；首页与详情页仍整份保留在后窗口。
       // V2.0 Step 3 阶段一：日志详情路由迁至 /u/[handle]/logs/[slug]，收录路径随目录迁移

@@ -6,7 +6,7 @@ import {
 } from "../src/lib/markdown-import.ts";
 
 test("文件名推 slug：小写化、非字母数字折叠、去首尾连字符", () => {
-  assert.equal(slugFromFileName("2026-11-16 My Log.md"), "2026-11-16-my-log");
+  assert.equal(slugFromFileName("2026-11-16 My Trace.md"), "2026-11-16-my-trace");
   assert.equal(slugFromFileName("a__b---c.markdown"), "a-b-c");
   assert.equal(slugFromFileName("C:\\docs\\Notes Final.md"), "notes-final");
 });

@@ -273,12 +273,12 @@ export async function getAdminOverview(userId: string) {
     trendRows,
   ] = await Promise.all([
     db.project.count({ where: { userId } }),
-    db.log.count({ where: { userId, isPublished: true } }),
-    db.log.count({ where: { userId, isPublished: false } }),
-    db.log.count({
+    db.trace.count({ where: { userId, isPublished: true } }),
+    db.trace.count({ where: { userId, isPublished: false } }),
+    db.trace.count({
       where: { userId, isPublished: true, publishedAt: { gte: weekAgo } },
     }),
-    db.log.findMany({
+    db.trace.findMany({
       where: { userId, isPublished: false },
       orderBy: { updatedAt: "desc" },
       take: 5,
@@ -292,7 +292,7 @@ export async function getAdminOverview(userId: string) {
       },
     }),
     // 只取发布时间一列：12 周窗口外的行不进内存，桶由纯函数切
-    db.log.findMany({
+    db.trace.findMany({
       where: {
         userId,
         isPublished: true,

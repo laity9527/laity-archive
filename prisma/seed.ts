@@ -9,13 +9,21 @@
  * - 2026-11-02: 哈希口径改读 src/lib/content-hash.ts，不再自带一份实现
  * - 2026-11-06: 由「1 项目 1 条演示日志」扩为「1 项目 12 条已发布日志」（负责人点名把本地注入的 12 篇写进种子）；正文与经验总结按 slug upsert 且 update 为空，重复执行既不报错也不生成副本；publishedAt 取库中历史真值，contentHash 仍调用 src/lib/content-hash.ts 现算、不自带第二份实现；旧的 earth-mirror / prebuild-index 演示条目退出种子
  * - 2026-11-09: V2.0 Step 2：复合唯一 @@unique([userId, slug]) 落地后 where: { slug } 不再是合法唯一键，
- *               开头先 upsert 测试用户（handle zhanglei / email zhanglei@example.com），全部 Project/Log 的
+ *               开头先 upsert 测试用户（handle zhanglei / email zhanglei@example.com），全部 Project/Trace 的
  *               upsert 改走 userId_slug 复合键、create 带 userId——先有 User 才能写档案（负责人任务 1）
+ * - 2026-11-18: V5 Phase 1 模型改名：prisma.log→prisma.trace（Schema Log→Trace @@map，表名不变）
+ * - 2026-11-19: V5 Phase 2 任务 6：补 Service / Faq 示例种子（幂等，先查后建）；
+ *               Prisma 7 适配修正——客户端注入 @prisma/adapter-pg 驱动适配器并载 dotenv（此前直跑报缺适配器）
+ * - 2026-11-18: V5 Phase 1 任务 7：种子 8 个主题，按 src/lib/topics.ts 的 key/label 映射 upsert（幂等）
  */
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { computeContentHash } from "../src/lib/content-hash.ts";
+import { TOPICS } from "../src/lib/topics.ts";
 
-const prisma = new PrismaClient();
+// Prisma 7：客户端必须注入驱动适配器（与 src/lib/db.ts 同口径）；直跑 node 时先载 .env
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 
 const PROJECT = {
   slug: "laity-archive",
@@ -136,7 +144,7 @@ B1 引入全站唯一强调色 \`--brown #7a5a3a\`，只给持久导航当前项
     publishedAt: "2026-11-06T05:37:58.763Z",
     beforeContent: `## 「把所有英文改成中文」这句需求里藏着三条界线
 
-截图圈出来的是 UI 展示层的硬编码英文，但同一屏上还站着另外两类东西：**系统专有术语**（BEFORE / AFTER 是详情页内容顺序与摘要口径的名字）与**用户自由输入的数据**（\`Log.tags\` 里的 \`archive · first-entry · validation\`）。
+截图圈出来的是 UI 展示层的硬编码英文，但同一屏上还站着另外两类东西：**系统专有术语**（BEFORE / AFTER 是详情页内容顺序与摘要口径的名字）与**用户自由输入的数据**（\`Trace.tags\` 里的 \`archive · first-entry · validation\`）。
 
 把三类一起翻译，会同时制造两种事故：筛选条显示中文而 URL 仍是 \`?tag=archive\` 的两套名字；以及给自由输入编一张永远不全的映射表。`,
     afterContent: `## 一、单源映射，未知值原样输出
@@ -483,7 +491,7 @@ async function main() {
   });
 
   for (const log of LOGS) {
-    await prisma.log.upsert({
+    await prisma.trace.upsert({
       where: { userId_slug: { userId: user.id, slug: log.slug } },
       update: {},
       create: {
@@ -509,8 +517,108 @@ async function main() {
     });
   }
 
+  // V5 Phase 1 任务 7：种子 8 个主题（slug=key、name=label、sortOrder=序号+1）；按 slug upsert 幂等
+  for (const [index, topic] of TOPICS.entries()) {
+    await prisma.topic.upsert({
+      where: { slug: topic.key },
+      update: { name: topic.label, sortOrder: index + 1 },
+      create: { slug: topic.key, name: topic.label, sortOrder: index + 1 },
+    });
+  }
+
+  // V5 Phase 2 任务 6：Service / Faq 示例种子（幂等——按标题/问题先查后建，不覆盖既有行）。
+  // 内容贴合本项目真实能力（档案构建与存证核验），不虚构业务数据
+  const SERVICES = [
+    {
+      title: "档案构建咨询",
+      summary: "把项目证据整理成可检索、可核验的档案库。",
+      body: "从现有代码与文档出发，梳理证据链结构，帮你把项目复盘整理成带存证摘要的档案条目；交付物为可运行的档案库与检索入口。",
+      sort: 1,
+    },
+    {
+      title: "存证链核验",
+      summary: "核验已发布内容自发布起未被改动。",
+      body: "基于发布时冻结的 SHA-256 摘要与版本行，提供浏览器本地复算与公开核验接口，用于对外证明内容自发布起未被改动。",
+      sort: 2,
+    },
+  ];
+
+  for (const service of SERVICES) {
+    const existing = await prisma.service.findFirst({ where: { title: service.title, deletedAt: null } });
+    if (!existing) {
+      await prisma.service.create({
+        data: { title: service.title, summary: service.summary, body: service.body, sort: service.sort, enabled: true },
+      });
+    }
+  }
+
+  const FAQS = [
+    {
+      question: "内容摘要是怎么算出来的？",
+      answer: "发布时按固定顺序拼接标题与判断/验证正文，计算 SHA-256 摘要并记录服务器时间。新发布启用规范化口径（统一换行、剔除零宽字符），历史版本的原口径永不重算。",
+      sort: 1,
+    },
+    {
+      question: "历史版本能被修改或删除吗？",
+      answer: "不能。每次发布都会追加一条不可变版本行，版本行只允许更新 Git 锚定的三个字段；正文或摘要一旦发布即冻结，重新编辑会退回草稿并产生新版本。",
+      sort: 2,
+    },
+    {
+      question: "怎么提交合作线索？",
+      answer: "在 /lead 页面填写姓名、邮箱、需求类型与留言提交。同一地址 5 分钟内只能提交一次，提交后我会尽快回复。",
+      sort: 3,
+    },
+  ];
+
+  for (const faq of FAQS) {
+    const existing = await prisma.faq.findFirst({ where: { question: faq.question, deletedAt: null } });
+    if (!existing) {
+      await prisma.faq.create({
+        data: { question: faq.question, answer: faq.answer, sort: faq.sort, enabled: true },
+      });
+    }
+  }
+
+  // V5 Phase 3 任务 4：首页演示样例（幂等——按标题/问题先查后建，不覆盖既有行）。
+  // 首页四区块直接消费启用状态的服务与问答，这里的样例保证首页开箱有内容
+  const HOME_SERVICES = [
+    {
+      title: "数字履历梳理",
+      summary: "把散落的项目经历整理成可核验的档案条目。",
+      body: "按 Before/After 复盘结构梳理项目经历，附内容摘要与发布时间，形成可对外展示的数字履历。",
+      sort: 3,
+    },
+  ];
+
+  for (const service of HOME_SERVICES) {
+    const existing = await prisma.service.findFirst({ where: { title: service.title, deletedAt: null } });
+    if (!existing) {
+      await prisma.service.create({ data: { ...service, enabled: true } });
+    }
+  }
+
+  const HOME_FAQS = [
+    {
+      question: "首页的服务与问答从哪里来？",
+      answer: "来自后台「服务」与「FAQ」两个管理页：只有启用状态的条目会按排序出现在首页与对应页面。",
+      sort: 4,
+    },
+    {
+      question: "统计口径里的访问计数会持久化吗？",
+      answer: "不会。访问计数是进程内存计数，服务重启即清零，不写库也不落盘。",
+      sort: 5,
+    },
+  ];
+
+  for (const faq of HOME_FAQS) {
+    const existing = await prisma.faq.findFirst({ where: { question: faq.question, deletedAt: null } });
+    if (!existing) {
+      await prisma.faq.create({ data: { ...faq, enabled: true } });
+    }
+  }
+
   console.log(
-    `seed 完成：用户 ${user.id}（handle ${user.handle}）下 1 个 Project，${LOGS.length} 条已发布 Log`,
+    `seed 完成：用户 ${user.id}（handle ${user.handle}）下 1 个 Project，${LOGS.length} 条已发布 Trace，${TOPICS.length} 个主题，${SERVICES.length} 个服务，${FAQS.length} 条问答，${HOME_SERVICES.length} 条首页演示服务，${HOME_FAQS.length} 条首页演示问答`,
   );
 }
 

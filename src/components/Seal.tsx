@@ -18,10 +18,15 @@
  * - 2026-11-17: P2 证据层（V4 §4.4）：完整哈希只留在 `EvidencePanel`（桌面右栏 / 移动端首段后）；
  *               `Stamp` 收编原 Seal 的站点标记、发布日期与锚点，不再重复哈希与发布时间。
  *               三读数顺序固定：发布时间 → 内容摘要 → 提交来源；无提交来源写「本地记录」，不造伪 sha。
+ * - 2026-11-18: V5 Phase 0 常量单源：复算口径文案改引 src/lib/evidence-constants.ts，措辞逐字未动
+ * - 2026-11-18: V5 Phase 1：EvidencePanel 展示裁决标签、版本号、hashVersion 与 Git 锚定状态
+ *               （gitSha 链接 / 待锚定），新增版本切换器（?v=N）与存证免责口径（常量单源）
  */
 import { CopyButton } from "@/components/CopyButton";
 import { ShareButton } from "@/components/ShareButton";
+import { EVIDENCE_DISCLAIMER, HASH_RECOMPUTE_NOTE } from "@/lib/evidence-constants";
 import { formatUtc } from "@/lib/time";
+import type { Verdict } from "@prisma/client";
 
 type EvidencePanelProps = {
   contentHash: string;
@@ -32,6 +37,20 @@ type EvidencePanelProps = {
   path?: string;
   /** rail：桌面右栏；mobile：正文首段之后的整宽面板 */
   variant?: "rail" | "mobile";
+  // V5 Phase 1：版本与裁决信息（详情页 ?v=N 与发布回执传入；缺省即当前版本）
+  version?: number;
+  hashVersion?: number;
+  gitSha?: string | null;
+  gitTag?: string | null;
+  verdict?: Verdict;
+  /** 版本切换器候选（版本号升序）；提供时渲染切换链接 */
+  versions?: number[];
+};
+
+const VERDICT_LABELS: Record<Verdict, string> = {
+  PENDING: "待验证",
+  VERIFIED: "已验证",
+  OVERTURNED: "被推翻",
 };
 
 // 4 字符分组只影响显示；复制仍用未分组的 64 位原串
@@ -52,10 +71,19 @@ export function EvidencePanel({
   title,
   path,
   variant = "rail",
+  version,
+  hashVersion,
+  gitSha,
+  gitTag,
+  verdict,
+  versions,
 }: EvidencePanelProps) {
   const sha = sourceCommitSha?.trim() || null;
   const href = sha ? commitHref(repoUrl, sha) : null;
   const visibility = variant === "rail" ? "hidden lg:block print:block" : "lg:hidden print:hidden";
+  const anchorHref = gitSha ? commitHref(repoUrl, gitSha) : null;
+  const versionLink = (v: number) =>
+    path ? `${path}${path.includes("?") ? "&" : "?"}v=${v}` : null;
 
   return (
     <section
@@ -67,6 +95,47 @@ export function EvidencePanel({
         <span className="font-mono text-[10px] tracking-[0.18em] text-ink-soft">READOUT</span>
         <span className="font-sans text-xs text-ink-soft">三读数</span>
       </p>
+      {verdict && (
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-sans text-xs text-ink-soft">
+          <span>{`裁决 ${VERDICT_LABELS[verdict]}`}</span>
+          {typeof version === "number" && (
+            <span>
+              版本{" "}
+              <span className="font-mono text-ink">v{version}</span>
+            </span>
+          )}
+          {typeof hashVersion === "number" && (
+            <span>
+              哈希口径{" "}
+              <span className="font-mono text-ink">v{hashVersion}</span>
+            </span>
+          )}
+        </p>
+      )}
+      {versions && versions.length > 1 && (
+        <nav aria-label="版本切换" className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-sans text-xs no-print">
+          {versions.map((v) => {
+            const href = versionLink(v);
+            const active = v === version;
+            return href ? (
+              <a
+                key={v}
+                href={href}
+                aria-current={active ? "true" : undefined}
+                className={`font-mono ${
+                  active ? "border-b border-brown text-brown" : "border-b border-transparent text-ink-soft hover:border-ink hover:text-ink"
+                }`}
+              >
+                v{v}
+              </a>
+            ) : (
+              <span key={v} className={`font-mono ${active ? "text-ink" : "text-ink-soft"}`}>
+                v{v}
+              </span>
+            );
+          })}
+        </nav>
+      )}
       <dl className="mt-4 space-y-4">
         <div>
           <dt className="font-sans text-xs text-ink-soft">发布时间</dt>
@@ -101,9 +170,35 @@ export function EvidencePanel({
           </dd>
         </div>
         <div>
+          <dt className="font-sans text-xs text-ink-soft">Git 锚定</dt>
+          <dd className="mt-1 font-sans text-xs leading-relaxed text-ink">
+            {gitSha && anchorHref ? (
+              <a
+                href={anchorHref}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="border-b border-transparent text-ink hover:border-ink"
+              >
+                提交 · {gitSha.slice(0, 7)} ↗
+                {gitTag ? ` · ${gitTag}` : ""}
+              </a>
+            ) : gitSha ? (
+              `提交 · ${gitSha.slice(0, 7)}${gitTag ? ` · ${gitTag}` : ""}`
+            ) : (
+              <span className="text-ink-soft">待锚定：该版尚未推入存证仓库，不影响内容摘要核验</span>
+            )}
+          </dd>
+        </div>
+        <div>
           <dt className="font-sans text-xs text-ink-soft">复算口径</dt>
           <dd className="mt-1 font-sans text-xs leading-relaxed text-ink-soft">
-            SHA-256(标题 + 换行 + BEFORE + 换行 + AFTER)，UTF-8，小写十六进制
+            {HASH_RECOMPUTE_NOTE}
+          </dd>
+        </div>
+        <div>
+          <dt className="font-sans text-xs text-ink-soft">存证边界</dt>
+          <dd className="mt-1 font-sans text-xs leading-relaxed text-ink-soft">
+            {EVIDENCE_DISCLAIMER}
           </dd>
         </div>
       </dl>

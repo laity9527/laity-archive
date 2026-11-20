@@ -22,6 +22,23 @@
 //               （原先只有以 userId 开头的复合索引，全局 where: {isPublished} 用不上）；
 //               @@index([tags], type: Gin) 服务标签筛选、标签聚合页前置判定与搜索的 tags 分支。
 //               迁移：npx prisma migrate dev --name hall_read_indexes（只加索引，不改列）
+// - 2026-11-18: V5 Phase 0 冻结基线（纯增量，负责人批准执行）：Project 补工作室字段
+//               （ownership/clientName/year/solution/result/coverId/featured/sortOrder/updatedAt）；
+//               Log 补五要素（scopeMd/riskMd/rollbackMd/impactMd）、裁决（verdict/verdictNote/verifiedAt）、
+//               featured/hashVersion/currentRevId/deletedAt；Revision 补 version/五要素/verdictAtPublish/
+//               hashVersion/gitSha/gitTag/gitSyncedAt 与 contentHash 索引（version 本轮可空，Phase 1 回填后收紧）；
+//               新表 Topic/TraceTopic/Lead/Media/Service/Faq 与枚举 Verdict/LeadStatus。
+//               模型改名（Log→Trace @@map）、onDelete Restrict、防篡改触发器、去 20 条裁剪属 Phase 1，
+//               本轮不改任何既有列与删除行为。迁移：npx prisma migrate dev --name v5_phase0_baseline
+// - 2026-11-18: V5 Phase 1 证据链闭环（负责人批准执行）：Log→Trace @@map("Log")、Revision→TraceRevision
+//               @@map("Revision")（表名零搬迁，客户端属性 db.log→db.trace 机械替换）；
+//               TraceRevision 外键 onDelete: Restrict、@@unique([traceId, version])、version 收紧 NOT NULL；
+//               防篡改触发器 SQL 只注释文档化不执行；20 条版本裁剪逻辑移除（publish.ts 同批改造）。
+//               存量 version 回填由 prisma/migrate-to-v5.ts 在迁移部署前完成（本地库 revision 为 0）。
+// - 2026-11-18: V5 Phase 2 线索与媒体资产接入：Media 补 originalName/traceId(SetNull)/isEvidence/hash/
+//               deletedAt，url 对齐 ossUrl；Service/Faq 字段对齐任务口径（title/summary/body/sort/enabled/deletedAt）；
+//               TraceRevision 增 mediaHashes（发布时附属媒体哈希清单，正文哈希不变）。迁移：v5_phase2_lead_media
+//               迁移：npx prisma migrate dev --name v5_phase1_trace_evidence
 
 generator client {
   provider = "prisma-client-js"
@@ -44,9 +61,11 @@ model User {
   // V1 遗留布尔位：Step 4-B 起会话与准入都不再读它（判据改 userId），字段保留不迁移，避免动库
   isAdmin   Boolean  @default(false)
   projects  Project[]
-  logs      Log[]
+  logs      Trace[]
   series    Series[]
   previewTokens PreviewToken[]
+  // V5 Phase 0：媒体登记归属（上传链路不变，Media 只管元数据）
+  media     Media[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -59,15 +78,30 @@ model Project {
   status    String // WIP | LIVE | ARCHIVED
   summary   String?
   repoUrl   String?
+  // V5 Phase 0：工作室维度字段（参考方案2 Project；全部可空或带默认，存量零改写）
+  ownership String   @default("SELF") // SELF | CLIENT；客户项目未授权不渲染 clientName
+  clientName String?
+  year      Int?
+  solution  String? // 实施方案
+  result    String? // 交付结果
+  featured  Boolean  @default(false)
+  sortOrder Int      @default(0)
+  coverId   String?
+  cover     Media?   @relation(fields: [coverId], references: [id])
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String?
   createdAt DateTime @default(now())
-  logs      Log[]
+  // @default(now()) 让存量行安全补列（migrate dev 对无默认值的非空新列会拒执行）
+  updatedAt DateTime @default(now()) @updatedAt
+  logs      Trace[]
 
   @@unique([userId, slug])
+  @@index([status, ownership])
 }
 
-model Log {
+// V5 Phase 1（2026-11-18）：模型改名 Log→Trace，表名 @@map("Log") 保持不变（数据库零搬迁）；
+// 证据链不可变化——修订版本行永不删除、首版也产版本行、20 条裁剪逻辑移除。
+model Trace {
   id            String   @id @default(cuid())
   title         String
   slug          String
@@ -97,10 +131,28 @@ model Log {
   // AI 辅助生成标记（V2.0 Step 6）：编辑器点过 [ AI 帮我写 ] 且正文来自模型输出时置 true；
   // 详情页据此在正文末尾打「[ AI 辅助生成 · 作者审校 ]」，提醒读者内容经过作者审校
   isAiAssisted Boolean @default(false)
+  // V5 Phase 0：五要素（方案1 日志模板）；新发布必填由 Phase 1 表单门禁承担，存量可空豁免
+  scopeMd    String? // 范围：涉及哪些模块
+  riskMd     String? // 风险：可能破坏什么
+  rollbackMd String? // 回滚：怎么退回
+  impactMd   String? // 影响：谁会受影响
+  // V5 Phase 0：裁决三态（待验证/已验证/被推翻）；反转率由 verdict 现算，不另建表
+  verdict      Verdict   @default(PENDING)
+  verdictNote  String? // 裁决依据；OVERTURNED 时必填（Phase 1 表单门禁）
+  verifiedAt   DateTime? // 裁决时间（UTC）
+  featured     Boolean   @default(false) // 首页精选摘录唯一来源（Phase 3 接线）
+  // V5 Phase 0：哈希版本——1=D5 原口径（历史印章永不重算）；2=规范化口径（Phase 1 新发布启用）
+  hashVersion  Int       @default(1)
+  currentRevId String? // 指向最新已发布版本行（Phase 1 起每次发布写入；本轮不建 FK）
+  deletedAt    DateTime? // 软删除标记（Phase 1 起已发布日志只软删；本轮读取端不过滤）
+  // V5 Phase 0：主题实体多对多（8 类主题横切聚合；tags[] 自由标签保留不动）
+  topics     TraceTopic[]
   // 公开预览链接（V3.1 G7）：一次性生成、24h 过期、存哈希；日志删除时级联清掉
   previewTokens PreviewToken[]
-  // 修订历史（V4 P3）：每次发布前把旧版本追加一条，最多保留 20 条
-  revisions     Revision[]
+  // 修订历史（V4 P3 → V5 Phase 1）：每次发布（含首版）追加一条不可变版本行，版本行永不删除
+  revisions     TraceRevision[]
+  // 绑定的媒体附件（Phase 2）：发布时 isEvidence 媒体的哈希清单随版本行冻结
+  media         Media[]
   // 上次发布快照（V3.1 G8）：发布时写入当时的标题/正文/标签/系列/摘要与发布时间；
   // 之后编辑退回草稿时，拿它对比“上次对外长什么样”，不在库外存历史
   lastPublishedSnapshot Json?
@@ -119,8 +171,12 @@ model Log {
   @@index([isPublished, beforeDate])
   // 标签数组：筛选（has/hasSome）、标签聚合页前置判定与搜索的 tags 分支都走它
   @@index([tags], type: Gin)
+  // V5 Phase 0：裁决筛选与反转率统计（全局已发布口径）
+  @@index([isPublished, verdict])
   @@index([projectId])
   @@index([seriesId])
+  // V5 Phase 1：表名保 "Log"，客户端属性由 prisma.log 机械切换为 prisma.trace
+  @@map("Log")
 }
 
 // 系列实体（V4 P2）：同一作者下 slug 唯一；name 为展示名，slug 为稳定内部键。
@@ -134,7 +190,7 @@ model Series {
   summary   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  logs      Log[]
+  traces   Trace[]
 
   @@unique([userId, slug])
   @@index([userId])
@@ -146,7 +202,7 @@ model PreviewToken {
   id        String   @id @default(cuid())
   tokenHash String   @unique
   logId     String
-  log       Log      @relation(fields: [logId], references: [id], onDelete: Cascade)
+  log       Trace  @relation(fields: [logId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
@@ -156,12 +212,37 @@ model PreviewToken {
   @@index([expiresAt])
 }
 
-// 修订历史（V4 P3）：发布时把“上一版”追加进来，当前版本始终在 Log 行上。
-// 只存发布过的版本（isPublished=true 且有 contentHash/publishedAt）；每篇最多 20 条，超出同事务删最旧。
-model Revision {
+// 修订历史（V4 P3）→ V5 Phase 1 不可变证据表：每次发布（含首版）追加一条版本行，
+// 版本行永不删除，20 条裁剪逻辑移除；当前版本的哈希与发布时间仍在 Trace 行上。
+// V5 Phase 1（2026-11-18）：模型改名 Revision→TraceRevision，表名 @@map("Revision") 保持不变（数据库零搬迁）；
+//   外键 onDelete: Cascade→Restrict——删除轨迹不得连带走证据行；
+//   version 收紧为 NOT NULL，@@unique([traceId, version]) 生效（存量版本号已由 prisma/migrate-to-v5.ts 回填）。
+// 防篡改双保险：Prisma 层先做业务逻辑防护（代码不提供 TraceRevision 删除入口，动作层拒绝）；
+// 数据库触发器是第二道防线，SQL 只在此注释文档化，暂不生成迁移执行（Phase 1 验收通过后另批迁移启用）：
+//
+//   CREATE OR REPLACE FUNCTION trace_revision_immutable() RETURNS trigger AS $$
+//   BEGIN
+//     -- 禁止任何删除：版本行是证据链，任何时刻不得删
+//     IF TG_OP = 'DELETE' THEN
+//       RAISE EXCEPTION 'trace_revision rows are immutable evidence: DELETE is forbidden' USING ERRCODE = '45000';
+//     END IF;
+//     -- 只允许 gitSha/gitTag/gitSyncedAt 三列 UPDATE（锚定回填/重试）；正文、裁决、版本号一律不可改
+//     IF TG_OP = 'UPDATE' AND NOT (NEW.gitSha IS DISTINCT FROM OLD.gitSha
+//          AND NEW.gitTag IS DISTINCT FROM OLD.gitTag
+//          AND NEW.gitSyncedAt IS DISTINCT FROM OLD.gitSyncedAt) THEN
+//       RAISE EXCEPTION 'trace_revision is immutable except gitSha/gitTag/gitSyncedAt' USING ERRCODE = '45000';
+//     END IF;
+//     RETURN NEW;
+//   END;
+//   $$ LANGUAGE plpgsql;
+//
+//   CREATE TRIGGER trg_trace_revision_immutable
+//     BEFORE DELETE OR UPDATE ON "Revision"
+//     FOR EACH ROW EXECUTE FUNCTION trace_revision_immutable();
+model TraceRevision {
   id            String   @id @default(cuid())
-  logId         String
-  log           Log      @relation(fields: [logId], references: [id], onDelete: Cascade)
+  traceId       String   @map("logId") // 列名保 logId，数据零搬迁
+  trace         Trace    @relation(fields: [traceId], references: [id], onDelete: Restrict)
   title         String
   beforeContent String
   afterContent  String?
@@ -169,8 +250,25 @@ model Revision {
   contentHash   String
   publishedAt   DateTime
   createdAt     DateTime @default(now())
+  version       Int // V5 Phase 1：从 1 自增，(traceId, version) 唯一，回填后 NOT NULL 生效
+  scopeMd       String? // 五要素随版本冻结
+  riskMd        String?
+  rollbackMd    String?
+  impactMd      String?
+  verdictAtPublish Verdict @default(PENDING) // 发布时裁决快照
+  hashVersion   Int      @default(1) // 1=D5 原口径；2=规范化口径
+  gitSha        String? // Git 时间锚 commit；null=待锚定（降级态，发布不受影响）
+  gitTag        String? // trace/<slug>/v<N>
+  gitSyncedAt   DateTime? // 锚定成功时间（UTC）
+  // V5 Phase 2：附属媒体证据哈希清单（JSON 数组文本，按 hash 升序）；
+  // 发布时把该轨迹 isEvidence 媒体的 hash 冻结进版本行——正文哈希独立不变，媒体哈希只是附属证据清单
+  mediaHashes   String?
 
-  @@index([logId, createdAt])
+  @@unique([traceId, version])
+  @@index([traceId, createdAt])
+  // V5 Phase 1：/verify/[hash] 按哈希反查版本
+  @@index([contentHash])
+  @@map("Revision")
 }
 
 // 审计（V4 P3）：只记"谁在何时对哪条对象做了什么"，不存正文、token 或密钥。
@@ -186,4 +284,125 @@ model AuditEvent {
 
   @@index([createdAt])
   @@index([actorId, action])
+}
+
+// ===== V5 Phase 0 新增（2026-11-18，冻结基线；接线与后台页面属 Phase 1/2）=====
+
+// 裁决三态（方案1 三支柱）：反转率 = OVERTURNED / 已裁决总数，现算不建表
+enum Verdict {
+  PENDING // 待验证
+  VERIFIED // 已验证
+  OVERTURNED // 被推翻
+}
+
+// 线索状态机（方案2 流程2）
+enum LeadStatus {
+  NEW
+  REPLIED
+  ARCHIVED
+  SPAM
+}
+
+// 主题实体（方案1 七节）：8 类主题从标签串升级为实体，横切聚合才精确；
+// 种子由 src/lib/topics.ts 的现有映射迁入（migrate-to-v5.ts），自由标签仍留 Log.tags[]
+model Topic {
+  id          String   @id @default(cuid())
+  slug        String   @unique // deploy/data/frontend/quality/collab/security/copyright/project
+  name        String // 部署与运行时 / 数据与存证 / …
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  logs        TraceTopic[]
+}
+
+// 日志×主题多对多；删日志或删主题都只清连接行，不动内容本体
+model TraceTopic {
+  traceId String
+  topicId String
+  trace   Trace @relation(fields: [traceId], references: [id], onDelete: Cascade)
+  topic   Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([traceId, topicId])
+  @@index([topicId])
+}
+
+// 线索（方案2 流程2）：只存 ipHash（sha256(ip + LEADS_IP_SALT)，盐在 env），不留明文 IP；
+// 蜜罐 + 最短填写时长 + nginx 边缘限流，公开 POST /api/leads（Phase 2 接线）
+model Lead {
+  id          String     @id @default(cuid())
+  name        String
+  email       String
+  reqType     String
+  evidenceReq String? // “希望留存哪些交付证据”
+  message     String
+  ipHash      String?
+  ua          String?
+  status      LeadStatus @default(NEW)
+  replyNote   String?
+  repliedAt   DateTime?
+  // V5 Phase 2：软删除标记——删除线索只翻 deletedAt，行保留在回收站可见
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+
+  @@index([status, createdAt])
+  @@index([deletedAt])
+}
+
+// 媒体登记（Phase 2）：上传链路为签名直传 OSS，此表只管元数据；
+// ossKey 是换域名/迁移时批量替换的锚点，导出 JSON 存 key 不绑 CDN 域名；
+// traceId 可空——绑定轨迹的媒体随轨迹删除而解绑（SetNull），不级联删媒体本体
+model Media {
+  id           String    @id @default(cuid())
+  fileName     String
+  originalName String? // 上传时的原始文件名（对象键由服务端生成，不采用上传名）
+  ossKey       String    @unique
+  ossUrl       String
+  mimeType     String
+  size         Int
+  width        Int?
+  height       Int?
+  alt          String? // a11y：后台表单必填门禁（Phase 2）
+  variants     Json? // 多尺寸变体（二期可选）
+  traceId      String?
+  trace        Trace?   @relation(fields: [traceId], references: [id], onDelete: SetNull)
+  isEvidence   Boolean   @default(false) // 是否纳入证据快照（发布时哈希并入版本元数据）
+  hash         String? // 内容 SHA-256（上传完成时服务端复算）
+  deletedAt    DateTime? // 软删除
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  projects     Project[] // 被用作封面
+
+  @@index([userId])
+  @@index([traceId])
+  @@index([deletedAt])
+}
+
+// 服务介绍（Phase 2）：title/summary/body 三段式；sort 控制前台顺序，enabled 控制可见性
+model Service {
+  id        String    @id @default(cuid())
+  title     String
+  summary    String
+  body      String
+  sort      Int       @default(0)
+  enabled   Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([enabled, sort])
+}
+
+// FAQ（Phase 2）：sort 控制前台顺序，enabled 控制可见性
+model Faq {
+  id        String    @id @default(cuid())
+  question  String
+  answer    String
+  sort      Int       @default(0)
+  enabled   Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([enabled, sort])
 }

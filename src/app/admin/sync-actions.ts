@@ -37,7 +37,7 @@ async function ensureSyncProject(userId: string) {
 }
 
 async function collectExistingShas(userId: string): Promise<Set<string>> {
-  const rows = await db.log.findMany({
+  const rows = await db.trace.findMany({
     where: { userId, sourceCommitSha: { not: null } },
     select: { sourceCommitSha: true },
   });

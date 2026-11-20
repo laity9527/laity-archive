@@ -1,3 +1,12 @@
+/**
+ * 文件：tests/e2e/flows.spec.ts
+ * 描述：Playwright E2E 串行流程用例：登录进后台、详情页证据面板、下架 404、预览令牌、系列页、反链、新建日志、审计与系列 CRUD 的端到端校验
+ * 作者：张磊
+ * 创建日期：2026-11-18
+ * 修改记录：
+ * - 2026-11-18: 初始创建
+ * - 2026-11-18: V5 Phase 1 模型改名：prisma.log→prisma.trace（Schema Log→Trace @@map，表名不变）
+ */
 import { test, expect } from "@playwright/test";
 import {
   cleanupE2E,
@@ -46,7 +55,7 @@ test("下架后详情页返回 404", async ({ page }) => {
     published: true,
   });
 
-  await prisma.log.update({
+  await prisma.trace.update({
     where: { id: log.id },
     data: { isPublished: false },
   });

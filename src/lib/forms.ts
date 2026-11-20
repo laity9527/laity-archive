@@ -111,6 +111,9 @@ export const LIMITS = {
   projectSummary: 200,
   // 系列名（V3.1 G2）：自由文本，与日志标题同量级；不建系列表，同名即同系列
   series: 40,
+  // V5 Phase 1：五要素（scopeMd/riskMd/rollbackMd/impactMd）与裁决依据的上限
+  element: 4000,
+  verdictNote: 1000,
 } as const;
 
 // 登录回调只认本站相对路径。挡三种跳外站的写法：协议相对 `//host`、

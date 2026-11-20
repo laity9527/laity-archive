@@ -44,7 +44,13 @@ import { EvidencePanel, Stamp } from "@/components/Seal";
 import { SectionHead } from "@/components/SectionHead";
 import { Timeline } from "@/components/Timeline";
 import { ZoomableArticle } from "@/components/ZoomableArticle";
-import { getLogContext, getSafeLogBySlug, getLogBacklinks } from "@/lib/logs";
+import {
+  getLogBacklinks,
+  getLogContext,
+  getPublishedRevisionByVersion,
+  getSafeLogBySlug,
+  listPublishedVersions,
+} from "@/lib/logs";
 import { Markdown } from "@/lib/markdown";
 import { estimateReadingMinutes } from "@/lib/reading-time";
 import { siteName, siteUrl } from "@/lib/site";
@@ -92,13 +98,61 @@ export const instant = false;
 
 export default async function LogDetailPage({
   params,
+  searchParams,
 }: PageProps<"/u/[handle]/logs/[slug]">) {
   const { handle, slug } = await params;
+  const query = await searchParams;
   const log = await getSafeLogBySlug(slug, handle);
 
   if (!log) {
     notFound();
   }
+
+  // V5 Phase 1：?v=N 版本视图——取该版本的发布快照渲染内容与证据；版本不存在按 404 处理，
+  // 不静默回落到当前版（读者要的是那版，给错了版本等于核验错位）
+  const rawV = Array.isArray(query.v) ? query.v[0] : query.v;
+  const versionNum = rawV ? Number(rawV) : null;
+  const versioned =
+    versionNum !== null && Number.isInteger(versionNum) && versionNum >= 1
+      ? await getPublishedRevisionByVersion(slug, handle, versionNum)
+      : null;
+
+  if (rawV && (versionNum === null || !Number.isInteger(versionNum) || versionNum < 1 || !versioned)) {
+    notFound();
+  }
+
+  const rev = versioned?.revisions[0] ?? null;
+  const view = rev
+    ? {
+        title: rev.title,
+        beforeContent: rev.beforeContent,
+        afterContent: rev.afterContent,
+        tags: rev.tags,
+        lessonLearned: null,
+        contentHash: rev.contentHash,
+        publishedAt: rev.publishedAt,
+        hashVersion: rev.hashVersion,
+        version: rev.version,
+        gitSha: rev.gitSha ?? null,
+        gitTag: rev.gitTag ?? null,
+        verdict: rev.verdictAtPublish,
+      }
+    : {
+        title: log.title,
+        beforeContent: log.beforeContent,
+        afterContent: log.afterContent,
+        tags: log.tags,
+        lessonLearned: log.lessonLearned,
+        contentHash: log.contentHash,
+        publishedAt: log.publishedAt,
+        hashVersion: log.hashVersion,
+        version: undefined,
+        gitSha: null,
+        gitTag: null,
+        verdict: log.verdict,
+      };
+  const versions = await listPublishedVersions(slug, handle);
+  const versionNumbers = (versions ?? []).map((item) => item.version).sort((a, b) => a - b);
 
   // B2：前后篇与相关阅读共用一次列表查询；阅读时长是纯函数，不碰数据库
   const context = await getLogContext({
@@ -116,7 +170,7 @@ export default async function LogDetailPage({
     take: 10,
   });
   const minutes = estimateReadingMinutes(
-    [log.beforeContent, log.afterContent ?? "", log.lessonLearned ?? ""].join(
+    [view.beforeContent, view.afterContent ?? "", view.lessonLearned ?? ""].join(
       "\n",
     ),
   );
@@ -142,9 +196,9 @@ export default async function LogDetailPage({
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BlogPosting",
-    headline: log.title,
-    description: describeLog(log),
-    datePublished: (log.publishedAt ?? log.beforeDate).toISOString(),
+    headline: view.title,
+    description: describeLog(view),
+    datePublished: (view.publishedAt ?? log.beforeDate).toISOString(),
     dateModified: log.updatedAt.toISOString(),
     author: {
       "@type": "Person",
@@ -154,7 +208,7 @@ export default async function LogDetailPage({
     publisher: { "@type": "Organization", name: siteName, url: siteUrl() },
     url: `${siteUrl()}${logPath}`,
     mainEntityOfPage: `${siteUrl()}${logPath}`,
-    keywords: log.tags.join(","),
+    keywords: view.tags.join(","),
     isPartOf: {
       "@type": "Blog",
       name: `${siteName} · 开发日志`,
@@ -165,15 +219,23 @@ export default async function LogDetailPage({
   // F23：BEFORE/AFTER 各抽一组锚点（经验总结是短结论，不索引）；总标题数 ≥2 才画目录——
   // 单标题文章没有导航价值。两组前缀独立从 0 起，与 Markdown 的 tocIdPrefix 一一对应
   const tocGroups: TocGroup[] = [
-    { key: "before", label: "BEFORE", items: extractToc(log.beforeContent, "before") },
-    ...(log.afterContent
-      ? [{ key: "after", label: "AFTER", items: extractToc(log.afterContent, "after") }]
+    { key: "before", label: "BEFORE", items: extractToc(view.beforeContent, "before") },
+    ...(view.afterContent
+      ? [{ key: "after", label: "AFTER", items: extractToc(view.afterContent, "after") }]
       : []),
   ].filter((group) => group.items.length > 0);
   const showToc = tocGroups.reduce((sum, group) => sum + group.items.length, 0) >= 2;
   const evidence =
-    log.contentHash && log.publishedAt
-      ? { contentHash: log.contentHash, publishedAt: log.publishedAt }
+    view.contentHash && view.publishedAt
+      ? {
+          contentHash: view.contentHash,
+          publishedAt: view.publishedAt,
+          version: view.version,
+          hashVersion: view.hashVersion,
+          gitSha: view.gitSha,
+          gitTag: view.gitTag,
+          verdict: view.verdict,
+        }
       : null;
   const hasRail = showToc || Boolean(evidence);
 
@@ -210,16 +272,16 @@ export default async function LogDetailPage({
               // 末项=当前页，但截断到 20 字：完整标题紧挨 H1 会重复，长标题还会把面包屑撑成两行
               {
                 label:
-                  log.title.length > 20
-                    ? `${log.title.slice(0, 20)}…`
-                    : log.title,
+                  view.title.length > 20
+                    ? `${view.title.slice(0, 20)}…`
+                    : view.title,
               },
             ]}
           />
 
           <header className="mt-3 pb-5 rule-double">
             <h1 className="text-[32px] font-medium leading-[1.2] tracking-tight max-md:text-[30px]">
-              {log.title}
+              {view.title}
             </h1>
             <div className="@container mt-3">
               <Timeline
@@ -228,11 +290,11 @@ export default async function LogDetailPage({
                 variant="inline"
               />
             </div>
-            {(log.tags.length > 0 || minutes > 0 || context.seriesInfo) && (
+            {(view.tags.length > 0 || minutes > 0 || context.seriesInfo) && (
               <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-2">
                 {log.tags.length > 0 && (
                   <p className="font-mono text-xs text-ink-soft">
-                    {log.tags.map((item, i) => (
+                    {view.tags.map((item, i) => (
                       <span key={item}>
                         {i > 0 && " · "}
                         <Link href={`/tags/${encodeURIComponent(item)}`} className="hover:text-ink hover:underline hover:decoration-1 hover:underline-offset-4">{item}</Link>
@@ -254,12 +316,21 @@ export default async function LogDetailPage({
             )}
           </header>
 
+          {view.version !== undefined && (
+            <div className="mt-6 border border-brown px-4 py-2 font-sans text-xs text-ink">
+              当前显示第 <span className="font-mono">v{view.version}</span> 版（历史发布快照）。
+              <Link href={logPath} className="ml-3 border-b border-brown text-brown">
+                返回当前版
+              </Link>
+            </div>
+          )}
+
           <ZoomableArticle>
             <section className="mt-6">
               <SectionHead index="01" title="BEFORE" mono />
               <div className="mt-6">
                 <Markdown
-                  source={log.beforeContent}
+                  source={view.beforeContent}
                   tocIdPrefix={showToc ? "before" : undefined}
                   logLinks={logLinks}
                 />
@@ -274,20 +345,26 @@ export default async function LogDetailPage({
                   publishedAt={evidence.publishedAt}
                   sourceCommitSha={log.sourceCommitSha}
                   repoUrl={log.project.repoUrl}
-                  title={log.title}
+                  title={view.title}
                   path={logPath}
+                  version={evidence.version}
+                  hashVersion={evidence.hashVersion}
+                  gitSha={evidence.gitSha}
+                  gitTag={evidence.gitTag}
+                  verdict={evidence.verdict}
+                  versions={versionNumbers}
                 />
               </div>
             )}
 
             {showToc && <ArticleTocPanel groups={tocGroups} />}
 
-            {log.afterContent && (
+            {view.afterContent && (
               <section className="mt-16">
                 <SectionHead index="02" title="AFTER" mono />
                 <div className="mt-6">
                   <Markdown
-                    source={log.afterContent}
+                    source={view.afterContent}
                     tocIdPrefix={showToc ? "after" : undefined}
                     logLinks={logLinks}
                   />
@@ -295,14 +372,14 @@ export default async function LogDetailPage({
               </section>
             )}
 
-            {log.lessonLearned && (
+            {view.lessonLearned && (
               <section className="mt-16">
                 <SectionHead
-                  index={log.afterContent ? "03" : "02"}
+                  index={view.afterContent ? "03" : "02"}
                   title="经验总结"
                 />
                 <blockquote className="mt-6 border-l-2 border-brown pl-5">
-                  <Markdown source={log.lessonLearned} logLinks={logLinks} />
+                  <Markdown source={view.lessonLearned} logLinks={logLinks} />
                 </blockquote>
               </section>
             )}
@@ -426,8 +503,14 @@ export default async function LogDetailPage({
                 publishedAt={evidence.publishedAt}
                 sourceCommitSha={log.sourceCommitSha}
                 repoUrl={log.project.repoUrl}
-                title={log.title}
+                title={view.title}
                 path={logPath}
+                version={evidence.version}
+                hashVersion={evidence.hashVersion}
+                gitSha={evidence.gitSha}
+                gitTag={evidence.gitTag}
+                verdict={evidence.verdict}
+                versions={versionNumbers}
               />
             )}
             {showToc && <ArticleTocRail groups={tocGroups} />}

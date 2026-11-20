@@ -8,11 +8,13 @@
  *               入口先 decodeTagParam 解码一次再 normalizeTag；0 行 notFound；
  *               Timeline 容器查询第六个调用点，ul 必须带 @container）
  * - 2026-11-16: 全站字号阶统一后，本页标题仍为 44px（B2 尚未轮到本页）；收尾时与作品页/租户页一并调到 32px
+ * - 2026-11-18: V5 Phase 0 常量单源：metadata.description 改引 src/lib/evidence-constants.ts 的模板，措辞逐字未动
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Timeline } from "@/components/Timeline";
+import { tagPageDescription } from "@/lib/evidence-constants";
 import { decodeTagParam, normalizeTag } from "@/lib/forms";
 import { getSafeLogs } from "@/lib/logs";
 
@@ -37,7 +39,7 @@ export async function generateMetadata({
 
   return {
     title: `标签 ${normalized}`,
-    description: `该标签下共 ${logs.length} 条已发布日志，均为 Before/After 开发复盘，附正文 SHA-256 摘要与发布时间。`,
+    description: tagPageDescription(logs.length),
     // 标签订阅源：给定标签可单独订阅（B4），与全站 feed 同一套组装口径
     alternates: {
       types: {

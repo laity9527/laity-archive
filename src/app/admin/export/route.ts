@@ -1,6 +1,6 @@
 /**
  * 文件：src/app/admin/export/route.ts
- * 描述：全站数据导出路由处理器：会话校验→查当前账号全部 Project/Log→组装 payload→JSON 下载响应
+ * 描述：全站数据导出路由处理器：会话校验→查当前账号全部 Project/Trace→组装 payload→JSON 下载响应
  * 作者：张磊
  * 创建日期：2026-11-12
  * 修改记录：
@@ -34,7 +34,7 @@ export async function GET() {
 
     const [projects, logs] = await Promise.all([
       db.project.findMany({ where: { userId } }),
-      db.log.findMany({ where: { userId } }),
+      db.trace.findMany({ where: { userId } }),
     ]);
 
     const payload = buildExportPayload({

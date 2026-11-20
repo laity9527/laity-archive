@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-11-09: 初始创建。幂等可重跑：先按 handle upsert 用户再按空归属回填，末尾断言两表都无 null，
  *               否则抛错退出（迁移/脚本失败宁可停下来，也不许带着 null 归属继续）。
+ * - 2026-11-18: V5 Phase 1 模型改名：db.log→db.trace（Schema Log→Trace @@map，表名不变）
  */
 import { PrismaClient } from "@prisma/client";
 
@@ -27,12 +28,12 @@ async function main() {
 
   const [projects, logs] = await Promise.all([
     db.project.updateMany({ where: { userId: null }, data: { userId: admin.id } }),
-    db.log.updateMany({ where: { userId: null }, data: { userId: admin.id } }),
+    db.trace.updateMany({ where: { userId: null }, data: { userId: admin.id } }),
   ]);
 
   const [stillUnassignedProjects, stillUnassignedLogs] = await Promise.all([
     db.project.count({ where: { userId: null } }),
-    db.log.count({ where: { userId: null } }),
+    db.trace.count({ where: { userId: null } }),
   ]);
 
   if (stillUnassignedProjects > 0 || stillUnassignedLogs > 0) {

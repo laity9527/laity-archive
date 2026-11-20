@@ -1,6 +1,7 @@
 /**
  * 文件：src/app/page.tsx
- * 描述：首页：标语、馆藏条、精选项目、档案状态、最新日志、按主题（重构 B0）
+ * 描述：首页（Phase 3 改版）：Hero 介绍、服务列表（启用项 sort 升序）、FAQ 折叠面板、
+ *       嵌入公开线索表单；档案区经 Hero 入口链接到达，原索引大厅看板移出首页
  * 作者：张磊
  * 创建日期：2026-10-30
  * 修改记录：
@@ -32,231 +33,118 @@
  * - 2026-11-13: 本轮升级：精选口径改调 pickFeatured（与租户主页同一实现），删掉页内重复的排序规则
  * - 2026-11-16: 重构 B0：Hero 重排（display 字号 + ink 收边线）、四个区块统一走 SectionHead（编号 + 中文标签 + 右侧入口），
  *               间距按十档收紧（Hero 后 48 / 区块之间 64/96），馆藏条改 hairline 收边。数据逻辑一字未动
+ * - 2026-11-19: V5 Phase 3 改版（负责人确认方案 A）：页面重构为四区块——Hero 介绍（含 /projects /logs /archive
+ *               档案入口链接）、服务列表（listEnabledServices，sort 升序）、FAQ 折叠面板（原生 details，
+ *               listEnabledFaqs）、嵌入 <LeadForm />（Suspense 边界隔离，流式渲染不阻塞）。
+ *               提交复用 /api/lead 全链路（双层限流/蜜罐/时长/ipHash/审计），页内零提交逻辑；
+ *               原索引大厅看板（馆藏条/精选/最新日志/按主题）移出首页，档案可达性由 Hero 链接承担
  */
 import Link from "next/link";
 import { Suspense } from "react";
-import { LoadingRows } from "@/components/LoadingRows";
+import { connection } from "next/server";
+import { LeadForm } from "@/components/LeadForm";
 import { SectionHead } from "@/components/SectionHead";
-import { StatusBoard } from "@/components/StatusBoard";
-import { Timeline } from "@/components/Timeline";
-import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
-import { getLatestLogs, getTopicCounts } from "@/lib/logs";
-import { getArchiveBoard, pickFeatured } from "@/lib/projects";
-import { publicProjectHref } from "@/lib/routes";
+import { listEnabledFaqs } from "@/lib/faq-admin";
+import { listEnabledServices } from "@/lib/service-admin";
 
-// 右侧入口的统一写法：12px、透明下划线，hover 才落墨
-const actionClass =
-  "border-b border-transparent text-xs text-ink hover:border-ink";
+export const instant = false;
 
-// 首页版心 1200px（与导航、页脚同宽）；Hero 用 clamp(2.5rem,5.2vw,3.5rem)，375–1440 不折行
-async function ArchiveOverview() {
-  // 首页的最新日志只要 3 条，按发布时间交给数据库取（D13 修订），不再全表捞回内存再切
-  const [board, latestLogs, topics] = await Promise.all([
-    getArchiveBoard(),
-    getLatestLogs(3),
-    getTopicCounts(),
-  ]);
+// Hero 的档案区入口：改版后首页不再承载看板，档案可达性由这三个链接承担
+const HERO_LINKS = [
+  { href: "/projects", label: "作品档案" },
+  { href: "/logs", label: "开发日志" },
+  { href: "/archive", label: "归档" },
+];
 
-  // 精选规则已单源化到 pickFeatured（日志数优先、同数按最近更新，无数据库字段）：
-  // 零日志项目只进下面的状态看板，不进精选。与租户主页同一实现，不靠两处注释对齐
-  const featured = pickFeatured(board);
-  const publishedCount = board.reduce((sum, project) => sum + project.count, 0);
-  const latest = latestLogs[0]?.publishedAt ?? latestLogs[0]?.beforeDate ?? null;
+const entryLink = "border-b border-transparent text-xs text-ink hover:border-ink";
+
+export default async function HomePage() {
+  await connection();
+  const [services, faqs] = await Promise.all([listEnabledServices(), listEnabledFaqs()]);
 
   return (
-    <>
-      <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3 border-b border-hairline pb-4 text-xs text-ink-soft">
-        <span>
-          <span className="font-mono text-lg text-ink">{board.length}</span> 个项目
-        </span>
-        <span>
-          <span className="font-mono text-lg text-ink">{publishedCount}</span>{" "}
-          条已发布
-        </span>
-        <span>
-          最近更新{" "}
-          <span className="font-mono text-ink">
-            {latest ? latest.toISOString().slice(0, 10) : "尚未发布"}
-          </span>
-        </span>
-        <a
-          href="/feed.xml"
-          className="ml-auto hidden border-b border-transparent text-xs text-ink-soft hover:border-ink hover:text-ink sm:inline"
-        >
-          RSS 订阅 →
-        </a>
-      </div>
-
-      <section
-        className={
-          featured.length >= 2
-            ? "mt-16 lg:flex lg:items-start lg:justify-between lg:gap-12"
-            : "mt-16"
-        }
-      >
-        {featured.length > 0 && (
-          <div className={featured.length >= 2 ? "lg:w-1/2" : ""}>
-            <SectionHead
-              index="01"
-              title="精选项目"
-              action={
-                <Link href="/projects" className={actionClass}>
-                  全部作品 →
-                </Link>
-              }
-            />
-            <ul>
-              {featured.map((project, index) => (
-                <li
-                  key={project.slug}
-                  className="flex gap-6 border-b border-hairline py-6"
-                >
-                  <span
-                    aria-hidden
-                    className="pt-1 font-mono text-[10px] text-ink-soft"
-                  >
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-                      <Link
-                        href={publicProjectHref(project.handle, project.slug)}
-                        className="text-xl hover:underline hover:decoration-1 hover:underline-offset-4"
-                      >
-                        {project.name}
-                      </Link>
-                      <span className="font-sans text-xs text-ink-soft">
-                        {kindLabel(project.kind)} · {statusLabel(project.status)}{" "}
-                        · {logsCountLabel(project.count)}
-                      </span>
-                    </div>
-                    {project.summary && (
-                      <p className="mt-2 max-w-prose text-sm leading-relaxed text-ink-soft">
-                        {project.summary}
-                      </p>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div
-          className={`@container ${
-            featured.length >= 2
-              ? "mt-16 lg:mt-0 lg:w-1/2 lg:border-l lg:border-hairline lg:pl-12"
-              : "mt-16 lg:grid lg:grid-cols-2 lg:gap-12"
-          }`}
-        >
-          <section>
-            <SectionHead index="02" title="档案状态" />
-            <div className="mt-4">
-              <StatusBoard entries={board} />
-            </div>
-          </section>
-
-          <section className={featured.length >= 2 ? "mt-16" : "mt-16 lg:mt-0"}>
-            <SectionHead
-              index="03"
-              title="最新日志"
-              action={
-                <Link href="/logs" className={actionClass}>
-                  全部日志 →
-                </Link>
-              }
-            />
-            {latestLogs.length === 0 ? (
-              <p className="py-6 font-sans text-sm text-ink-soft">
-                暂无已发布日志
-              </p>
-            ) : (
-              <ul>
-                {latestLogs.map((log) => (
-                  <li
-                    key={log.id}
-                    className="flex flex-col gap-6 border-b border-hairline py-8 @[36rem]:flex-row @[36rem]:gap-10"
-                  >
-                    <Timeline
-                      beforeDate={log.beforeDate}
-                      afterDate={log.afterDate}
-                    />
-                    <article className="flex-1">
-                      <h3 className="text-xl font-medium">
-                        <Link
-                          href={`/u/${log.user.handle}/logs/${log.slug}`}
-                          className="hover:underline hover:decoration-1 hover:underline-offset-4"
-                        >
-                          {log.title}
-                        </Link>
-                      </h3>
-                      {log.lessonLearned ? (
-                        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-soft">
-                          {log.lessonLearned}
-                        </p>
-                      ) : null}
-                      <p className="mt-2 font-mono text-xs text-ink-soft">
-                        {log.project.name}
-                        {log.tags.length > 0 ? ` · ${log.tags.join(" · ")}` : ""}
-                      </p>
-                    </article>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
+    <main id="main" className="mx-auto max-w-[1200px] px-6 py-16 max-md:py-8">
+      <section className="border-b border-hairline pb-12">
+        <p className="font-mono text-[10px] tracking-[0.3em] text-ink-soft">LAITY ARCHIVE</p>
+        <h1 className="mt-4 text-3xl font-medium tracking-tight md:text-4xl">
+          数字档案，记录每一次工程决策。
+        </h1>
+        <p className="mt-4 max-w-[640px] font-sans text-sm leading-relaxed text-ink-soft">
+          收集项目作品与开发复盘，构建一份可信的数字履历；关键内容带 SHA-256
+          存证摘要，可逐字核对。
+        </p>
+        <nav aria-label="档案区入口" className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+          {HERO_LINKS.map((item) => (
+            <Link key={item.href} href={item.href} className={entryLink}>
+              {item.label} →
+            </Link>
+          ))}
+        </nav>
       </section>
 
       <section className="mt-16">
         <SectionHead
-          index="04"
-          title="按主题"
+          index="01"
+          title="服务"
           action={
-            <Link href="/logs" className={actionClass}>
-              全部日志 →
+            <Link href="/services" className={entryLink}>
+              全部服务 →
             </Link>
           }
         />
-        <ul className="mt-4 grid grid-cols-2 gap-x-8 sm:grid-cols-4">
-          {topics
-            .filter((topic) => topic.count > 0)
-            .map((topic) => (
-              <li key={topic.key} className="border-b border-hairline">
-                <Link
-                  href={`/logs?topic=${topic.key}`}
-                  className="flex items-baseline justify-between gap-3 py-2.5 text-sm"
-                >
-                  <span>{topic.label}</span>
-                  <span className="font-mono text-[10px] text-ink-soft">
-                    {topic.count}
-                  </span>
-                </Link>
+        {services.length === 0 ? (
+          <p className="mt-4 font-sans text-xs text-ink-soft">暂无已启用的服务。</p>
+        ) : (
+          <ul className="mt-4">
+            {services.map((service) => (
+              <li key={service.id} className="border-b border-hairline py-5">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-mono text-xs text-ink-soft">{String(service.sort).padStart(2, "0")}</span>
+                  <h3 className="text-base font-medium tracking-tight text-ink">{service.title}</h3>
+                </div>
+                {service.summary && (
+                  <p className="mt-1 font-sans text-xs leading-relaxed text-ink-soft">{service.summary}</p>
+                )}
               </li>
             ))}
-        </ul>
+          </ul>
+        )}
       </section>
-    </>
-  );
-}
 
-export default function Home() {
-  return (
-    <main id="main" className="mx-auto max-w-[1200px] px-6 py-16 max-md:py-10">
-      <header className="border-b border-ink pb-10">
-        <h1 className="text-balance text-[clamp(2.5rem,5.2vw,3.5rem)] font-medium leading-[1.08] tracking-tight">
-          数字档案，记录每一次工程决策。
-        </h1>
-        <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-ink-soft">
-          收集项目作品与开发复盘，构建一份可信的数字履历。
-        </p>
-      </header>
+      <section className="mt-16">
+        <SectionHead
+          index="02"
+          title="常见问题"
+          action={
+            <Link href="/faq" className={entryLink}>
+              全部问答 →
+            </Link>
+          }
+        />
+        {faqs.length === 0 ? (
+          <p className="mt-4 font-sans text-xs text-ink-soft">暂无已启用的问答。</p>
+        ) : (
+          <div className="mt-2">
+            {faqs.map((faq) => (
+              <details key={faq.id} className="border-b border-hairline py-4">
+                <summary className="cursor-pointer font-sans text-sm text-ink">{faq.question}</summary>
+                <p className="mt-2 font-serif text-sm leading-relaxed text-ink-soft whitespace-pre-wrap">
+                  {faq.answer}
+                </p>
+              </details>
+            ))}
+          </div>
+        )}
+      </section>
 
-      <div className="mt-10">
-        <Suspense fallback={<LoadingRows rows={3} />}>
-          <ArchiveOverview />
+      <section id="lead" className="mt-16">
+        <SectionHead index="03" title="合作线索" />
+        <Suspense
+          fallback={<p className="mt-4 font-sans text-xs text-ink-soft">表单加载中…</p>}
+        >
+          <LeadForm />
         </Suspense>
-      </div>
+      </section>
     </main>
   );
 }

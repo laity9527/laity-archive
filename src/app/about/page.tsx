@@ -10,10 +10,12 @@
  *               个人简介里的「后台只有一把口令」与技术栈里的「NextAuth.js — 后台口令登录与会话」
  * - 2026-11-13: B4 技术栈分组：平面 10 项按职责分成 7 组（框架 / 样式 / 数据 / 鉴权 / 内容 / 存储 / 运行时）；
  *               中文区头、字段名与说明从 Mono 改回 Inter，只留技术名与字体名为 Mono；不写版本号的口径不变
+ * - 2026-11-18: V5 Phase 0 常量单源：简介里的摘要子句改引 src/lib/evidence-constants.ts，措辞逐字未动
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/SectionHead";
+import { ABOUT_DIGEST_CLAUSE } from "@/lib/evidence-constants";
 import { siteContactEmail } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
 // 只写仓库里可核对的事实：不出年份、不出粉丝数、不出"多年经验"这类无法验证的说法
 const PROFILE: string[] = [
   "我是张磊，这个站的主人与唯一的作者：代码、文案、发布与运维都是我一个人。后台用 GitHub 账号登录，只有站主一个账号，没有第二位作者。",
-  "这里不是博客，也不放教程。它记的是判断过程——每条开发日志都成对写着 BEFORE（当时怎么判断、为什么这样做）与 AFTER（做完之后验证成什么、哪里不对），底部带这一版正文的 SHA-256 摘要与服务器发布时间，可以和页面上一字一字对。",
+  `这里不是博客，也不放教程。它记的是判断过程——每条开发日志都成对写着 BEFORE（当时怎么判断、为什么这样做）与 AFTER（做完之后验证成什么、哪里不对），${ABOUT_DIGEST_CLAUSE}`,
   "档案里的第一条记录就是这个项目自己：laity-archive 连同它自己的开发日志都在库里，用同一套后台录入、同一个口径发布。之所以先把自己收进去，是因为一份讲不出真实过程的档案库，不值得别人引用。",
   "工作方式写在仓库根目录的约定里：技术栈锁定不做漂移、四道门禁全 0 才算能发版、范围外的问题记账不顺手改、凭据不进仓库也不进对话。这个站是这个工作方式的产物，也是它的证据。",
 ];

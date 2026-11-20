@@ -37,7 +37,7 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
       where: { OR: [{ logs: { some: { isPublished: true } } }, { projects: { some: {} } }] },
       select: { handle: true },
     }),
-    db.log.findMany({
+    db.trace.findMany({
       where: { isPublished: true },
       orderBy: { beforeDate: "desc" },
       select: { slug: true, updatedAt: true, user: { select: { handle: true } } },

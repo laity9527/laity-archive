@@ -26,15 +26,21 @@
  *               成功后回列表页，错误码经 URL 回传由 Toast 展示
  * - 2026-11-16: 评审 G10：新增 importLogAction——导入 Markdown 只建草稿，
  *               slug 冲突由 saveLog 的 LOG_001 回传（不覆盖），成功后进编辑页补齐标签与时间
+ * - 2026-11-18: V5 Phase 1：parseInput 收五要素与裁决（verdict/verdictNote/scopeMd/riskMd/rollbackMd/impactMd）；
+ *               新增 retryGitAnchorAction——对指定版本行重试 Git 锚定（成功回填 gitSha/gitTag/gitSyncedAt + 审计，
+ *               失败回 SYNC_003 不阻断页面）；模型改名 Log→Trace（@@map 表名不变）
  */
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { Verdict } from "@prisma/client";
 import { requireAdminSession } from "@/auth";
 import { recordAudit } from "@/lib/audit";
+import { db } from "@/lib/db";
 import type { LogField } from "@/lib/error-text";
 import { ID_PATTERN, LIMITS, SLUG_PATTERN, parseTagList, readField } from "@/lib/forms";
+import { anchorGitEvidence } from "@/lib/git-evidence";
 import { listProjectIds } from "@/lib/projects";
 import {
   deleteLog,
@@ -43,6 +49,8 @@ import {
   unpublishLog,
   type LogInput,
 } from "@/lib/publish";
+
+const VERDICTS: Verdict[] = ["PENDING", "VERIFIED", "OVERTURNED"];
 
 function parseDate(raw: string) {
   if (!raw) {
@@ -94,6 +102,13 @@ function parseInput(formData: FormData): ParseResult {
     afterDate: afterDate ?? undefined,
     lessonLearned: readField(formData, "lessonLearned"),
     isAiAssisted: readField(formData, "isAiAssisted") === "true",
+    // V5 Phase 1：五要素与裁决（裁决取值校验 + 上限校验在下方）
+    verdict: readField(formData, "verdict") as Verdict | undefined,
+    verdictNote: readField(formData, "verdictNote"),
+    scopeMd: readField(formData, "scopeMd"),
+    riskMd: readField(formData, "riskMd"),
+    rollbackMd: readField(formData, "rollbackMd"),
+    impactMd: readField(formData, "impactMd"),
   };
 
   if (!SLUG_PATTERN.test(input.slug)) {
@@ -126,6 +141,22 @@ function parseInput(formData: FormData): ParseResult {
 
   if ((input.lessonLearned ?? "").length > LIMITS.lesson) {
     return { ok: false, field: "lessonLearned" };
+  }
+
+  // V5 Phase 1：裁决取值白名单；五要素与裁决依据的上限
+  const rawVerdict = readField(formData, "verdict");
+  if (rawVerdict && !VERDICTS.includes(rawVerdict as Verdict)) {
+    return { ok: false, field: "verdict" };
+  }
+
+  if ((input.verdictNote ?? "").length > LIMITS.verdictNote) {
+    return { ok: false, field: "verdictNote" };
+  }
+
+  for (const field of ["scopeMd", "riskMd", "rollbackMd", "impactMd"] as const) {
+    if ((input[field] ?? "").length > LIMITS.element) {
+      return { ok: false, field };
+    }
   }
 
   return { ok: true, input };
@@ -271,6 +302,82 @@ export async function publishLogAction(formData: FormData) {
     receiptHits: String(result.scanHits),
   });
   redirect(`${backTo}?${receipt.toString()}`);
+}
+
+/**
+ * V5 Phase 1：重试 Git 锚定（历史页版本行操作）。
+ * 锚定是无状态 PUT + 打 tag：Contents API 对同一文件重复 PUT 是更新，重跑安全；
+ * 成功后回填 gitSha/gitTag/gitSyncedAt 并记审计；失败回 SYNC_003，不阻断页面。
+ */
+export async function retryGitAnchorAction(formData: FormData) {
+  const id = readField(formData, "id");
+  const revId = readField(formData, "rev");
+
+  if (!ID_PATTERN.test(id) || !ID_PATTERN.test(revId)) {
+    redirect("/admin/logs?error=VAL_001&field=id");
+  }
+
+  const backTo = `/admin/logs/${id}/history`;
+  const session = await requireAdminSession();
+
+  if (!session) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(backTo)}`);
+  }
+
+  const revision = await db.traceRevision.findFirst({
+    where: { id: revId, trace: { userId: session.userId } },
+    select: {
+      id: true,
+      version: true,
+      title: true,
+      beforeContent: true,
+      afterContent: true,
+      contentHash: true,
+      publishedAt: true,
+      trace: { select: { slug: true, userId: true } },
+    },
+  });
+
+  if (!revision) {
+    redirect(`${backTo}?error=LOG_002`);
+  }
+
+  if (!revision.trace.userId) {
+    redirect(`${backTo}?error=SYNC_001`);
+  }
+
+  const result = await anchorGitEvidence({
+    userId: revision.trace.userId,
+    trace: {
+      slug: revision.trace.slug,
+      title: revision.title,
+      beforeContent: revision.beforeContent,
+      afterContent: revision.afterContent,
+      contentHash: revision.contentHash,
+      publishedAt: revision.publishedAt,
+    },
+    version: revision.version,
+  });
+
+  if (!result.ok) {
+    redirect(`${backTo}?error=SYNC_003`);
+  }
+
+  await db.traceRevision.update({
+    where: { id: revision.id },
+    data: { gitSha: result.sha, gitTag: result.tag, gitSyncedAt: result.syncedAt },
+  });
+
+  await recordAudit({
+    actorId: session.userId,
+    action: "trace.git_anchor",
+    targetType: "TraceRevision",
+    targetId: revision.id,
+    meta: { slug: revision.trace.slug, version: revision.version, sha: result.sha.slice(0, 7), tag: result.tag },
+  });
+
+  refreshLogViews();
+  redirect(`${backTo}?anchored=1`);
 }
 
 export async function unpublishLogAction(formData: FormData) {

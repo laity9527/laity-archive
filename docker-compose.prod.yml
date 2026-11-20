@@ -28,6 +28,13 @@
 # - 2026-11-10: V2.0 Step 6 Commit 1：app 服务补 AI_API_KEY / AI_API_BASE_URL / AI_MODEL_NAME 透传
 #               （国内合规大模型，OpenAI 兼容协议，默认走 DashScope / qwen-plus）。preflight 门禁新增
 #               硬卡项：AI_API_KEY 缺了整栈拒绝起；AI_API_BASE_URL / AI_MODEL_NAME 用 :- 回落默认值
+# - 2026-11-19: V5 Phase 2：app 环境块补 LEADS_IP_SALT 透传（线索 ipHash 盐；:- 可选，不进 preflight 硬卡）
+# - 2026-11-18: V5 Phase 1：app 环境块补 EVIDENCE_REPO / GIT_EVIDENCE_ENABLED 透传（Git 证据锚定；
+#               两键均 :- 可选——锚定失败可降级，不进 preflight 硬卡，留空即跳过锚定）
+# - 2026-11-19: V5 Phase 2 收尾自检修正（I024 同类）：上面两条当时实际插进了 preflight 环境（锚点撞在
+#               preflight 的 OSS+restart 上），app 环境从未拿到三组键——生产容器会静默缺配置。
+#               本轮把 EVIDENCE_REPO / GIT_EVIDENCE_ENABLED / LEADS_IP_SALT 补进 app 环境，撤下 preflight
+#               误插的两键；LEADS_IP_SALT 经负责人确认升 :? 硬卡并加 preflight 非空判定，缺盐部署即失败
 #
 # 用前必读：
 #   1. cp .env.production.example .env.production，填真实值：数据库口令不要与开发环境复用，
@@ -76,6 +83,7 @@ services:
         [ -z "$${OSS_BUCKET:-}" ] && fail "OSS_BUCKET 为空，正文插图无法上传"
         [ -z "$${OSS_ACCESS_KEY_ID:-}" ] && fail "OSS_ACCESS_KEY_ID 为空，正文插图无法上传"
         [ -z "$${OSS_ACCESS_KEY_SECRET:-}" ] && fail "OSS_ACCESS_KEY_SECRET 为空，正文插图无法上传"
+        [ -z "$${LEADS_IP_SALT:-}" ] && fail "LEADS_IP_SALT 为空，线索 ipHash 无盐（生成说明见 .env.production.example）"
         echo "上线门禁通过：数据库用户 $${POSTGRES_USER}、口令长度 $${#POSTGRES_PASSWORD}、GitHub 两键非空、ENCRYPTION_KEY 形态合格、$${NEXTAUTH_URL}、OSS $${OSS_REGION}/$${OSS_BUCKET}（前缀 logs/）、AI_API_KEY 就绪"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?必须在 .env.production 里指定非 root 用户}
@@ -95,6 +103,9 @@ services:
       OSS_BUCKET: ${OSS_BUCKET:?OSS Bucket 名称}
       OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:?生产专用 RAM 子账号 AccessKey ID}
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:?生产专用 RAM 子账号 AccessKey Secret}
+      # 线索 ipHash 盐：preflight 硬卡（2026-11-19 收尾自检确认），缺盐部署即失败；
+      # EVIDENCE_REPO / GIT_EVIDENCE_ENABLED 不在 preflight 透传——锚定键只进 app（本文件曾误插此处，见头部留痕）
+      LEADS_IP_SALT: ${LEADS_IP_SALT:?线索 ipHash 盐必填（负责人 2026-11-19 收尾自检确认升硬卡）}
     restart: "no"
     networks: [laity_back]
 
@@ -154,6 +165,12 @@ services:
       SITE_ICP: ${SITE_ICP:-}
       SITE_POLICE_ICP: ${SITE_POLICE_ICP:-}
       SITE_CONTACT_EMAIL: ${SITE_CONTACT_EMAIL:-}
+      # V5 Phase 1 Git 证据锚定：EVIDENCE_REPO 为 owner/repo，留空则发布时跳过锚定（gitSha 留 null，后台可重试）；
+      # GIT_EVIDENCE_ENABLED=false 整体关闭（本地调试用）。两键 :- 可选——锚定失败可降级，不阻断发布
+      EVIDENCE_REPO: ${EVIDENCE_REPO:-}
+      GIT_EVIDENCE_ENABLED: ${GIT_EVIDENCE_ENABLED:-true}
+      # 线索 ipHash 盐：preflight 硬卡（2026-11-19 收尾自检确认），缺盐部署即失败
+      LEADS_IP_SALT: ${LEADS_IP_SALT:?线索 ipHash 盐必填（说明见 .env.production.example）}
     # 只绑 127.0.0.1：外部流量一律经 nginx，不给应用直接开口
     ports:
       - "127.0.0.1:3000:3000"

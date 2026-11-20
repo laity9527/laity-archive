@@ -1,6 +1,6 @@
 /**
  * 文件：src/lib/export.ts
- * 描述：全站数据导出纯函数：把 Project/Log 行组装成确定性排序的导出 payload（JSON 序列化与响应在动作层）
+ * 描述：全站数据导出纯函数：把 Project/Trace 行组装成确定性排序的导出 payload（JSON 序列化与响应在动作层）
  * 作者：张磊
  * 创建日期：2026-11-12
  * 修改记录：
@@ -22,7 +22,7 @@ export type ExportableProject = {
   createdAt: Date;
 };
 
-// 与 Log 模型逐字段对齐：含草稿（导出是备份语义）、contentHash、sourceCommitSha、isAiAssisted 等全部字段
+// 与 Trace 模型逐字段对齐：含草稿（导出是备份语义）、contentHash、sourceCommitSha、isAiAssisted 等全部字段
 export type ExportableLog = {
   id: string;
   title: string;

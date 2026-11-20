@@ -13,9 +13,11 @@
  *               删掉"不接入第三方账号体系/只有一名管理员/无用户内容"三处已失实的承诺；
  *               OSS 前缀改记 logs/<账号>/；访问令牌不落地一句按 next-auth v4 源码核实（默认 JWT 不带 access_token）
  * - 2026-11-10: V2.0 Step 5 Commit 3：Token 段改口径——现在访问令牌经 AES-256-GCM 加密落库（仅用于拉取公开提交），不写入会话
+ * - 2026-11-18: V5 Phase 0 常量单源：摘要段文案改引 src/lib/evidence-constants.ts，措辞逐字未动
  */
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PRIVACY_HASH_PARAGRAPH } from "@/lib/evidence-constants";
 
 export const metadata: Metadata = {
   title: "隐私与数据说明",
@@ -42,7 +44,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
     heading: "内容存在哪里",
     body: [
       "日志与项目的文字内容存放在自有服务器的 PostgreSQL 数据库中，按账号隔离；正文插图存放在阿里云对象存储（OSS），页面以直接链接引用。写入 OSS 使用的是最小权限子账号密钥——只允许向 logs/ 前缀写入，不能删除、不能列举，每个账号的插图落在各自的 logs/<账号>/ 子目录下。",
-      "每条日志在发布时会把「标题 + 判断正文 + 验证正文」按固定顺序拼接后计算 SHA-256 摘要，并记录服务器的 UTC 时间，摘要与发布时间随详情页一起公开。这意味着已公开的内容本身是可被第三方独立核验的，请勿在正文中写入不便公开的信息。",
+      PRIVACY_HASH_PARAGRAPH,
     ],
   },
   {

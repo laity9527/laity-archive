@@ -39,6 +39,7 @@
  * - 2026-11-16: 重构 B2 首批：左栏当前项由下划线改为棕左线（与详情页目录同一套“当前项”语言）；
  *               搜索框并入顶栏并限宽 320px；结果行改“共 N 条 / 本页 N 条”；列表行距 40→32px、
  *               元信息 11→12px（中文在 11px 下发糊）。筛选与搜索逻辑一字未动
+ * - 2026-11-18: V5 Phase 0 常量单源：metadata.description 改引 src/lib/evidence-constants.ts，措辞逐字未动
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -48,6 +49,7 @@ import { LoadingRows } from "@/components/LoadingRows";
 import { PageHeader } from "@/components/SectionHead";
 import { Timeline } from "@/components/Timeline";
 import { db } from "@/lib/db";
+import { LOGS_HALL_DESCRIPTION } from "@/lib/evidence-constants";
 import { ID_PATTERN, pickParam } from "@/lib/forms";
 import { extractSnippet, highlightSegments } from "@/lib/highlight";
 import { getLogFacets, getLogList, searchLogsLimited, type LogSort } from "@/lib/logs";
@@ -56,8 +58,7 @@ import { isTopicKey, topicLabel, type TopicKey } from "@/lib/topics";
 
 export const metadata: Metadata = {
   title: "开发日志",
-  description:
-    "按项目与标签筛选的开发复盘：每条都分成 BEFORE 判断与 AFTER 验证两段，页尾附正文 SHA-256 摘要与发布时间，可核对是否被改动。",
+  description: LOGS_HALL_DESCRIPTION,
 };
 
 type LogsPageProps = {
@@ -157,7 +158,7 @@ async function LogBoard({ searchParams }: LogsPageProps) {
     qFilter && items.length > 0
       ? new Map(
           (
-            await db.log.findMany({
+            await db.trace.findMany({
               where: { id: { in: items.map((item) => item.id) } },
               select: { id: true, beforeContent: true, afterContent: true },
             })

@@ -17,6 +17,11 @@
  * - 2026-11-10: Step 6 Commit 2：补 AI_001（生成失败/超时/解析失败，降级保留「（等待补充）」）/
  *               AI_002（单次 Commit 条数超 F22 的 12 条上限）
  * - 2026-11-13: AI 错误码拆分；AI_002 的 Commit 上限随 ai-prompt 从 12 提到 20
+ * - 2026-11-18: V5 Phase 1：补 LOG_005（裁决为被推翻时必填裁决依据）；
+ *               模型改名 Log→Trace / Revision→TraceRevision，注释随机械替换同步
+ * - 2026-11-18: V5 Phase 1 任务 7：补 TOPIC_001/002/003/004（主题后台管理动作结果码）
+ * - 2026-11-19: V5 Phase 2 任务 1：补 LEAD_001/002/003/004（线索提交限流/校验/不存在/状态变更）
+ * - 2026-11-19: V5 Phase 2 收尾自检：补 LEAD_005（最短填写时长不足）
  */
 
 export const ERROR_TEXT: Record<string, string> = {
@@ -26,6 +31,34 @@ export const ERROR_TEXT: Record<string, string> = {
   LOG_003:
     "正文里有疑似敏感信息（手机号、身份证号、密钥、内网地址等）。请先核对并删改；确认无误再勾选「已核对，仍要发布」。",
   LOG_004: "删除没有执行：确认框里要原样填入这条日志的 slug。",
+  LOG_005: "裁决为「被推翻」时必须填写裁决依据。",
+  // V5 Phase 1：主题后台管理的动作结果码
+  TOPIC_001: "主题标识冲突，换一个名称。",
+  TOPIC_002: "名称必填且不超过 40 字，描述不超过 120 字，排序必须是整数。",
+  TOPIC_003: "该主题仍关联着开发日志，先解绑再删除。",
+  TOPIC_004: "主题不存在，或删除前未勾选确认。",
+  // V5 Phase 2：线索提交与流转的动作结果码
+  LEAD_001: "提交太频繁：同一地址 5 分钟内只能提交一次，请稍后再试。",
+  LEAD_002: "线索表单填写不完整或格式不对，请检查后重试。",
+  LEAD_003: "线索不存在，可能已被删除。",
+  LEAD_004: "线索状态不能这样变更，或删除前未勾选确认。",
+  LEAD_005: "提交太快了，请稍等几秒再试。",
+  // V5 Phase 2：媒体库上传与流转的动作结果码
+  MEDIA_001: "文件类型不在白名单里（仅支持常见图片与文档，禁止可执行文件）。",
+  MEDIA_002: "文件超过大小上限，或内容与声明的类型不符。",
+  MEDIA_003: "媒体或目标轨迹不存在，可能已被删除。",
+  MEDIA_004: "媒体状态不能这样变更，或删除前未勾选确认。",
+  // V5 Phase 2：服务介绍与 FAQ 的动作结果码
+  SERVICE_001: "服务名称或内容冲突，换一个。",
+  SERVICE_002: "标题必填且不超过 60 字，简介不超过 200 字，正文不超过 20000 字，排序必须是整数。",
+  SERVICE_003: "服务不存在，可能已被删除。",
+  SERVICE_004: "服务状态不能这样变更，或删除前未勾选确认。",
+  FAQ_001: "问答内容冲突，换一个。",
+  FAQ_002: "问题必填且不超过 200 字，回答不超过 20000 字，排序必须是整数。",
+  FAQ_003: "问答不存在，可能已被删除。",
+  FAQ_004: "问答状态不能这样变更，或删除前未勾选确认。",
+  // V5 Phase 1：/verify 核验接口与页面（实现时登记，契约见 docs/openapi.yaml）
+  VERIFY_001: "未找到该摘要对应的已发布版本。",
   PRJ_001: "该项目下还有日志，禁止删除。",
   PRJ_002: "slug 已被占用，换一个。",
   PRJ_003: "删除没有执行：请再点一次「确认删除」。",
@@ -74,7 +107,14 @@ export type LogField =
   | "beforeDate"
   | "afterDate"
   | "beforeContent"
-  | "lessonLearned";
+  | "lessonLearned"
+  // V5 Phase 1：五要素与裁决字段
+  | "verdict"
+  | "verdictNote"
+  | "scopeMd"
+  | "riskMd"
+  | "rollbackMd"
+  | "impactMd";
 
 export type ProjectField = "slug" | "name" | "kind" | "status" | "summary" | "repoUrl";
 
@@ -97,6 +137,12 @@ const VAL_FIELD_TEXT: {
     afterDate: "AFTER 日期要能解析，且不早于 BEFORE。",
     beforeContent: "BEFORE 正文不能为空。",
     lessonLearned: `经验总结不超过 ${LIMITS.lesson} 字。`,
+    verdict: "裁决取值只能是待验证、已验证或被推翻。",
+    verdictNote: `裁决依据不超过 ${LIMITS.verdictNote} 字；裁决为被推翻时必填。`,
+    scopeMd: `范围说明不超过 ${LIMITS.element} 字，可留空。`,
+    riskMd: `风险说明不超过 ${LIMITS.element} 字，可留空。`,
+    rollbackMd: `回滚说明不超过 ${LIMITS.element} 字，可留空。`,
+    impactMd: `影响说明不超过 ${LIMITS.element} 字，可留空。`,
   },
   project: {
     slug: "slug 只能用小写字母、数字与连字符（2–64 位）。",
@@ -132,7 +178,7 @@ export function errorTextOf(
 
   return ERROR_TEXT[code] ?? code;
 }
-// 2026-11-17: 材料前窗口切口占位行（Revision 模型进 ① 后第 1500 行落在空行）；
+// 2026-11-17: 材料前窗口切口占位行（TraceRevision 模型进 ① 后第 1500 行落在空行）；
 // 错误码表与回退文案未变，本行只为让切口落在完整源码行。
 
 // 后台横幅会把 ?error= 的值原样打成一枚码标签（截图留证要用）。但 URL 是任何人可改的，

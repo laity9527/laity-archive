@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-11-18: 初始创建（V4 P2 Series 第三阶段）。slug 由名称哈希生成且创建后不变；
  *               有日志的系列拒绝删除（SERIES_003），避免静默 SetNull；写操作记审计。
+ * - 2026-11-18: V5 Phase 1 模型改名：Series 关系字段 logs→traces（Schema Log→Trace 机械替换）
  */
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -42,7 +43,7 @@ export async function listAdminSeries(userId: string): Promise<AdminSeries[]> {
       name: true,
       slug: true,
       summary: true,
-      _count: { select: { logs: true } },
+      _count: { select: { traces: true } },
     },
     orderBy: { name: "asc" },
   });
@@ -52,7 +53,7 @@ export async function listAdminSeries(userId: string): Promise<AdminSeries[]> {
     name: row.name,
     slug: row.slug,
     summary: row.summary,
-    count: row._count.logs,
+    count: row._count.traces,
   }));
 }
 
@@ -117,10 +118,10 @@ export async function deleteSeries(
 ): Promise<DeleteSeriesResult> {
   const row = await db.series.findFirst({
     where: { id, userId },
-    select: { id: true, _count: { select: { logs: true } } },
+    select: { id: true, _count: { select: { traces: true } } },
   });
   if (!row) return { ok: false, code: "SERIES_004" };
-  if (row._count.logs > 0) return { ok: false, code: "SERIES_003" };
+  if (row._count.traces > 0) return { ok: false, code: "SERIES_003" };
 
   await db.series.delete({ where: { id: row.id } });
   await recordAudit({

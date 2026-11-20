@@ -13,6 +13,10 @@
  * 本文件只被 prisma CLI 加载（generate / migrate / studio），不进 Next 构建产物。
  * 连接串缺失时只允许 generate；migrate deploy 由部署环境提供 DATABASE_URL。
  * 软著材料把本文件放折走段：它是配置壳，真正的数据模型在 schema.prisma、运行时连接在 db.ts。
+ * 修改记录续：
+ * - 2026-11-18: V5 Phase 1——补 shadowDatabaseUrl（由 DATABASE_URL 派生，库名不写死）。
+ *               Prisma 7 的 migrate diff --from-migrations 非交互生成 SQL 需要阴影库；
+ *               本地容器 root 可建/删库，Prisma 自动管理其生命周期
  */
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
@@ -20,6 +24,10 @@ import { defineConfig } from "prisma/config";
 // generate 不需要连接串（Docker builder 阶段没有数据库凭据）；migrate/introspect 才需要。
 // 因此 datasource 按环境变量存在与否条件注入，避免构建期因缺 DATABASE_URL 而失败。
 const datasourceUrl = process.env.DATABASE_URL;
+// 阴影库：把连接串末段库名替换为 shadow_<库名>，供 migrate diff 做影子比对
+const shadowDatabaseUrl = datasourceUrl
+  ? datasourceUrl.replace(/([^/]+)$/, "shadow_$1")
+  : undefined;
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -27,5 +35,7 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "node prisma/seed.ts",
   },
-  ...(datasourceUrl ? { datasource: { url: datasourceUrl } } : {}),
+  ...(datasourceUrl
+    ? { datasource: { url: datasourceUrl, shadowDatabaseUrl } }
+    : {}),
 });

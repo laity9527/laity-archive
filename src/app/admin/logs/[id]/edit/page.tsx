@@ -26,6 +26,9 @@
  * - 2026-11-16: 评审 A5：状态行加「预览」——跳到登录态可见的草稿预览页（同详情页排版，不出登录态）
  * - 2026-11-16: V3.1 G2 补：系列输入接 <datalist>（已有系列名来自 listSeriesNames）
  * - 2026-11-16: G7：新增公开预览链接生成/撤销（24h、库内存哈希，明文只在回跳 URL 出现一次）
+ * - 2026-11-18: V5 Phase 0 常量单源：发布动作说明改引 src/lib/evidence-constants.ts，措辞逐字未动
+ * - 2026-11-18: V5 Phase 1：表单新增五要素（scopeMd/riskMd/rollbackMd/impactMd）与裁决下拉
+ *               （OVERTURNED 必填裁决依据，发布时 LOG_005 校验）
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -43,6 +46,7 @@ import { PublishCheck } from "@/components/PublishCheck";
 import { SubmitButton } from "@/components/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { computeContentHash } from "@/lib/content-hash";
+import { PUBLISH_ACTION_NOTE } from "@/lib/evidence-constants";
 import { parsePublishedSnapshot } from "@/lib/published-snapshot";
 import { countActivePreviewTokens } from "@/lib/preview";
 import { siteUrl } from "@/lib/site";
@@ -371,7 +375,7 @@ export default async function EditLogPage({
           <span className="font-sans text-[10px] text-ink-soft">
             {log.isPublished
               ? "已发布的日志一保存就退回草稿，需要重新发布"
-              : "发布 = 先保存这张表单里的内容，再按它算 SHA-256 并记服务器时间"}
+              : PUBLISH_ACTION_NOTE}
           </span>
           {!log.isPublished && blocking.length > 0 && (
             <label className="flex items-center gap-2">
@@ -513,6 +517,90 @@ export default async function EditLogPage({
             aria-describedby={bad("lessonLearned") ? "form-error" : undefined}
             rows={4}
             className="w-full border border-hairline bg-transparent px-3 py-2 font-mono text-[12px] leading-relaxed text-ink"
+          />
+        </label>
+
+        <label className="flex flex-col gap-2 md:col-span-2">
+          <span className="font-sans text-[10px] text-ink-soft">
+            裁决（PENDING 待验证 / VERIFIED 已验证 / OVERTURNED 被推翻；发布时冻结进版本行）
+          </span>
+          <select
+            name="verdict"
+            defaultValue={log.verdict ?? "PENDING"}
+            aria-invalid={bad("verdict") || undefined}
+            aria-describedby={bad("verdict") ? "form-error" : undefined}
+            className="border border-hairline bg-transparent px-3 py-2 text-sm text-ink"
+          >
+            <option value="PENDING">待验证</option>
+            <option value="VERIFIED">已验证</option>
+            <option value="OVERTURNED">被推翻</option>
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-2 md:col-span-2">
+          <span className="font-sans text-[10px] text-ink-soft">
+            裁决依据（裁决为「被推翻」时必填，发布时校验 LOG_005）
+          </span>
+          <textarea
+            name="verdictNote"
+            defaultValue={log.verdictNote ?? ""}
+            maxLength={LIMITS.verdictNote}
+            aria-invalid={bad("verdictNote") || undefined}
+            aria-describedby={bad("verdictNote") ? "form-error" : undefined}
+            rows={3}
+            className="w-full border border-hairline bg-transparent px-3 py-2 font-sans text-[12px] leading-relaxed text-ink"
+          />
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className="font-sans text-[10px] text-ink-soft">范围（涉及哪些模块，可空）</span>
+          <textarea
+            name="scopeMd"
+            defaultValue={log.scopeMd ?? ""}
+            maxLength={LIMITS.element}
+            aria-invalid={bad("scopeMd") || undefined}
+            aria-describedby={bad("scopeMd") ? "form-error" : undefined}
+            rows={3}
+            className="w-full border border-hairline bg-transparent px-3 py-2 font-sans text-[12px] leading-relaxed text-ink"
+          />
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className="font-sans text-[10px] text-ink-soft">风险（可能破坏什么，可空）</span>
+          <textarea
+            name="riskMd"
+            defaultValue={log.riskMd ?? ""}
+            maxLength={LIMITS.element}
+            aria-invalid={bad("riskMd") || undefined}
+            aria-describedby={bad("riskMd") ? "form-error" : undefined}
+            rows={3}
+            className="w-full border border-hairline bg-transparent px-3 py-2 font-sans text-[12px] leading-relaxed text-ink"
+          />
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className="font-sans text-[10px] text-ink-soft">回滚（怎么退回，可空）</span>
+          <textarea
+            name="rollbackMd"
+            defaultValue={log.rollbackMd ?? ""}
+            maxLength={LIMITS.element}
+            aria-invalid={bad("rollbackMd") || undefined}
+            aria-describedby={bad("rollbackMd") ? "form-error" : undefined}
+            rows={3}
+            className="w-full border border-hairline bg-transparent px-3 py-2 font-sans text-[12px] leading-relaxed text-ink"
+          />
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className="font-sans text-[10px] text-ink-soft">影响（谁会受影响，可空）</span>
+          <textarea
+            name="impactMd"
+            defaultValue={log.impactMd ?? ""}
+            maxLength={LIMITS.element}
+            aria-invalid={bad("impactMd") || undefined}
+            aria-describedby={bad("impactMd") ? "form-error" : undefined}
+            rows={3}
+            className="w-full border border-hairline bg-transparent px-3 py-2 font-sans text-[12px] leading-relaxed text-ink"
           />
         </label>
 
