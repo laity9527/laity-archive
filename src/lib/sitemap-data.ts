@@ -13,6 +13,7 @@
  *               /u/[handle]、/u/[handle]/logs/[slug]、/u/[handle]/projects/[slug] 清单；
  *               草稿（isPublished=false）与后台路径一律不进——取数仍走 getSafeLogs/listPublicProjects 的公开白名单
  * - 2026-11-13: O5：逐用户 N+1 改为三张表单次取齐 + 内存按 handle 分组（输出顺序与条目不变）
+ * - 2026-11-19: V5 Phase 5 子任务3：公开路由清单补 /verify、/services、/faq、/lead 四条静态路由（无 lastModified，与 /about 同口径；/login、/preview、/verify/[hash] 因 noindex 不进）
  */
 import { connection } from "next/server";
 import { db } from "@/lib/db";
@@ -70,6 +71,11 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     { url: `${base}/privacy` },
     { url: `${base}/licenses` },
     { url: `${base}/about` },
+    // V5 Phase 5 子任务3：新增公开路由（静态页，无 lastModified，与 /about 同口径）
+    { url: `${base}/verify` },
+    { url: `${base}/services` },
+    { url: `${base}/faq` },
+    { url: `${base}/lead` },
   ];
 
   for (const { handle } of users) {
