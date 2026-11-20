@@ -23,7 +23,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Timeline } from "@/components/Timeline";
+import { Timeline } from "@/components/trace/Timeline";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { getSafeLogs } from "@/lib/logs";
 import { getPublicProjectBySlug } from "@/lib/projects";

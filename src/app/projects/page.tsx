@@ -21,7 +21,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { listPublicProjects } from "@/lib/projects";
-import { PageHeader } from "@/components/SectionHead";
+import { PageHeader } from "@/components/site/SectionHead";
 
 export const metadata: Metadata = {
   title: "作品档案",

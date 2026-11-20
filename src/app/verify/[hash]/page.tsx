@@ -14,7 +14,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { VerifyPanel } from "@/components/VerifyPanel";
+import { VerifyPanel } from "@/components/trace/VerifyPanel";
 import { getPublishedRevisionByHash } from "@/lib/logs";
 import { isContentHash, CANONICAL_RULES_TEXT } from "@/lib/canonical-hash";
 

@@ -8,6 +8,7 @@
  * - 2026-11-02: formatUtc 改由 src/lib/time.ts 提供
  * - 2026-11-06: 宽度断点由视口改容器——根节点 `md:w-[200px]` → `@[36rem]:w-[200px]`。窄容器（首页右栏 344px）回退为整行宽，
  *               不再在右侧留 96px 空白；宽容器（≥576px 的列表与详情页）仍是左侧 200px 时间轴。四个调用点各自加 `@container` 承载
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
  */
 import { formatUtc } from "@/lib/time";
 

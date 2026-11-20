@@ -12,7 +12,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { MarkdownImportFields } from "@/components/MarkdownImportFields";
+import { MarkdownImportFields } from "@/components/admin/MarkdownImportFields";
 import { requireAdminSession } from "@/auth";
 import { errorTextOf } from "@/lib/error-text";
 import { pickParam } from "@/lib/forms";

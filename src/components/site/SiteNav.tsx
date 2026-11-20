@@ -14,6 +14,7 @@
  * - 2026-11-06: 铁律合规修复（负责人裁断一）——三个中文导航项去 `font-mono` 与 `tracking-[0.2em]` 改走 `font-sans`；字标 LAITY 是英文品牌标识，仍留 `font-mono tracking-[0.3em]`
  * - 2026-11-13: 显著升级 A——中文导航项 10px → 12px、字标 11px → 12px（实测 10px 偏小）；
  *               版心 1080 → 1200，与首页 / 大厅同步，避免导航比正文窄一截
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/site/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 
@@ -21,13 +22,13 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { IconSearch } from "@/components/icons";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { IconSearch } from "@/components/ui/icons";
+import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { isPublicRoute } from "@/lib/routes";
 
 // 面板按需加载：未打开时不进首屏包（只多一个按钮上的图标）
 const CommandPalette = dynamic(
-  () => import("@/components/CommandPalette").then((mod) => mod.CommandPalette),
+  () => import("@/components/site/CommandPalette").then((mod) => mod.CommandPalette),
   { ssr: false },
 );
 

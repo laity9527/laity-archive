@@ -13,7 +13,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Timeline } from "@/components/Timeline";
+import { Timeline } from "@/components/trace/Timeline";
 import { tagPageDescription } from "@/lib/evidence-constants";
 import { decodeTagParam, normalizeTag } from "@/lib/forms";
 import { getSafeLogs } from "@/lib/logs";

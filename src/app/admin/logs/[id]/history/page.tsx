@@ -16,7 +16,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { requireAdminSession } from "@/auth";
-import { SubmitButton } from "@/components/SubmitButton";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { getLogRevisions } from "@/lib/logs";
 import { diffLines, type DiffResult } from "@/lib/text-diff";
 import { retryGitAnchorAction } from "@/app/admin/log-actions";

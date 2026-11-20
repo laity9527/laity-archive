@@ -11,7 +11,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { requireAdminSession } from "@/auth";
-import { SubmitButton } from "@/components/SubmitButton";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { getLead } from "@/lib/lead-admin";
 import { closeLeadAction, deleteLeadAction, replyLeadAction } from "@/lib/lead-actions";
 

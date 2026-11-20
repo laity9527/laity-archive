@@ -10,7 +10,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { PageHeader } from "@/components/SectionHead";
+import { PageHeader } from "@/components/site/SectionHead";
 import { listEnabledFaqs } from "@/lib/faq-admin";
 import { incrementFaqVisit } from "@/lib/stats-admin";
 

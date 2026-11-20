@@ -10,8 +10,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { PageHeader } from "@/components/SectionHead";
-import { LeadForm } from "@/components/LeadForm";
+import { PageHeader } from "@/components/site/SectionHead";
+import { LeadForm } from "@/components/home/LeadForm";
 
 export const metadata: Metadata = {
   title: "合作线索",

@@ -42,8 +42,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { LeadForm } from "@/components/LeadForm";
-import { SectionHead } from "@/components/SectionHead";
+import { LeadForm } from "@/components/home/LeadForm";
+import { SectionHead } from "@/components/site/SectionHead";
 import { listEnabledFaqs } from "@/lib/faq-admin";
 import { listEnabledServices } from "@/lib/service-admin";
 

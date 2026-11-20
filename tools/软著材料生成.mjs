@@ -105,7 +105,7 @@
  *               ①+② 零余量防线不动，出件看护栏
  * - 2026-11-11: F23/D34 阅读目录与进度条：新增 src/lib/toc.ts（extractToc 纯函数）登记进折走段 ③，
  *               与 log-search/ai-prompt 同族（调用方详情页在 ④、markdown.tsx 在 ③）；新增
- *               src/components/ArticleToc.tsx 登记进 ④（访客可见界面）。④ 因 ArticleToc + 详情页接线 +
+ *               src/components/trace/ArticleToc.tsx 登记进 ④（访客可见界面）。④ 因 ArticleToc + 详情页接线 +
  *               globals.css 进度条/rail/面板样式涨行，出件看 assertWindowFit
  * - 2026-11-11: F23/D34 窗口配平（负责人裁定 Option 2）：assertWindowFit 拒件（④ 1879 > 后窗口 1498，缺口 381），
  *               预案1（拆移动面板约 30–70 行）单独不够；按裁定把租户主页(190)/关于页(158)/登录页(92)自 ④ 平移进 ③
@@ -124,6 +124,7 @@
  *               按负责人 2026-11-13 决定保留，同批登记 ③（GitHub 恢复后再删并重出）
  * - 2026-11-12: F26 标签聚合 Commit 4：登记 src/app/tags/[tag]/page.tsx 进 ④ 段（访客可见界面，与大厅/详情同类）；
  *               大厅与详情页标签链接接线属 ④ 段内行数增长，出件看护栏
+ * - 2026-11-19: V5 Phase 5 子任务2：BANDS 登记路径同步——组件目录归组，全部 src/components 登记路径改指分组子目录（组件本体未改）
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -238,7 +239,7 @@ const BANDS = [
       // V5 Phase 1 核验界面（2026-11-18 窗口配平自 ④ 移入）：复算口径的真逻辑在 ② 的 canonical-hash.ts
       // 整份可见，这四个文件是消费口径的界面与接口壳（面板展示、入口表单、结果页、只读反查），
       // 与已让位的 privacy/about/login/404 外壳同类；证据展示面板 Seal.tsx 仍在 ④ 整份可见
-      "src/components/VerifyPanel.tsx",
+      "src/components/trace/VerifyPanel.tsx",
       "src/app/verify/page.tsx",
       "src/app/verify/[hash]/page.tsx",
       "src/app/api/verify/[hash]/route.ts",
@@ -302,24 +303,24 @@ const BANDS = [
       "src/lib/sort-preference.ts",
       // B0/B1-a 新增的排版与交互组件（2026-11-16）：都是“排版 + 小块交互”的外壳，
       // 其数据来源（logs/projects DAL）与渲染入口（页面）均已在可见载体，登记 ③ 不动 ①+② 防线
-      "src/components/SectionHead.tsx",
+      "src/components/site/SectionHead.tsx",
       // 2026-11-17 P0：Timeline 自 ④ 下移。它是纯排版组件（竖排/单行两种），
       // 详情页与列表里的调用处仍在可见窗口；本轮字号调整把 globals.css 余量压到 54，
       // 下移后余量 148（≥BOUNDARY_MARGIN=100），排版与交互逻辑均未改。
-      "src/components/Timeline.tsx",
-      "src/components/Breadcrumbs.tsx",
-      "src/components/CodeBlock.tsx",
-      "src/components/ZoomableArticle.tsx",
-      "src/components/ThemeToggle.tsx",
-      "src/components/icons/index.tsx",
+      "src/components/trace/Timeline.tsx",
+      "src/components/site/Breadcrumbs.tsx",
+      "src/components/trace/CodeBlock.tsx",
+      "src/components/trace/ZoomableArticle.tsx",
+      "src/components/site/ThemeToggle.tsx",
+      "src/components/ui/icons/index.tsx",
       // 站点导航外壳：渲染三项导航、当前项高亮与主题切换按钮；判定逻辑在 routes.ts、交互在 ThemeToggle
-      "src/components/SiteNav.tsx",
+      "src/components/site/SiteNav.tsx",
       // 命令面板（2026-11-16 B4）：⌘K 全局搜索；查询走 /api/search，键盘交互与渲染都在本组件
-      "src/components/CommandPalette.tsx",
+      "src/components/site/CommandPalette.tsx",
       // 搜索接口（2026-11-16 B4）：一次返回日志/项目/标签三组候选，日志复用 searchLogsLimited
       "src/app/api/search/route.ts",
       // Toast：后台操作回执浮层（读 URL 参数 → 提示 → 清查询串）；文案仍走 error-text 单源
-      "src/components/Toast.tsx",
+      "src/components/admin/Toast.tsx",
       // 根布局：字体挂载 + metadata + 首屏主题脚本 + 导航/页脚组合（无业务逻辑，视觉都在 globals.css）
       "src/app/layout.tsx",
       // log-search 是 V2.1 全局搜索的匹配纯函数（四字段大小写不敏感子串匹配），
@@ -396,7 +397,7 @@ const BANDS = [
       "src/app/admin/layout.tsx",
       // Phase C 后台侧栏：深墨导航外壳，与 admin/layout 同属后台壳层；调用方布局已在 ③，
       // 登记 ③ 不动 ①+② 零余量防线（2026-11-13）
-      "src/components/AdminNav.tsx",
+      "src/components/admin/AdminNav.tsx",
       "src/app/admin/log-actions.ts",
       "src/app/admin/sync-actions.ts",
       // export/route 是 F25 全站数据导出路由处理器（会话校验→查库→组装→JSON 下载响应），
@@ -415,7 +416,7 @@ const BANDS = [
       // 导入 Markdown（2026-11-16 G10）：文件在浏览器本地读取，服务端动作复用 parseInput/saveLog，
       // 只建草稿、slug 冲突不覆盖；登记 ③（后台排版与动作层）
       "src/app/admin/logs/import/page.tsx",
-      "src/components/MarkdownImportFields.tsx",
+      "src/components/admin/MarkdownImportFields.tsx",
       "src/lib/markdown-import.ts",
       // 草稿预览页（2026-11-16 A5）：登录态可见的详情页同构排版，不写 token、不出登录态；
       // 与后台列表/编辑页同属后台排版层，登记 ③
@@ -429,28 +430,28 @@ const BANDS = [
       // 项目详情页让位给后窗口的站点外壳：项目列表页仍在 ④ 段，功能面不缺
       // V2.0 Step 3 阶段一：路由迁至 /u/[handle]/projects/[slug]，收录路径随目录迁移
       "src/app/u/[handle]/projects/[slug]/page.tsx",
-      "src/components/Editor.tsx",
+      "src/components/admin/Editor.tsx",
       // PublishCheck 是编辑器的实时发布检查（客户端，监听表单 input/change；复用
       // sensitive-scan / reading-time 两个纯函数），与 Editor 同属后台交互层，登记 ③
-      "src/components/PublishCheck.tsx",
+      "src/components/admin/PublishCheck.tsx",
       "src/components/SignInButton.tsx",
       // DevLoginForm 是登录页的本地调试表单（客户端，仅在 dev-admin 启用时渲染），
       // 与 SignInButton 同属登录交互层；登记 ③
       "src/components/DevLoginForm.tsx",
-      "src/components/SignOutButton.tsx",
+      "src/components/admin/SignOutButton.tsx",
       // 提交按钮与编辑器、登录表单同属后台交互层：这一层整体在折走段是第八轮起定的口径
       // （它的调用方——各表单页——也都在这一段），本轮它整份落在省略段属于该口径的正常结果，
       // 不是漏登记：assertComplete() 已经核过它在清单里
-      "src/components/SubmitButton.tsx",
+      "src/components/admin/SubmitButton.tsx",
       // 印章组件在这里：它只是把 contentHash 与发布时间排版出来，存证的真逻辑在
       // publish.ts / content-hash.ts（前窗口）与详情页（后窗口，含 <Seal /> 的调用处）
-      "src/components/Seal.tsx",
+      "src/components/trace/Seal.tsx",
       // CopyButton 是 B2 内容摘要卡的复制客户端组件（clipboard 写入 + 两秒回显 / 失败文案），
       // 与 Seal 成对；调用方 Seal 在本段，登记 ③
-      "src/components/CopyButton.tsx",
+      "src/components/ui/CopyButton.tsx",
       // ShareButton 是 G13 的分享客户端组件（Web Share 优先，不支持/失败退回复制），
       // 与 CopyButton/Seal 同属“动作行”小组件；登记 ③
-      "src/components/ShareButton.tsx",
+      "src/components/trace/ShareButton.tsx",
       // 部署产物集中放这里：生产编排与多阶段构建文件都是配置而非程序逻辑，
       // 而 ② 段新增的 sensitive-scan 必须留在前窗口——它是这一轮的程序实质
       "docker-compose.prod.yml",
@@ -475,10 +476,10 @@ const BANDS = [
       // 按 assertWindowFit 的处置在 ④ 段挑让位者：Timeline 是 SPEC F02 点名的 Before/After 时间轴形态、
       // 最能代表本站界面，不折；看板只是把 getArchiveBoard() 的结果排版成若干行，
       // 而该取数口在 ② 段（src/lib/projects.ts）整份可见——折走的是排版，不是逻辑。
-      "src/components/StatusBoard.tsx",
+      "src/components/ui/StatusBoard.tsx",
       // LoadingRows 是 B4 的 Suspense 暖线骨架（零 JS / 零动画），只负责排版，
       // 与 StatusBoard 同类；调用方首页/大厅在 ④，登记 ③
-      "src/components/LoadingRows.tsx",
+      "src/components/ui/LoadingRows.tsx",
       // 隐私页是一份静态承诺文案（数据全在页面内的常量数组，无算法）；本轮 globals.css 为正文标题补了
       // 一段样式，④ 涨到把 globals.css 头部切在后窗口外，按 assertWindowFit 的建议由它让位（收录不减）
       "src/app/privacy/page.tsx",
@@ -502,7 +503,7 @@ const BANDS = [
       // 租户主页（+190 行）把 ④ 顶超后窗口、globals.css 头部被切口切掉。SiteFooter 是纯排版页脚、
       // 作品页是纯列表排版，两者都不承载算法，符合"折排版不折逻辑"判据；访客可见界面仍有
       // 首页/日志大厅/租户主页/关于在窗口内
-      "src/components/SiteFooter.tsx",
+      "src/components/site/SiteFooter.tsx",
       "src/app/projects/page.tsx",
       // 日志大厅页自 ④ 平移进折走段（2026-11-13，B1–B4 收尾）：B2 详情页、B1 大厅左栏与
       // B4 骨架使 ④ 涨到 1610 行，后窗口起点 10701 已越过 globals.css 头部（10349），护栏拒件。
@@ -519,7 +520,7 @@ const BANDS = [
       // 非线性回落使后窗口容量 1492→1478，④ 超余量、globals.css 头部被切口切掉；按"折排版不折逻辑"
       // 让位——toc.ts 抽取口径已在 ③ 整份可见，ArticleToc 是目录右栏/折叠面板的排版交互外壳，
       // 详情页（④）的调用处仍可见
-      "src/components/ArticleToc.tsx",
+      "src/components/trace/ArticleToc.tsx",
       // forms.ts 自 ② 平移进折走段（2026-11-09 第二十次窗口配平，负责人裁断一批准）：主体是常量表
       // （LIMITS 上限表 + SLUG/REPO_URL/ID 三组正则源串）+ 三个纯函数判（pickParam/readField/safeCallbackUrl），
       // 与已在 ③ 的 error-text.ts / licenses.ts 同性质；①+② 因阶段一 logs/projects 涨行 + 阶段二 proxy 涨行
@@ -546,8 +547,8 @@ const BANDS = [
       "src/app/lead/page.tsx",
       "src/app/services/page.tsx",
       "src/app/faq/page.tsx",
-      "src/components/LeadForm.tsx",
-      "src/components/MediaUpload.tsx",
+      "src/components/home/LeadForm.tsx",
+      "src/components/admin/MediaUpload.tsx",
       // V5 Phase 2（2026-11-19）：线索/媒体/服务/FAQ 四模块的 DAL、Action、后台页与公开 API。
       // 均为业务交互层，与 series/topics 后台层同类；存证核心逻辑（哈希/发布/锚定）已在 ② 整份可见
       "src/lib/lead-admin.ts",

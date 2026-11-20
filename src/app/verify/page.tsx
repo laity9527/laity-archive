@@ -13,7 +13,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { PageHeader } from "@/components/SectionHead";
+import { PageHeader } from "@/components/site/SectionHead";
 import { isContentHash } from "@/lib/canonical-hash";
 import { EVIDENCE_DISCLAIMER } from "@/lib/evidence-constants";
 

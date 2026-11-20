@@ -17,10 +17,10 @@
  */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LoadingRows } from "@/components/LoadingRows";
-import { SectionHead } from "@/components/SectionHead";
-import { StatusBoard } from "@/components/StatusBoard";
-import { Timeline } from "@/components/Timeline";
+import { LoadingRows } from "@/components/ui/LoadingRows";
+import { SectionHead } from "@/components/site/SectionHead";
+import { StatusBoard } from "@/components/ui/StatusBoard";
+import { Timeline } from "@/components/trace/Timeline";
 import { shouldShowYearBar } from "@/lib/archive";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";
 import { getArchive, getLatestLogs, getTopicCounts } from "@/lib/logs";

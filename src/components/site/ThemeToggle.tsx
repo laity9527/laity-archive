@@ -8,11 +8,12 @@
  * - 2026-11-16: 改为 useSyncExternalStore 读取 DOM 上的主题状态：effect 里 setState 会被
  *               react-hooks/set-state-in-effect 判错（React Compiler 规则），而且"读 DOM 再回写 state"
  *               本质上就是外部存储订阅，useSyncExternalStore 是它的正解；服务端快照固定 light
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/site/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
-import { IconMoon, IconSun } from "@/components/icons";
+import { IconMoon, IconSun } from "@/components/ui/icons";
 
 type Theme = "light" | "dark";
 

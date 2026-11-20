@@ -11,7 +11,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { requireAdminSession } from "@/auth";
-import { MediaUpload } from "@/components/MediaUpload";
+import { MediaUpload } from "@/components/admin/MediaUpload";
 import {
   listMedia,
   listTraceOptions,

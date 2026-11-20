@@ -11,7 +11,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { SectionHead } from "@/components/SectionHead";
+import { SectionHead } from "@/components/site/SectionHead";
 import { requireAdminSession } from "@/auth";
 import { getAdminLogById, getLogContext } from "@/lib/logs";
 import { Markdown } from "@/lib/markdown";

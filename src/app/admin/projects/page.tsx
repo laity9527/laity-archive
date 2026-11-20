@@ -30,7 +30,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { deleteProjectAction, saveProjectAction } from "@/app/admin/project-actions";
 import { requireAdminSession } from "@/auth";
-import { SubmitButton } from "@/components/SubmitButton";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { LIMITS, REPO_URL_SOURCE, SLUG_SOURCE, pickParam } from "@/lib/forms";
 import { kindLabel, logsCountLabel, statusLabel } from "@/lib/labels";

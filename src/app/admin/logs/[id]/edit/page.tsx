@@ -40,10 +40,10 @@ import {
   unpublishLogAction,
 } from "@/app/admin/log-actions";
 import { requireAdminSession } from "@/auth";
-import { Editor } from "@/components/Editor";
-import { CopyButton } from "@/components/CopyButton";
-import { PublishCheck } from "@/components/PublishCheck";
-import { SubmitButton } from "@/components/SubmitButton";
+import { Editor } from "@/components/admin/Editor";
+import { CopyButton } from "@/components/ui/CopyButton";
+import { PublishCheck } from "@/components/admin/PublishCheck";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { errorCodeChip, errorTextOf } from "@/lib/error-text";
 import { computeContentHash } from "@/lib/content-hash";
 import { PUBLISH_ACTION_NOTE } from "@/lib/evidence-constants";

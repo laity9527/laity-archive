@@ -14,7 +14,7 @@
  */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeader } from "@/components/SectionHead";
+import { PageHeader } from "@/components/site/SectionHead";
 import { ABOUT_DIGEST_CLAUSE } from "@/lib/evidence-constants";
 import { siteContactEmail } from "@/lib/site";
 

@@ -10,6 +10,7 @@
  *               中文区块（经验总结等）仍走 sans
  * - 2026-11-17: 同文件新增 `PageHeader`（索引页统一头部）。不新建源文件，避免软著收录清单
  *               因新增文件触发 assertComplete；标题/引导/统计/右侧动作四段固定，页间距统一
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/site/（纯结构调整，组件逻辑/样式/导出未变）
  */
 
 import type { ReactNode } from "react";

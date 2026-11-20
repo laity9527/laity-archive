@@ -21,9 +21,10 @@
  * - 2026-11-18: V5 Phase 0 常量单源：复算口径文案改引 src/lib/evidence-constants.ts，措辞逐字未动
  * - 2026-11-18: V5 Phase 1：EvidencePanel 展示裁决标签、版本号、hashVersion 与 Git 锚定状态
  *               （gitSha 链接 / 待锚定），新增版本切换器（?v=N）与存证免责口径（常量单源）
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
  */
-import { CopyButton } from "@/components/CopyButton";
-import { ShareButton } from "@/components/ShareButton";
+import { CopyButton } from "@/components/ui/CopyButton";
+import { ShareButton } from "@/components/trace/ShareButton";
 import { EVIDENCE_DISCLAIMER, HASH_RECOMPUTE_NOTE } from "@/lib/evidence-constants";
 import { formatUtc } from "@/lib/time";
 import type { Verdict } from "@prisma/client";

@@ -18,7 +18,7 @@
  */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeader, SectionHead } from "@/components/SectionHead";
+import { PageHeader, SectionHead } from "@/components/site/SectionHead";
 import { getTagIndex, type TagIndexEntry } from "@/lib/logs";
 import { TOPICS, topicOfTag } from "@/lib/topics";
 

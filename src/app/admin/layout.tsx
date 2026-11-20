@@ -23,8 +23,8 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/auth";
-import { AdminNav } from "@/components/AdminNav";
-import { Toast } from "@/components/Toast";
+import { AdminNav } from "@/components/admin/AdminNav";
+import { Toast } from "@/components/admin/Toast";
 
 // 后台读会话与数据库，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式

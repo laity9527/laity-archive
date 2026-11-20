@@ -7,6 +7,7 @@
  * - 2026-11-16: 初始创建（重构方案 V3 / B0）。正文图片此前固定 max-width:100%，截图里的
  *               文字在窄栏里读不清；这里用事件委托监听已渲染的 <img>，不注入任何 HTML，
  *               rehype-sanitize 管线不受影响。原生 dialog 自带焦点捕获与 Esc
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 

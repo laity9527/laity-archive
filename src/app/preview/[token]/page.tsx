@@ -11,7 +11,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SectionHead } from "@/components/SectionHead";
+import { SectionHead } from "@/components/site/SectionHead";
 import { getLogContext } from "@/lib/logs";
 import { Markdown } from "@/lib/markdown";
 import { resolvePreviewToken } from "@/lib/preview";

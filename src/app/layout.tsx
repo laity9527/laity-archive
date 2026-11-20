@@ -16,8 +16,8 @@
  */
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Noto_Serif_SC } from "next/font/google";
-import { SiteFooter } from "@/components/SiteFooter";
-import { SiteNav } from "@/components/SiteNav";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { SiteNav } from "@/components/site/SiteNav";
 import {
   siteContactEmail,
   siteDescription,

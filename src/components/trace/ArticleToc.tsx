@@ -8,6 +8,7 @@
  * - 2026-11-11: 初始创建（编号 mono + 中文标题 sans；当前态主墨 + 2px 左边线，不给 --brown 扩权）；
  *               按 react-hooks 编译器规则收口：编号用纯偏移量算（渲染期不自增闭包变量），
  *               自证与 scrollspy 的 setState 只落在 IntersectionObserver 回调里（effect 体只做纯 DOM 读取）
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 

@@ -11,12 +11,13 @@
  * - 2026-11-19: V5 Phase 2 任务 5：导航改分组结构——新增主题/线索/媒体库/服务/FAQ 五组入口，
  *               系统组收纳设置与审计；不存在普通用户角色，全部后台路由保持管理员单一鉴权
  * - 2026-11-19: V5 Phase 3 任务 3：新增「统计」组（/admin/stats 占位页），页面主体延后 Phase4
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/admin/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SignOutButton } from "@/components/SignOutButton";
+import { SignOutButton } from "@/components/admin/SignOutButton";
 
 const GROUPS = [
   {

@@ -9,6 +9,7 @@
  * - 2026-11-18: 初始创建（V5 Phase 1 /verify）。规范化逻辑复用 src/lib/canonical-hash.ts 的
  *               normalizeContent（纯函数，无 node:crypto 依赖，可进客户端包）；
  *               哈希拼接口径与 v1/v2 服务端实现一一对应，向量由 tests/canonical-hash.test.ts 钉住
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 

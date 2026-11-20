@@ -38,12 +38,12 @@ import {
   ArticleTocPanel,
   ArticleTocRail,
   type TocGroup,
-} from "@/components/ArticleToc";
-import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { EvidencePanel, Stamp } from "@/components/Seal";
-import { SectionHead } from "@/components/SectionHead";
-import { Timeline } from "@/components/Timeline";
-import { ZoomableArticle } from "@/components/ZoomableArticle";
+} from "@/components/trace/ArticleToc";
+import { Breadcrumbs } from "@/components/site/Breadcrumbs";
+import { EvidencePanel, Stamp } from "@/components/trace/Seal";
+import { SectionHead } from "@/components/site/SectionHead";
+import { Timeline } from "@/components/trace/Timeline";
+import { ZoomableArticle } from "@/components/trace/ZoomableArticle";
 import {
   getLogBacklinks,
   getLogContext,

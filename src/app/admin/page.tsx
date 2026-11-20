@@ -30,7 +30,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { syncGithubAction } from "@/app/admin/sync-actions";
 import { requireAdminSession } from "@/auth";
-import { SubmitButton } from "@/components/SubmitButton";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
 import { pickParam } from "@/lib/forms";
 import { getAdminOverview } from "@/lib/projects";

@@ -7,6 +7,7 @@
  * - 2026-11-16: 初始创建（重构方案 V3 / B1-a）。统一 24×24 viewBox、圆头线帽、无填充；
  *               无 title 时 aria-hidden（纯装饰），有 title 时 role="img" 并由 <title> 播报。
  *               图标只做辅助识别，任何入口都必须另有文字或 aria-label
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/ui/（纯结构调整，组件逻辑/样式/导出未变）
  */
 import type { ReactNode } from "react";
 

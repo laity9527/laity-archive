@@ -10,6 +10,7 @@
  * - 2026-11-04: 加 confirmLabel：破坏性动作改为"再点一次"两步生效，第二次点击才提交并带上确认位（D26）
  * - 2026-11-09: 加 confirmMessage：点击先弹原生 window.confirm，取消即阻止提交；该分支的确认位恒为 on
  *               （服务端 PRJ_003 闸门不动，防手滑职责由弹窗承担），与 confirmLabel 两步分支互斥
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/admin/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 

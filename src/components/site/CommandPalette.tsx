@@ -8,12 +8,13 @@
  *               （未打开时不加载组件），查询走 /api/search，结果限 6 条日志 / 4 个项目 / 6 个标签。
  *               键盘：↑↓ 移动、Enter 跳转、Esc 关闭；焦点在打开时进输入框，关闭交还触发按钮
  * - 2026-11-16: 评审 G3：结果底部加「在大厅中查看全部结果」，把 q 交给 /logs 的搜索（面板只展示前 6 条日志）
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/site/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconSearch } from "@/components/icons";
+import { IconSearch } from "@/components/ui/icons";
 
 type ResultItem = {
   key: string;

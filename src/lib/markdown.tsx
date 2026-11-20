@@ -18,7 +18,7 @@ import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import type { PluggableList } from "unified";
-import { CodeBlock } from "@/components/CodeBlock";
+import { CodeBlock } from "@/components/trace/CodeBlock";
 import { rehypeLogLinks, type LogLinkResolver } from "@/lib/log-links";
 
 type MarkdownProps = {

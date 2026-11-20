@@ -14,13 +14,14 @@
  *               根因是 `useSearchParams` 在当前 PPR 环境下该边界未完成水合；
  *               改为 `useSyncExternalStore` 订阅 `location.search`（与 ThemeToggle 同一套），
  *               不再依赖路由 hooks；后台操作回执均为整页重定向，不靠客户端导航触发
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/admin/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { errorTextOf } from "@/lib/error-text";
-import { IconAlert, IconCheck, IconClose } from "@/components/icons";
+import { IconAlert, IconCheck, IconClose } from "@/components/ui/icons";
 
 type Tone = "ok" | "error";
 

@@ -9,6 +9,7 @@
  *               语言取自 code 的 language-* class（sanitize 默认 schema 已放行该模式）
  * - 2026-11-16: 评审 G4：加「行号」开关（默认关，保原观感）。行号列只用于阅读，
  *               aria-hidden 且不可选中；复制仍只复制代码本体，不带行号
+ * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
  */
 "use client";
 
