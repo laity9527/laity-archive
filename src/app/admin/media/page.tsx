@@ -5,6 +5,8 @@
  * 创建日期：2026-11-19
  * 修改记录：
  * - 2026-11-19: 初始创建（V5 Phase 2 任务 2.3）。软删除只翻 deletedAt，列表照常可见并带标记
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：绑定轨迹 select 补 aria-label（此前是无名控件）；
+ *               分页当前页补 aria-current、页码链接补"第 N 页"名称
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -185,6 +187,7 @@ export default async function AdminMediaPage({ searchParams }: Props) {
                       <select
                         name="traceId"
                         defaultValue=""
+                        aria-label={`为「${item.fileName}」选择要绑定的轨迹`}
                         className="border border-hairline bg-transparent px-2 py-1 text-xs text-ink"
                       >
                         <option value="" disabled>
@@ -230,6 +233,8 @@ export default async function AdminMediaPage({ searchParams }: Props) {
             <Link
               key={n}
               href={`/admin/media?traceId=${traceFilter}&page=${n}`}
+              aria-label={`第 ${n} 页`}
+              aria-current={n === page ? "page" : undefined}
               className={`border px-3 py-1 ${n === page ? "border-brown text-brown" : "border-hairline text-ink-soft"}`}
             >
               {n}

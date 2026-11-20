@@ -12,6 +12,8 @@
  *               系统组收纳设置与审计；不存在普通用户角色，全部后台路由保持管理员单一鉴权
  * - 2026-11-19: V5 Phase 3 任务 3：新增「统计」组（/admin/stats 占位页），页面主体延后 Phase4
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/admin/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：组标题 text-paper/40 → text-paper/60——40% 纸白在深墨底上
+ *               实算约 3.5:1，不达正文 4.5:1；60% 约 6.3:1 达标（同一令牌族，不引入新色值）
  */
 "use client";
 
@@ -87,7 +89,7 @@ function NavItem({
       className={`shrink-0 border-b-2 px-3 py-2 text-xs md:border-b-0 md:border-l-2 md:px-5 md:py-2.5 ${
         active
           ? "border-brown bg-paper/5 text-paper"
-          : "border-transparent text-paper/40 hover:text-paper"
+          : "border-transparent text-paper/60 hover:text-paper"
       }`}
     >
       {label}

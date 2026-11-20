@@ -15,6 +15,8 @@
  *               改为 `useSyncExternalStore` 订阅 `location.search`（与 ThemeToggle 同一套），
  *               不再依赖路由 hooks；后台操作回执均为整页重定向，不靠客户端导航触发
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/admin/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：活区容器改为常驻挂载（此前整块随消息条件挂载，
+ *               读屏不一定播报新出现的回执）；错误仍走 role=alert 插队
  */
 "use client";
 
@@ -143,42 +145,45 @@ export function Toast() {
     return () => window.clearTimeout(timer);
   }, [message, messageKey, pathname, router]);
 
-  if (!message || !visible) return null;
-
   function dismiss() {
     setDismissedKey(messageKey);
     router.replace(pathname, { scroll: false });
   }
 
+  // 活区常驻：容器始终挂载（此前整块随消息条件挂载，读屏不一定播报新出现的回执）；
+  // 错误走 role=alert 插队，成功走 role=status 由常驻 polite 活区播报
   return (
-    <div
-      role={message.tone === "error" ? "alert" : "status"}
-      aria-live={message.tone === "error" ? "assertive" : "polite"}
-      className="fixed bottom-6 right-6 z-50 w-[min(92vw,360px)] border border-ink bg-paper p-4"
-    >
-      <div className="flex items-start gap-3">
-        <span aria-hidden className="mt-0.5 shrink-0 text-ink">
-          {message.tone === "error" ? (
-            <IconAlert size={16} />
-          ) : (
-            <IconCheck size={16} />
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-sans text-xs text-ink">{message.title}</p>
-          <p className="mt-1 font-sans text-xs leading-relaxed text-ink-soft">
-            {message.text}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="关闭提示"
-          className="shrink-0 border border-transparent p-0.5 text-ink-soft hover:border-ink hover:text-ink"
+    <div aria-live="polite" className="fixed bottom-6 right-6 z-50 w-[min(92vw,360px)]">
+      {message && visible && (
+        <div
+          role={message.tone === "error" ? "alert" : "status"}
+          className="border border-ink bg-paper p-4"
         >
-          <IconClose size={14} />
-        </button>
-      </div>
+          <div className="flex items-start gap-3">
+            <span aria-hidden className="mt-0.5 shrink-0 text-ink">
+              {message.tone === "error" ? (
+                <IconAlert size={16} />
+              ) : (
+                <IconCheck size={16} />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-sans text-xs text-ink">{message.title}</p>
+              <p className="mt-1 font-sans text-xs leading-relaxed text-ink-soft">
+                {message.text}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={dismiss}
+              aria-label="关闭提示"
+              className="shrink-0 border border-transparent p-0.5 text-ink-soft hover:border-ink hover:text-ink"
+            >
+              <IconClose size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

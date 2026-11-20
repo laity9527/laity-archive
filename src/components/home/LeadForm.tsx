@@ -10,6 +10,7 @@
  * - 2026-11-19: V5 Phase 2 收尾自检（负责人确认补齐②）：蜜罐 website 隐藏字段 +
  *               renderedAt 渲染时间戳（<3s 服务端拒收），正常用户不可见不受影响
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/home/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：提交回执改常驻活区（成功类 role=status 条件挂载时读屏不一定播报）
  */
 "use client";
 
@@ -149,16 +150,19 @@ export function LeadForm() {
           {status === "sending" ? "提交中…" : "提交线索"}
         </button>
       </div>
-      {message && (
-        <p
-          role={status === "failed" ? "alert" : "status"}
-          className={`border px-3 py-2 font-sans text-xs ${
-            status === "failed" ? "border-ink text-ink" : "border-hairline text-ink-soft"
-          }`}
-        >
-          {message}
-        </p>
-      )}
+      {/* 活区常驻：回执是已存在活区里的内容变化，读屏才可靠播报；失败仍走 alert 插队 */}
+      <div aria-live="polite">
+        {message && (
+          <p
+            role={status === "failed" ? "alert" : undefined}
+            className={`border px-3 py-2 font-sans text-xs ${
+              status === "failed" ? "border-ink text-ink" : "border-hairline text-ink-soft"
+            }`}
+          >
+            {message}
+          </p>
+        )}
+      </div>
     </form>
   );
 }

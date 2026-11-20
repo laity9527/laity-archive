@@ -14,6 +14,8 @@
  *               业务逻辑一行未重写；按年月回看保留同页（新增 SectionHead 05）。
  *               版心放宽到 1200px（看板双栏容器查询的原始设计宽度）；本页查询 4 次
  *               （board/latest/topics/archive），经负责人确认预算按 4 次记录
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：补页级 h1（sr-only"归档"）——此前整页只有区块 h2，
+ *               读屏没有页面级标题；视觉呈现不变
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -339,6 +341,7 @@ async function ArchiveByMonth() {
 export default function ArchivePage() {
   return (
     <main id="main" className="mx-auto max-w-[1200px] px-6 py-16 max-md:py-10">
+      <h1 className="sr-only">归档</h1>
       <Suspense fallback={<LoadingRows rows={3} />}>
         <ArchiveHall />
       </Suspense>

@@ -23,6 +23,7 @@
  *               编辑页传 initialAiAssisted 保持既有标记；暂存同步带该位（服务端打回时不丢）
  * - 2026-11-13: 没有「- 提交」行时不再禁用，按标题与现有正文续写；全空时由服务端回 AI_006
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/admin/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：BEFORE/AFTER 切换按钮补 aria-pressed（读屏能知道当前在哪栏）
  */
 "use client";
 
@@ -392,10 +393,10 @@ export function Editor({
         {/* AI 标记：点击 [ AI 帮我写 ] 成功后渲染；随整张表单提交，保存/发布动作据此落库 */}
         {aiAssisted && <input type="hidden" name="isAiAssisted" value="true" />}
         <div className="flex items-center gap-6">
-          <button type="button" onClick={() => setTab("before")} className={tabClass("before")}>
+          <button type="button" onClick={() => setTab("before")} aria-pressed={tab === "before"} className={tabClass("before")}>
             BEFORE
           </button>
-          <button type="button" onClick={() => setTab("after")} className={tabClass("after")}>
+          <button type="button" onClick={() => setTab("after")} aria-pressed={tab === "after"} className={tabClass("after")}>
             AFTER
           </button>
           <span className="ml-auto flex items-baseline gap-3 font-mono text-[10px] text-ink-soft">

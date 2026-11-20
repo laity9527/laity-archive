@@ -15,7 +15,9 @@
  * - 2026-11-09: V2.0 Step 4-B：项目下拉只列本租户的项目（listProjects 带 session.userId），
  *               自查会话后再查库（布局检查不阻塞页面并行渲染）
  * - 2026-11-16: V3.1 G2 补：系列输入接 <datalist>（已有系列名来自 listSeriesNames），防手打裂缝
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：补页级 metadata 标题"新建日志"（此前只继承布局的"后台"）
  */
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -32,6 +34,10 @@ import { toDateTimeLocal } from "@/lib/publish";
 // 本页查库并取表单默认值，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式
 export const instant = false;
+
+export const metadata: Metadata = {
+  title: "新建日志",
+};
 
 type NewLogPageProps = {
   searchParams: Promise<{

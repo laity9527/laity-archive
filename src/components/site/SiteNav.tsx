@@ -15,12 +15,14 @@
  * - 2026-11-13: 显著升级 A——中文导航项 10px → 12px、字标 11px → 12px（实测 10px 偏小）；
  *               版心 1080 → 1200，与首页 / 大厅同步，避免导航比正文窄一截
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/site/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：搜索面板关闭后焦点交还触发按钮——此前关闭后焦点落回 body，
+ *               键盘用户丢失位置；触发按钮挂 ref，onClose 里 focus 交还
  */
 "use client";
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { IconSearch } from "@/components/ui/icons";
 import { ThemeToggle } from "@/components/site/ThemeToggle";
@@ -43,6 +45,8 @@ const SECTIONS = [
 export function SiteNav() {
   const pathname = usePathname();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // a11y：面板关闭后把焦点交还触发按钮，键盘用户不丢焦点
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
 
   // ⌘K / Ctrl+K 全局唤起；监听器很小，留在导航里，面板实体按需加载
   useEffect(() => {
@@ -120,6 +124,7 @@ export function SiteNav() {
             ))}
           </nav>
           <button
+            ref={searchButtonRef}
             type="button"
             onClick={() => setPaletteOpen(true)}
             aria-label="打开搜索（快捷键 Command K）"
@@ -134,7 +139,12 @@ export function SiteNav() {
         </div>
       </div>
       {paletteOpen && (
-        <CommandPalette onClose={() => setPaletteOpen(false)} />
+        <CommandPalette
+          onClose={() => {
+            setPaletteOpen(false);
+            searchButtonRef.current?.focus();
+          }}
+        />
       )}
     </header>
   );

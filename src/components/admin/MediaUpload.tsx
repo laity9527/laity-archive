@@ -8,6 +8,7 @@
  * - 2026-11-19: 初始创建（V5 Phase 2 任务 2.2）。单 PUT 直传（分片为优化项，本阶段不实现）
  * - 2026-11-19: 收尾自检：直传 403 单独提示签名过期（300 秒有效），与网络失败区分
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/admin/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：上传进度与结果进常驻活区（此前签名/直传/登记/完成四段状态读屏无播报）
  */
 "use client";
 
@@ -94,7 +95,9 @@ export function MediaUpload() {
           className="border border-hairline bg-transparent px-3 py-2 text-sm text-ink"
         />
       </label>
-      {state.status === "signing" && <p className="mt-2 font-sans text-xs text-ink-soft">申请签名中…</p>}
+      {/* 活区常驻：进度与结果都是已存在活区里的内容变化；失败仍走 alert 插队 */}
+      <div aria-live="polite">
+        {state.status === "signing" && <p className="mt-2 font-sans text-xs text-ink-soft">申请签名中…</p>}
         {state.status === "uploading" && <p className="mt-2 font-sans text-xs text-ink-soft">直传 OSS 中…</p>}
         {state.status === "registering" && <p className="mt-2 font-sans text-xs text-ink-soft">登记中…</p>}
         {state.status === "done" && (
@@ -105,6 +108,7 @@ export function MediaUpload() {
             {state.message}
           </p>
         )}
+      </div>
     </div>
   );
 }

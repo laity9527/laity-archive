@@ -24,7 +24,10 @@
  *               同步/导出/项目入口收进「数据与发布」区；横幅与动作语义未动
  * - 2026-11-16: 评审 G12：四张计数卡下加「近 12 周发布」纯 CSS 柱状条（周一起算、UTC 切桶），
  *               只展示发布节奏，不引图表库；取数由 getAdminOverview 一并返回
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：补页级 metadata 标题"概览"（此前与新建页都只继承布局的"后台"，
+ *               浏览器标签与读屏无法区分两页）
  */
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -34,6 +37,10 @@ import { SubmitButton } from "@/components/admin/SubmitButton";
 import { errorTextOf } from "@/lib/error-text";
 import { pickParam } from "@/lib/forms";
 import { getAdminOverview } from "@/lib/projects";
+
+export const metadata: Metadata = {
+  title: "概览",
+};
 
 // 概览统计走未缓存查询，导航进来必然阻塞。instant = false 只用于退出即时导航校验；
 // 它是本路由里最高的 instant 配置，因此同时豁免"静态壳非空"校验，并不改变渲染方式

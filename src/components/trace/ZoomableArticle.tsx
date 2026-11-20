@@ -8,6 +8,8 @@
  *               文字在窄栏里读不清；这里用事件委托监听已渲染的 <img>，不注入任何 HTML，
  *               rehype-sanitize 管线不受影响。原生 dialog 自带焦点捕获与 Esc
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：正文图片补键盘入口——tabindex=0 + role=button +
+ *               aria-label"放大图片：…"，Enter/空格与点击同效开灯箱；关闭后焦点由原生 dialog 还回原图
  */
 "use client";
 
@@ -20,15 +22,20 @@ export function ZoomableArticle({ children }: { children: React.ReactNode }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
 
-  // 事件委托：Markdown 产物由服务端渲染，这里只认 <img>，不改动其结构
+  // 事件委托：Markdown 产物由服务端渲染，这里只认 <img>，不改动其结构。
+  // a11y：给图片补 tabindex/role/aria-label 成为键盘可达的"按钮"，Enter/空格与点击同效开灯箱
   useEffect(() => {
     const body = bodyRef.current;
 
     if (!body) return;
 
-    function onClick(event: MouseEvent) {
-      const target = event.target;
+    for (const img of Array.from(body.querySelectorAll("img"))) {
+      img.tabIndex = 0;
+      img.setAttribute("role", "button");
+      img.setAttribute("aria-label", `放大图片：${img.alt || "未命名图片"}`);
+    }
 
+    function openFrom(target: EventTarget | null) {
       if (!(target instanceof HTMLImageElement)) return;
 
       const src = target.currentSrc || target.src;
@@ -38,9 +45,25 @@ export function ZoomableArticle({ children }: { children: React.ReactNode }) {
       setPreview({ src, alt: target.alt || "" });
     }
 
-    body.addEventListener("click", onClick);
+    function onClick(event: MouseEvent) {
+      openFrom(event.target);
+    }
 
-    return () => body.removeEventListener("click", onClick);
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      if (!(event.target instanceof HTMLImageElement)) return;
+
+      event.preventDefault();
+      openFrom(event.target);
+    }
+
+    body.addEventListener("click", onClick);
+    body.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      body.removeEventListener("click", onClick);
+      body.removeEventListener("keydown", onKeyDown);
+    };
   }, []);
 
   // 打开/关闭与预览状态同步：showModal 自带焦点捕获，close 后浏览器把焦点还回原处

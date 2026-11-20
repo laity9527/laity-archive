@@ -10,6 +10,8 @@
  *               normalizeContent（纯函数，无 node:crypto 依赖，可进客户端包）；
  *               哈希拼接口径与 v1/v2 服务端实现一一对应，向量由 tests/canonical-hash.test.ts 钉住
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-19: V5 Phase 5 子任务4 a11y：读数列表挂 aria-live=polite——复算值由"计算中…"变为结果、
+ *               核验结论出现时读屏会播报（静态字段不变化、不会被重复读出）
  */
 "use client";
 
@@ -92,7 +94,7 @@ export function VerifyPanel({
         <span className="font-mono text-[10px] tracking-[0.18em] text-ink-soft">VERIFY</span>
         <span className="font-sans text-xs text-ink-soft">自助核验</span>
       </p>
-      <dl className="mt-4 space-y-4">
+      <dl className="mt-4 space-y-4" aria-live="polite">
         <div>
           <dt className="font-sans text-xs text-ink-soft">存证对象</dt>
           <dd className="mt-1 font-sans text-xs leading-relaxed text-ink">
