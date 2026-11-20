@@ -49,7 +49,6 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-
   // 方向键把当前项移进可视区：结果区限高滚动，选中项不能在视野外
   useEffect(() => {
     if (items.length === 0) return;

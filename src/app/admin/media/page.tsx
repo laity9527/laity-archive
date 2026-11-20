@@ -7,6 +7,9 @@
  * - 2026-11-19: 初始创建（V5 Phase 2 任务 2.3）。软删除只翻 deletedAt，列表照常可见并带标记
  * - 2026-11-19: V5 Phase 5 子任务4 a11y：绑定轨迹 select 补 aria-label（此前是无名控件）；
  *               分页当前页补 aria-current、页码链接补"第 N 页"名称
+ * - 2026-11-19: V5 Phase 6 O2：筛选表单改原生 GET 提交（对齐 /admin/logs 筛选口径）——
+ *               select 名 traceFilter→traceId（与 URL 参数/DAL 入参一致），应用筛选由 Link 改提交按钮，
+ *               表单字段即 URL query，读取 select 当前值后跳转
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -102,11 +105,11 @@ export default async function AdminMediaPage({ searchParams }: Props) {
       {evidence && <p role="status" className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink">证据标记已更新。</p>}
       {deleted && <p role="status" className="mt-6 border border-ink px-4 py-3 font-sans text-xs text-ink">已删除（软删除，仍在列表可见）。</p>}
 
-      <form className="mt-8 grid gap-3 border-y border-hairline py-4 sm:grid-cols-[200px_auto]">
+      <form method="get" action="/admin/media" className="mt-8 grid gap-3 border-y border-hairline py-4 sm:grid-cols-[200px_auto]">
         <label className="flex flex-col gap-1 font-sans text-xs text-ink-soft">
           按轨迹筛选
           <select
-            name="traceFilter"
+            name="traceId"
             defaultValue={traceFilter}
             className="border border-hairline bg-transparent px-3 py-2 text-sm text-ink"
           >
@@ -119,12 +122,12 @@ export default async function AdminMediaPage({ searchParams }: Props) {
           </select>
         </label>
         <div className="flex items-end">
-          <Link
-            href={`/admin/media?traceFilter=${traceFilter}&page=1`}
+          <button
+            type="submit"
             className="border border-ink px-4 py-2 font-sans text-xs text-ink"
           >
             应用筛选
-          </Link>
+          </button>
         </div>
       </form>
 
