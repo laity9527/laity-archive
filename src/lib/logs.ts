@@ -56,6 +56,8 @@
  * - 2026-11-16: V3.1 G2：新增 getSeriesLogs / hasPublishedSeries / listSeriesNames（系列页、Proxy 404、编辑器联想）
  * - 2026-11-16: G1 第二刀：新增 getLogBacklinks——同作者已发布正文里出现 `[[slug]]` 的反向引用；
  *               由 `content contains` 一次查询承担，详情页 Prisma 调用 2→3（裁定见评审第十九节）
+ * - 2026-11-19: V5 Phase 6 O1：searchLogsLimited 的 tags 裸 SQL 表名 Trace→Log——@@map("Log") 下物理表名
+ *               仍是 Log，V5 Phase 1 的 db.log→db.trace 机械替换误改裸 SQL，导致 /api/search 500
  */
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -297,8 +299,10 @@ export async function searchLogsLimited(
   const take = Math.min(Math.max(params.take ?? LOG_PAGE_SIZE, 1), LOG_PAGE_SIZE);
   // LIKE 的 % _ \ 必须转义；pattern 作为参数传给原生 SQL，不拼字符串
   const pattern = `%${escapeLikePattern(q)}%`;
+  // 裸 SQL 写物理表名（@@map("Log")）：Prisma 客户端用 db.trace，但物理表叫 Log。
+  // V5 Phase 1 的 db.log→db.trace 机械替换曾把这里也改成 "Trace"，/api/search 即 500。
   const tagHits = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
-    SELECT "id" FROM "Trace"
+    SELECT "id" FROM "Log"
     WHERE "isPublished" = true
       AND array_to_string("tags", ' ') ILIKE ${pattern} ESCAPE '\\'
   `);
