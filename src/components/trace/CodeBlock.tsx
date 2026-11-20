@@ -10,6 +10,9 @@
  * - 2026-11-16: 评审 G4：加「行号」开关（默认关，保原观感）。行号列只用于阅读，
  *               aria-hidden 且不可选中；复制仍只复制代码本体，不带行号
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-20: a11y 二期 L2（方案A）：两个横滚容器（非行号模式 <pre>、行号模式 .code-block__lined）
+ *               追加 tabIndex={0} + role="region" + aria-label，使长行横滚对键盘用户可达（WCAG 2.1.1）；
+ *               仅追加 DOM 属性，不改 CSS、不新增样式、不改动布局
  */
 "use client";
 
@@ -62,7 +65,7 @@ export function CodeBlock({ lang, code }: CodeBlockProps) {
       </div>
 
       {showLines ? (
-        <div className="code-block__lined">
+        <div className="code-block__lined" tabIndex={0} role="region" aria-label="代码块，可使用左右方向键横向滚动查看">
           {/* 行号只是阅读辅助：不进选中、不进复制、不被读屏重复播报 */}
           <pre aria-hidden="true" className="code-block__lines">
             {lines.map((_, index) => index + 1).join("\n")}
@@ -72,7 +75,7 @@ export function CodeBlock({ lang, code }: CodeBlockProps) {
           </pre>
         </div>
       ) : (
-        <pre>
+        <pre tabIndex={0} role="region" aria-label="代码块，可使用左右方向键横向滚动查看">
           <code>{code}</code>
         </pre>
       )}

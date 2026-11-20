@@ -11,6 +11,8 @@
  * - 2026-11-09: 加 confirmMessage：点击先弹原生 window.confirm，取消即阻止提交；该分支的确认位恒为 on
  *               （服务端 PRJ_003 闸门不动，防手滑职责由弹窗承担），与 confirmLabel 两步分支互斥
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/admin/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-20: a11y 二期 L5：两步确认 armed 状态增加读屏播报（sr-only aria-live 活区，
+ *               armed 时播报提示，按钮文案变化本身读屏不一定能捕捉）
  */
 "use client";
 
@@ -82,6 +84,12 @@ export function SubmitButton({
             ? confirmLabel
             : label}
       </button>
+      {/* 读屏播报：armed 状态变化走活区，按钮自身文案切换读屏不一定能捕捉 */}
+      {twoStep && (
+        <span aria-live="polite" className="sr-only">
+          {armed ? "已进入两步确认，再次点击以确认提交" : ""}
+        </span>
+      )}
     </>
   );
 }

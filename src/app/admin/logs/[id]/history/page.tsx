@@ -10,6 +10,7 @@
  *               单侧超过 2000 行由 text-diff 截断并显示提示，不在页面里做大数组计算。
  * - 2026-11-18: V5 Phase 1：版本行永不删除（取消 20 条上限，按版本号倒序）；列表展示 version/hashVersion/
  *               git 锚定状态；待锚定版本提供重试锚定按钮（retryGitAnchorAction，写审计）
+ * - 2026-11-20: a11y 二期 L6：主分支文章标题 h1 降级为 h2（源码中第二个 h1），视觉 className 不变
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -116,7 +117,7 @@ export default async function HistoryPage({ params, searchParams }: HistoryPageP
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <div>
           <p className="font-sans text-xs text-ink-soft">修订历史 · 共 {revisions.length} 版</p>
-          <h1 className="mt-2 text-3xl font-medium tracking-tight">{log.title}</h1>
+          <h2 className="mt-2 text-3xl font-medium tracking-tight">{log.title}</h2>
         </div>
         {pick(query.anchored) === "1" && (
           <span className="border border-ink px-3 py-1 font-sans text-[11px] text-ink">

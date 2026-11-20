@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-11-18: 初始创建（V4 P2 Series 第三阶段）。slug 创建后不变；删除前必须勾选确认，
  *               有日志时由服务端拒绝（SERIES_003）。
+ * - 2026-11-20: a11y 二期 L3：确认复选框补 aria-label（带上条目系列名，满足 Label in Name）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -128,7 +129,11 @@ export default async function AdminSeriesPage({ searchParams }: Props) {
               <form action={deleteSeriesAction} className="flex items-baseline gap-3 font-sans text-xs">
                 <input type="hidden" name="id" value={item.id} />
                 <label className="flex items-center gap-1 text-ink-soft">
-                  <input type="checkbox" name="confirmDelete" />
+                  <input
+                    type="checkbox"
+                    name="confirmDelete"
+                    aria-label={`确认删除「${item.name}」`}
+                  />
                   确认
                 </label>
                 <button type="submit" className="border-b border-ink text-ink">删除</button>

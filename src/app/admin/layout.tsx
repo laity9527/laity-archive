@@ -17,6 +17,7 @@
  *               登录校验仍走 requireAdminSession；移动端侧栏变顶部横滚，不引入抽屉/图标库
  * - 2026-11-16: B1-b 挂 Toast（Suspense 包裹，useSearchParams 需要边界）：操作回执从「页内横幅 + URL 参数」
  *               改为右下角浮层，成功 4.5s 自动收起并清查询串，错误保持到手动关闭
+ * - 2026-11-20: a11y 二期 L4：main 容器加 tabIndex={-1}，供 Toast 关闭后程序化交还焦点
  */
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -59,7 +60,7 @@ export default async function AdminLayout({
       </a>
       <AdminNav userName={session.user?.name ?? "已登录"} />
       <div className="min-w-0 flex-1">
-        <main id="main" className="mx-auto max-w-[1200px] px-6 py-10 md:py-12">
+        <main id="main" tabIndex={-1} className="mx-auto max-w-[1200px] px-6 py-10 md:py-12">
           {children}
         </main>
       </div>

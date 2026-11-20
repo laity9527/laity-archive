@@ -17,6 +17,8 @@
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/admin/（纯结构调整，组件逻辑/样式/导出未变）
  * - 2026-11-19: V5 Phase 5 子任务4 a11y：活区容器改为常驻挂载（此前整块随消息条件挂载，
  *               读屏不一定播报新出现的回执）；错误仍走 role=alert 插队
+ * - 2026-11-20: a11y 二期 L4：手动关闭后焦点交还页面主区域 #main（定时器自动收起不动焦点，
+ *               避免用户在页面其他位置操作时被强行移走）
  */
 "use client";
 
@@ -148,6 +150,8 @@ export function Toast() {
   function dismiss() {
     setDismissedKey(messageKey);
     router.replace(pathname, { scroll: false });
+    // 焦点交还主区域：关闭按钮消失后焦点会落回 body，键盘用户丢失位置
+    document.getElementById("main")?.focus();
   }
 
   // 活区常驻：容器始终挂载（此前整块随消息条件挂载，读屏不一定播报新出现的回执）；

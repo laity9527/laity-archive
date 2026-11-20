@@ -5,6 +5,7 @@
  * 创建日期：2026-11-19
  * 修改记录：
  * - 2026-11-19: 初始创建（V5 Phase 2 任务 4.2）。排序用 sort 表单项，软删除只翻 deletedAt
+ * - 2026-11-20: a11y 二期 L3：启用/确认两个复选框补 aria-label（带上条目问题名，满足 Label in Name）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -145,7 +146,12 @@ export default async function AdminFaqsPage({ searchParams }: Props) {
                 <form action={setFaqEnabledAction} className="flex items-center gap-2">
                   <input type="hidden" name="id" value={item.id} />
                   <label className="flex items-center gap-1 text-ink-soft">
-                    <input type="checkbox" name="enabled" defaultChecked={item.enabled} />
+                    <input
+                      type="checkbox"
+                      name="enabled"
+                      defaultChecked={item.enabled}
+                      aria-label={`启用「${item.question}」`}
+                    />
                     启用
                   </label>
                   <button type="submit" className="border-b border-ink text-ink">保存状态</button>
@@ -153,7 +159,11 @@ export default async function AdminFaqsPage({ searchParams }: Props) {
                 <form action={deleteFaqAction} className="flex items-center gap-2">
                   <input type="hidden" name="id" value={item.id} />
                   <label className="flex items-center gap-1 text-ink-soft">
-                    <input type="checkbox" name="confirmDelete" />
+                    <input
+                      type="checkbox"
+                      name="confirmDelete"
+                      aria-label={`确认删除「${item.question}」`}
+                    />
                     确认
                   </label>
                   <button type="submit" className="border-b border-ink text-ink">删除</button>

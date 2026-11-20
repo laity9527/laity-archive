@@ -11,6 +11,7 @@
  * - 2026-11-13: B4 技术栈分组：平面 10 项按职责分成 7 组（框架 / 样式 / 数据 / 鉴权 / 内容 / 存储 / 运行时）；
  *               中文区头、字段名与说明从 Mono 改回 Inter，只留技术名与字体名为 Mono；不写版本号的口径不变
  * - 2026-11-18: V5 Phase 0 常量单源：简介里的摘要子句改引 src/lib/evidence-constants.ts，措辞逐字未动
+ * - 2026-11-20: a11y 二期 L1：仓库外链 target=_blank 补 sr-only「新窗口打开」提示
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -179,6 +180,7 @@ export default function AboutPage() {
                 className="border-b border-transparent text-ink hover:border-ink"
               >
                 laity9527/laity-archive ↗
+                <span className="sr-only">（新窗口打开）</span>
               </a>
             </dd>
           </div>

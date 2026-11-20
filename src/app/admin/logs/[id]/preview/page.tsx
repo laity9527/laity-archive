@@ -8,6 +8,7 @@
  *               标题层级、时间轴、正文行宽、目录外的一切都在页面层。本页复用 Markdown / Timeline /
  *               SectionHead，不复制详情页的印章与 SEO 输出——草稿没有哈希与发布时间。
  *               与 G7（公开预览链接）的区别：本页不产生 token、不出登录态，属后台自查工具。
+ * - 2026-11-20: a11y 二期 L6：主分支文章标题 h1 降级为 h2（源码中第二个 h1），视觉 className 不变
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -117,9 +118,9 @@ export default async function PreviewLogPage({ params }: PreviewLogPageProps) {
           <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
             {log.project.name}
           </p>
-          <h1 className="mt-3 text-3xl font-medium tracking-tight">
+          <h2 className="mt-3 text-3xl font-medium tracking-tight">
             {log.title}
-          </h1>
+          </h2>
           <div className="@container mt-6">
             <Timeline beforeDate={log.beforeDate} afterDate={log.afterDate} />
           </div>

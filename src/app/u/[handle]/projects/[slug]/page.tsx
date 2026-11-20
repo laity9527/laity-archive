@@ -13,6 +13,7 @@
  *               同页的 SINCE / REPO / LOGS 三个纯英文标签按分工留在第二批，本轮未动
  * - 2026-11-06: 第四批（负责人裁断一）——SINCE 改「始于」、REPO ↗ 改「仓库 ↗」、区块标题 LOGS 改「开发日志」，
  *               三处标签走 font-sans；日期仍留 font-mono，且「始于 」与日期同处一个 span，避免 flex 的 gap-x-6 在两段间撑出 24px
+ * - 2026-11-20: a11y 二期 L1：仓库外链 target=_blank 补 sr-only「新窗口打开」提示
  * - 2026-11-06: 日志列表 `<ul>` 加 `@container`，配合 Timeline 的容器查询宽度（本页满宽列表 ≥576px，时间轴仍 200px，视觉不变）
  * - 2026-11-09: V2.0 Step 3 阶段一：路由迁至 /u/[handle]/projects/[slug]，params 提取 handle 传入
  *               getPublicProjectBySlug 与 getSafeLogs（后者带 handle，挡住复合唯一下同名 slug 的跨租户日志）；
@@ -97,6 +98,7 @@ export default async function ProjectDetailPage({
               className="font-sans text-ink hover:underline hover:decoration-1 hover:underline-offset-4"
             >
               仓库 ↗
+                <span className="sr-only">（新窗口打开）</span>
             </a>
           )}
         </p>

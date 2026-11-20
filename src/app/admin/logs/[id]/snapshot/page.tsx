@@ -6,6 +6,7 @@
  * 修改记录：
  * - 2026-11-16: 初始创建（V3.1 G8）。快照是“上次对外长什么样”的证据，不随编辑变化；
  *               本页不写库、不发布、不出登录态。快照缺失或损坏时给面板，不猜内容
+ * - 2026-11-20: a11y 二期 L6：主分支文章标题 h1 降级为 h2（源码中第二个 h1），视觉 className 不变
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -113,9 +114,9 @@ export default async function SnapshotPage({ params }: SnapshotPageProps) {
           <p className="font-mono text-[11px] tracking-[0.1em] text-ink-soft">
             {log.project.name}
           </p>
-          <h1 className="mt-3 text-3xl font-medium tracking-tight">
+          <h2 className="mt-3 text-3xl font-medium tracking-tight">
             {snapshot.title}
-          </h1>
+          </h2>
           {snapshot.tags.length > 0 && (
             <p className="mt-4 font-mono text-[11px] text-ink-soft">
               {snapshot.tags.join(" · ")}

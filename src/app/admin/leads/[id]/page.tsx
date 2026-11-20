@@ -5,6 +5,7 @@
  * 创建日期：2026-11-19
  * 修改记录：
  * - 2026-11-19: 初始创建（V5 Phase 2 任务 1.3）。回复与关闭的失败码经 URL 回传
+ * - 2026-11-20: a11y 二期 L3：确认复选框补 aria-label（带上线索名，满足 Label in Name）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -163,7 +164,11 @@ export default async function AdminLeadDetailPage({ params, searchParams }: Prop
           <form action={deleteLeadAction} className="flex items-center gap-3 font-sans text-xs">
             <input type="hidden" name="id" value={lead.id} />
             <label className="flex items-center gap-1 text-ink-soft">
-              <input type="checkbox" name="confirmDelete" />
+              <input
+                type="checkbox"
+                name="confirmDelete"
+                aria-label={`确认删除「${lead.name}」`}
+              />
               确认
             </label>
             <button type="submit" className="border-b border-ink text-ink">软删除</button>

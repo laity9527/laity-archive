@@ -10,6 +10,8 @@
  * - 2026-11-19: V5 Phase 6 O2：筛选表单改原生 GET 提交（对齐 /admin/logs 筛选口径）——
  *               select 名 traceFilter→traceId（与 URL 参数/DAL 入参一致），应用筛选由 Link 改提交按钮，
  *               表单字段即 URL query，读取 select 当前值后跳转
+ * - 2026-11-20: a11y 二期 L1：「打开文件」外链 target=_blank 补 sr-only「新窗口打开」提示
+ * - 2026-11-20: a11y 二期 L3：证据/确认两个复选框补 aria-label（带上文件名，满足 Label in Name）
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -172,6 +174,7 @@ export default async function AdminMediaPage({ searchParams }: Props) {
                         className="border-b border-ink font-sans text-xs text-ink"
                       >
                         打开文件
+                        <span className="sr-only">（新窗口打开）</span>
                       </a>
                     )}
                   </div>
@@ -209,7 +212,12 @@ export default async function AdminMediaPage({ searchParams }: Props) {
                     <input type="hidden" name="id" value={item.id} />
                     <input type="hidden" name="backTo" value="/admin/media" />
                     <label className="flex items-center gap-1 text-ink-soft">
-                      <input type="checkbox" name="isEvidence" defaultChecked={item.isEvidence} />
+                      <input
+                        type="checkbox"
+                        name="isEvidence"
+                        defaultChecked={item.isEvidence}
+                        aria-label={`标记「${item.fileName}」为证据`}
+                      />
                       证据
                     </label>
                     <button type="submit" className="border-b border-ink text-ink">保存标记</button>
@@ -218,7 +226,11 @@ export default async function AdminMediaPage({ searchParams }: Props) {
                     <input type="hidden" name="id" value={item.id} />
                     <input type="hidden" name="backTo" value="/admin/media" />
                     <label className="flex items-center gap-1 text-ink-soft">
-                      <input type="checkbox" name="confirmDelete" />
+                      <input
+                        type="checkbox"
+                        name="confirmDelete"
+                        aria-label={`确认删除「${item.fileName}」`}
+                      />
                       确认
                     </label>
                     <button type="submit" className="border-b border-ink text-ink">删除</button>

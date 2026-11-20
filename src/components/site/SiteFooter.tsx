@@ -8,6 +8,7 @@
  * - 2026-11-03: 补开源许可入口、侵权投诉邮箱位、公安备案号位与版权行；三个新位同样是"未设置就不渲染"
  * - 2026-11-13: 版心 1080 → 1200，与导航、首页、大厅对齐
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/site/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-20: a11y 二期 L1：两处备案号外链 target=_blank 补 sr-only「新窗口打开」提示
  */
 "use client";
 
@@ -61,6 +62,7 @@ export function SiteFooter({ icp, policeIcp, contactEmail }: SiteFooterProps) {
               className="hover:text-ink"
             >
               {policeIcp}
+              <span className="sr-only">（新窗口打开）</span>
             </a>
           )}
           {icp && (
@@ -71,6 +73,7 @@ export function SiteFooter({ icp, policeIcp, contactEmail }: SiteFooterProps) {
               className="hover:text-ink"
             >
               {icp}
+              <span className="sr-only">（新窗口打开）</span>
             </a>
           )}
           <span className="font-mono text-[10px] tracking-[0.2em]">© 2026 LAITY</span>

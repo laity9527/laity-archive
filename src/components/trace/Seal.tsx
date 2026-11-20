@@ -22,6 +22,7 @@
  * - 2026-11-18: V5 Phase 1：EvidencePanel 展示裁决标签、版本号、hashVersion 与 Git 锚定状态
  *               （gitSha 链接 / 待锚定），新增版本切换器（?v=N）与存证免责口径（常量单源）
  * - 2026-11-19: V5 Phase 5 子任务2：组件目录归组，迁至 src/components/trace/（纯结构调整，组件逻辑/样式/导出未变）
+ * - 2026-11-20: a11y 二期 L1：EvidencePanel 两处外链 target=_blank 补 sr-only「新窗口打开」提示
  */
 import { CopyButton } from "@/components/ui/CopyButton";
 import { ShareButton } from "@/components/trace/ShareButton";
@@ -162,6 +163,7 @@ export function EvidencePanel({
                 className="border-b border-transparent text-ink hover:border-ink"
               >
                 GitHub 提交 · {sha.slice(0, 7)} ↗
+                <span className="sr-only">（新窗口打开）</span>
               </a>
             ) : sha ? (
               `GitHub 提交 · ${sha.slice(0, 7)}`
@@ -182,6 +184,7 @@ export function EvidencePanel({
               >
                 提交 · {gitSha.slice(0, 7)} ↗
                 {gitTag ? ` · ${gitTag}` : ""}
+                <span className="sr-only">（新窗口打开）</span>
               </a>
             ) : gitSha ? (
               `提交 · ${gitSha.slice(0, 7)}${gitTag ? ` · ${gitTag}` : ""}`
