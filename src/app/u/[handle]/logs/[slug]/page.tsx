@@ -30,6 +30,10 @@
  *               相邻日志与相关阅读加 no-print，打印时只留正文与印章
  * - 2026-11-16: 评审 G1：正文 `[[slug]]` 渲染为同作者已发布日志的内链（显示目标标题）；
  *               目标表取自已有的 getLogContext 查询，未命中保留原文；"被引用"反向列表另轮裁定
+ * - 2026-11-19: V5 Phase 5 子任务1：证据层接入 VerifyPanel（浏览器本地 WebCrypto 复算）。
+ *               移动端与桌面右栏随各自 EvidencePanel 同位挂载，复用 assembleVerifyInput 拼接单源
+ *               与 CANONICAL_RULES_TEXT；版本号沿用证据层口径（?v=N 用修订行版本、当前版取
+ *               listPublishedVersions 版本号末位），零新增 Prisma 查询
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -43,7 +47,9 @@ import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { EvidencePanel, Stamp } from "@/components/trace/Seal";
 import { SectionHead } from "@/components/site/SectionHead";
 import { Timeline } from "@/components/trace/Timeline";
+import { VerifyPanel } from "@/components/trace/VerifyPanel";
 import { ZoomableArticle } from "@/components/trace/ZoomableArticle";
+import { CANONICAL_RULES_TEXT } from "@/lib/canonical-hash";
 import {
   getLogBacklinks,
   getLogContext,
@@ -239,6 +245,34 @@ export default async function LogDetailPage({
       : null;
   const hasRail = showToc || Boolean(evidence);
 
+  // Phase 5 子任务1：核验面板数据。复算全部在浏览器本地（WebCrypto）完成，本对象只做传参，
+  // 不触发任何新查询——各字段均取自本页已有查询（getSafeLogBySlug / listPublishedVersions 等）。
+  // 版本号口径与证据层一致：?v=N 视图用修订行版本，当前版取已发布版本号末位（发布时当前发布态
+  // 本身即一个版本行）；无可用版本号时不渲染核验面板，证据层三读数保留。
+  const currentVersion = versionNumbers[versionNumbers.length - 1];
+  const verify = evidence
+    ? (() => {
+        const version =
+          typeof evidence.version === "number" ? evidence.version : currentVersion;
+
+        if (!version || version < 1) {
+          return null;
+        }
+
+        return {
+          title: view.title,
+          beforeContent: view.beforeContent,
+          afterContent: view.afterContent,
+          storedHash: evidence.contentHash,
+          hashVersion: (evidence.hashVersion === 2 ? 2 : 1) as 1 | 2,
+          rulesText: CANONICAL_RULES_TEXT,
+          publishedAt: evidence.publishedAt,
+          version,
+          slug,
+        };
+      })()
+    : null;
+
   return (
     <main id="main" className="mx-auto max-w-[1080px] px-6 py-16 max-md:py-8">
       <script
@@ -354,6 +388,11 @@ export default async function LogDetailPage({
                   verdict={evidence.verdict}
                   versions={versionNumbers}
                 />
+                {verify && (
+                  <div className="mt-4">
+                    <VerifyPanel {...verify} />
+                  </div>
+                )}
               </div>
             )}
 
@@ -512,6 +551,11 @@ export default async function LogDetailPage({
                 verdict={evidence.verdict}
                 versions={versionNumbers}
               />
+            )}
+            {verify && (
+              <div className="mt-4">
+                <VerifyPanel {...verify} />
+              </div>
             )}
             {showToc && <ArticleTocRail groups={tocGroups} />}
           </aside>
